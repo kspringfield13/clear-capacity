@@ -8,6 +8,7 @@ import {
   BarChart3,
   CalendarCheck,
   Check,
+  ChevronRight,
   ClipboardCopy,
   Eye,
   FileText,
@@ -65,6 +66,7 @@ import {
 
 type Screen = "setup" | "ledger" | "daily" | "weekly" | "narrative" | "audit";
 type WindowMode = "large" | "compact";
+type PrimarySection = "today" | "week" | "history";
 
 interface AppToolbarAction {
   label: string;
@@ -155,19 +157,51 @@ interface NativeVisualContextResponse {
   raw_screenshot_retained: boolean;
 }
 
-const screens: Array<{ id: Screen; label: string; icon: typeof ShieldCheck }> = [
-  { id: "setup", label: "Setup", icon: ShieldCheck },
-  { id: "ledger", label: "Ledger", icon: Activity },
-  { id: "daily", label: "Daily Review", icon: CalendarCheck },
-  { id: "weekly", label: "Weekly Capacity", icon: BarChart3 },
-  { id: "narrative", label: "Narrative", icon: FileText },
-  { id: "audit", label: "Audit Log", icon: AlignLeft }
+const primaryNavigation: Array<{
+  id: PrimarySection;
+  label: string;
+  description: string;
+  screen: Screen;
+  icon: typeof ShieldCheck;
+}> = [
+  { id: "today", label: "Today", description: "Review and current activity", screen: "daily", icon: CalendarCheck },
+  { id: "week", label: "Week", description: "Capacity and summary", screen: "weekly", icon: BarChart3 },
+  { id: "history", label: "History", description: "Ledger and audit trail", screen: "ledger", icon: History }
 ];
 
-const sources = [
-  { label: "Outlook calendar import", detail: "Local .ics files only; meeting titles and time windows", enabled: true },
-  { label: "Active window sessions", detail: "Foreground app and window title metadata grouped locally", enabled: true }
-];
+const screenLabels: Record<Screen, string> = {
+  setup: "Settings",
+  ledger: "Activity ledger",
+  daily: "Today",
+  weekly: "Weekly capacity",
+  narrative: "Weekly summary",
+  audit: "Audit history"
+};
+
+function primarySectionForScreen(screen: Screen): PrimarySection | null {
+  if (screen === "daily") return "today";
+  if (screen === "weekly" || screen === "narrative") return "week";
+  if (screen === "ledger" || screen === "audit") return "history";
+  return null;
+}
+
+function sectionViews(section: PrimarySection | null) {
+  if (section === "week") {
+    return [
+      { id: "weekly" as const, label: "Capacity" },
+      { id: "narrative" as const, label: "Summary" }
+    ];
+  }
+
+  if (section === "history") {
+    return [
+      { id: "ledger" as const, label: "Activity" },
+      { id: "audit" as const, label: "Audit" }
+    ];
+  }
+
+  return [];
+}
 
 const MAX_VISUAL_CONTEXT_CAPTURES_PER_DAY = 8;
 const MIN_VISUAL_CONTEXT_SESSION_MINUTES = 10;
@@ -349,6 +383,7 @@ function AppShell({
   toolbarStatus,
   snapshot,
   hasWorkBlocks,
+  reviewCount,
   paused,
   setPaused,
   sidebarCollapsed,
@@ -363,6 +398,7 @@ function AppShell({
   toolbarStatus: string;
   snapshot: ReturnType<typeof computeWeeklyCapacitySnapshot>;
   hasWorkBlocks: boolean;
+  reviewCount: number;
   paused: boolean;
   setPaused: (value: boolean) => void;
   sidebarCollapsed: boolean;
@@ -375,7 +411,6 @@ function AppShell({
     <div className={`app ${sidebarCollapsed ? "sidebar-collapsed" : ""} ${windowMode === "compact" ? "is-compact-widget" : ""}`}>
       <AppToolbar
         active={active}
-        setActive={setActive}
         actions={toolbarActions}
         status={toolbarStatus}
         paused={paused}
@@ -395,17 +430,22 @@ function AppShell({
           </div>
         </div>
         <nav className="nav-list">
-          {screens.map((screen) => {
-            const Icon = screen.icon;
+          {primaryNavigation.map((item) => {
+            const Icon = item.icon;
+            const selected = primarySectionForScreen(active) === item.id;
             return (
               <button
-                className={active === screen.id ? "nav-item is-active" : "nav-item"}
-                key={screen.id}
-                onClick={() => setActive(screen.id)}
+                className={selected ? "nav-item is-active" : "nav-item"}
+                key={item.id}
+                onClick={() => setActive(item.screen)}
                 type="button"
               >
                 <Icon size={18} />
-                <span>{screen.label}</span>
+                <span>
+                  <strong>{item.label}</strong>
+                  <small>{item.description}</small>
+                </span>
+                {item.id === "today" && reviewCount > 0 && <b>{reviewCount}</b>}
               </button>
             );
           })}
@@ -419,16 +459,24 @@ function AppShell({
           {paused ? <Moon size={18} /> : <Pause size={18} />}
           <span>{paused ? "Private mode on" : "Pause tracking"}</span>
         </button>
+        <button className={active === "setup" ? "settings-button is-active" : "settings-button"} type="button" onClick={() => setActive("setup")}>
+          <Settings size={17} />
+          <span>Settings</span>
+        </button>
       </aside>
       )}
-      <main className="main-panel">{children}</main>
+      <main className="main-panel">
+        {windowMode === "large" && active !== "setup" && (
+          <ContextNavigation active={active} setActive={setActive} />
+        )}
+        {children}
+      </main>
     </div>
   );
 }
 
 function AppToolbar({
   active,
-  setActive,
   actions,
   status,
   paused,
@@ -439,7 +487,6 @@ function AppToolbar({
   setWindowMode
 }: {
   active: Screen;
-  setActive: (screen: Screen) => void;
   actions: AppToolbarAction[];
   status: string;
   paused: boolean;
@@ -476,32 +523,10 @@ function AppToolbar({
           </button>
         )}
         <div className="toolbar-title">
-          <strong>ClearCapacity</strong>
+          <strong>{windowMode === "compact" ? "ClearCapacity" : screenLabels[active]}</strong>
           <span>{paused ? "Private mode on" : status}</span>
         </div>
       </div>
-
-      {windowMode === "large" && (
-        <nav className="toolbar-tabs" aria-label="Primary views">
-          {screens.map((screen) => {
-            const Icon = screen.icon;
-            return (
-              <button
-                aria-label={screen.label}
-                className={active === screen.id ? "is-active" : ""}
-                data-label={screen.label}
-                key={screen.id}
-                type="button"
-                onClick={() => setActive(screen.id)}
-                title={screen.label}
-              >
-                <Icon size={15} />
-                <span>{screen.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-      )}
 
       <div className="toolbar-drag-region" />
 
@@ -544,6 +569,36 @@ function AppToolbar({
   );
 }
 
+function ContextNavigation({
+  active,
+  setActive
+}: {
+  active: Screen;
+  setActive: (screen: Screen) => void;
+}) {
+  const section = primarySectionForScreen(active);
+  const views = sectionViews(section);
+
+  if (views.length === 0) {
+    return null;
+  }
+
+  return (
+    <nav className="context-navigation" aria-label={`${section} views`}>
+      {views.map((view) => (
+        <button
+          className={active === view.id ? "is-active" : ""}
+          key={view.id}
+          type="button"
+          onClick={() => setActive(view.id)}
+        >
+          {view.label}
+        </button>
+      ))}
+    </nav>
+  );
+}
+
 function SetupScreen({
   paused,
   setPaused,
@@ -578,125 +633,112 @@ function SetupScreen({
   const visualCapturesToday = visualContextInsights.filter((insight) => getLocalDateKey(new Date(insight.captured_at)) === getLocalDateKey()).length;
 
   return (
-    <section className="screen">
+    <section className="screen settings-screen">
       <div className="screen-header">
         <div>
-          <p className="eyebrow">Setup and permissions</p>
-          <h1>Start with trust, then collect only useful metadata.</h1>
+          <p className="eyebrow">Settings</p>
+          <h1>Privacy and data sources</h1>
+          <p className="screen-intro">ClearCapacity collects only the signals you enable. Tracking can be paused at any time.</p>
         </div>
         <button className="primary-action" type="button" onClick={() => setPaused(!paused)}>
-          {paused ? <Moon size={18} /> : <Pause size={18} />}
-          <span>{paused ? "Resume" : "Private mode"}</span>
+          {paused ? <Play size={18} /> : <Pause size={18} />}
+          <span>{paused ? "Resume tracking" : "Pause tracking"}</span>
         </button>
       </div>
 
-      <div className="trust-band">
-        <div>
-          <Lock size={20} />
-          <strong>Raw events stay local by default</strong>
-          <span>Screenshot analysis is opt-in. No keystrokes, webcam signals, or hidden manager access.</span>
+      <section className="privacy-summary">
+        <div className={paused ? "privacy-state is-paused" : "privacy-state"}>
+          <span className={paused ? "live-dot is-paused" : "live-dot"} />
+          <div>
+            <strong>{paused ? "Tracking is paused" : "Tracking is active"}</strong>
+            <span>{paused ? "No new activity or visual signals are being collected." : "Foreground app and window-title metadata stay on this Mac."}</span>
+          </div>
         </div>
-        <div>
-          <Eye size={20} />
-          <strong>User reviews before sharing</strong>
-          <span>Exports are manager-ready summaries, not surveillance feeds.</span>
+        <div className="privacy-facts">
+          <span><Lock size={15} /> Local storage</span>
+          <span><Eye size={15} /> User-reviewed output</span>
+          <span><ShieldCheck size={15} /> No keystrokes or webcam</span>
         </div>
+      </section>
+
+      <div className="settings-section-heading">
         <div>
-          <Settings size={20} />
-          <strong>Every source is adjustable</strong>
-          <span>Pause, exclude, relabel, and keep sensitive blocks private.</span>
+          <h2>Data sources</h2>
+          <span>Enable sources only when they add useful workload context.</span>
         </div>
       </div>
 
-      <div className="settings-grid">
-        {sources.map((source) => (
-          <label className="setting-row" key={source.label}>
-            <input type="checkbox" defaultChecked={source.enabled} />
-            <span>
-              <strong>{source.label}</strong>
-              <small>{source.detail}</small>
-            </span>
-          </label>
-        ))}
-      </div>
-
-      <section className="integration-panel">
+      <section className="settings-row">
+        <div className="settings-row-icon"><Monitor size={18} /></div>
         <div>
-          <p className="eyebrow">Outlook calendar</p>
-          <h2>Import meetings from an Outlook .ics export.</h2>
-          <p>
-            ClearCapacity parses the file locally, creates fixed meeting blocks, and uses them in weekly
-            capacity. No email body or meeting notes are imported.
-          </p>
+          <h2>Active window activity</h2>
+          <p>Records foreground app, window title, and timestamp locally. It never records keystrokes or file contents.</p>
         </div>
-        <label className="file-import-button">
-          <Upload size={17} />
-          <span>Import .ics</span>
+        <div className="settings-row-status">
+          <strong>{activeWindowSessions.length} sessions</strong>
+          <span>{activeWindowSamples.length} samples stored</span>
+          {captureError && <small className="import-error">{captureError}</small>}
+        </div>
+        <button className="settings-control" type="button" onClick={() => setPaused(!paused)}>
+          {paused ? <Play size={16} /> : <Pause size={16} />}
+          {paused ? "Resume" : "Pause"}
+        </button>
+      </section>
+
+      <section className="settings-row">
+        <div className="settings-row-icon"><CalendarCheck size={18} /></div>
+        <div>
+          <h2>Outlook calendar</h2>
+          <p>Imports meeting titles and time windows from a local `.ics` export. Email bodies and meeting notes are ignored.</p>
+        </div>
+        <div className="settings-row-status">
+          <strong>{calendarEvents.length} events</strong>
+          <span>{latestImport ? `Imported ${formatAuditTime(latestImport)}` : "Not imported yet"}</span>
+          {importError && <small className="import-error">{importError}</small>}
+        </div>
+        <label className="settings-control">
+          <Upload size={16} />
+          <span>Import</span>
           <input
             accept=".ics,text/calendar"
             type="file"
             onChange={(event) => {
               const file = event.target.files?.[0];
-              if (file) {
-                onImportOutlookIcs(file);
-              }
+              if (file) onImportOutlookIcs(file);
               event.currentTarget.value = "";
             }}
           />
         </label>
-        <div className="integration-status">
-          <strong>{calendarEvents.length}</strong>
-          <span>Outlook events imported</span>
-          {latestImport && <small>Last import {formatAuditTime(latestImport)}</small>}
-          {importError && <small className="import-error">{importError}</small>}
-        </div>
       </section>
 
-      <section className="integration-panel">
+      <section className="settings-row">
+        <div className="settings-row-icon"><Eye size={18} /></div>
         <div>
-          <p className="eyebrow">Active window metadata</p>
-          <h2>Capture foreground app and window title locally.</h2>
-          <p>
-            The native sampler records app name, front window title, and timestamps only. Pause tracking
-            stops new samples immediately. No screenshots, keystrokes, or content capture.
-          </p>
+          <h2>Visual context</h2>
+          <p>Optional screenshot analysis for sustained sessions. Images are sent to OpenAI with `store: false`, then deleted locally.</p>
         </div>
-        <button className={paused ? "file-import-button is-muted" : "file-import-button"} type="button" onClick={() => setPaused(!paused)}>
-          {paused ? <Moon size={17} /> : <Monitor size={17} />}
-          <span>{paused ? "Resume capture" : "Pause capture"}</span>
+        <div className="settings-row-status">
+          <strong>{visualContextEnabled ? "On" : "Off"}</strong>
+          <span>{visualCapturesToday}/{MAX_VISUAL_CONTEXT_CAPTURES_PER_DAY} captures today</span>
+        </div>
+        <button className={visualContextEnabled ? "settings-control is-on" : "settings-control"} type="button" onClick={() => setVisualContextEnabled(!visualContextEnabled)}>
+          {visualContextEnabled ? "Disable" : "Enable"}
         </button>
-        <div className="integration-status">
-          <strong>{activeWindowSessions.length}</strong>
-          <span>local sessions grouped</span>
-          <small>{activeWindowSamples.length} active-window samples stored</small>
-          {captureError && <small className="import-error">{captureError}</small>}
-        </div>
       </section>
 
-      <section className="integration-panel">
+      <details className="advanced-settings">
+        <summary>
+          <span>
+            <Settings size={17} />
+            <strong>Advanced privacy details</strong>
+          </span>
+          <ChevronRight size={16} />
+        </summary>
         <div>
-          <p className="eyebrow">Visual context</p>
-          <h2>Smart occasional screenshot analysis.</h2>
-          <p>
-            When enabled, ClearCapacity can capture at most {MAX_VISUAL_CONTEXT_CAPTURES_PER_DAY} screenshots per day
-            during sustained work sessions, send them to OpenAI for a derived insight, then delete the raw image.
-            Private mode stops new captures.
-          </p>
+          <p>Raw activity metadata remains in this app's local webview storage. AI classification, forecasts, summaries, and visual context send only the context needed for that feature to the OpenAI API.</p>
+          <p>Window titles and screenshots can contain sensitive information. Pause tracking or disable visual context before working with confidential material.</p>
         </div>
-        <button
-          className={visualContextEnabled ? "file-import-button" : "file-import-button is-muted"}
-          type="button"
-          onClick={() => setVisualContextEnabled(!visualContextEnabled)}
-        >
-          {visualContextEnabled ? <Eye size={17} /> : <Moon size={17} />}
-          <span>{visualContextEnabled ? "Enabled" : "Disabled"}</span>
-        </button>
-        <div className="integration-status">
-          <strong>{visualCapturesToday}</strong>
-          <span>visual captures today</span>
-          <small>{MAX_VISUAL_CONTEXT_CAPTURES_PER_DAY - visualCapturesToday} remaining before daily cap</small>
-        </div>
-      </section>
+      </details>
     </section>
   );
 }
@@ -1001,6 +1043,25 @@ function DailyReviewScreen({
   onResetLocalData: () => void;
 }) {
   const reviewQueue = blocks.filter((block) => !block.user_verified);
+
+  if (blocks.length === 0) {
+    return (
+      <section className="screen">
+        <div className="screen-header compact">
+          <div>
+            <p className="eyebrow">Today</p>
+            <h1>Nothing needs your attention.</h1>
+          </div>
+        </div>
+        <EmptyState
+          icon={CalendarCheck}
+          title="Your review queue is empty."
+          description="ClearCapacity will place inferred work here after Outlook meetings are imported or active-window sessions are classified."
+        />
+      </section>
+    );
+  }
+
   return (
     <section className="screen">
       <div className="screen-header compact">
@@ -1040,13 +1101,7 @@ function DailyReviewScreen({
             onDismiss={onDismissReviewSuggestion}
           />
         </div>
-        {blocks.length === 0 ? (
-          <EmptyState
-            icon={CalendarCheck}
-            title="No review queue."
-            description="Once Outlook meetings or inferred active-window work blocks exist, this view becomes the fast correction loop for confirming, relabeling, splitting, and excluding local records."
-          />
-        ) : reviewQueue.length === 0 ? (
+        {reviewQueue.length === 0 ? (
           <EmptyState
             icon={Check}
             title="Everything visible is confirmed."
@@ -1803,118 +1858,93 @@ function CompactWidget({
   paused,
   activeWindowSamples,
   activeWindowSessions,
-  visualContextInsights,
-  auditEvents,
-  generatedNarrative,
-  narrative,
-  weekRangeLabel,
-  snapshot
+  blocks,
+  snapshot,
+  onPauseChange,
+  onOpenScreen,
+  onConfirm
 }: {
   paused: boolean;
   activeWindowSamples: ActiveWindowSample[];
   activeWindowSessions: ActivitySession[];
-  visualContextInsights: VisualContextInsight[];
-  auditEvents: AuditEvent[];
-  generatedNarrative: PersistedNarrativeRecord | null;
-  narrative: ReturnType<typeof generateWeeklyNarrative>;
-  weekRangeLabel: string;
+  blocks: WorkBlock[];
   snapshot: ReturnType<typeof computeWeeklyCapacitySnapshot>;
+  onPauseChange: (paused: boolean) => void;
+  onOpenScreen: (screen: Screen) => void;
+  onConfirm: (blockId: string) => void;
 }) {
   const latestSample = activeWindowSamples[activeWindowSamples.length - 1];
   const latestSession = activeWindowSessions[0];
-  const latestInsight = [...visualContextInsights].sort(
-    (left, right) => new Date(right.captured_at).getTime() - new Date(left.captured_at).getTime()
-  )[0];
-  const recentAuditEvents = [...auditEvents]
-    .sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime())
-    .slice(0, 6);
-  const displayNarrative = displaySafeNarrative(generatedNarrative?.narrative ?? narrative, weekRangeLabel);
-  const observation = paused
-    ? "Tracking is paused. ClearCapacity is not collecting new active-window or visual context signals."
-    : latestInsight
-      ? `${latestInsight.visible_tool ?? latestInsight.app_name}: ${latestInsight.activity_summary}`
-      : latestSample
-        ? `Currently observing ${latestSample.app_name}${latestSample.window_title ? `, ${latestSample.window_title}` : ""}.`
-        : "Waiting for the first local signal from active-window capture.";
+  const reviewQueue = blocks.filter((block) => !block.user_verified);
+  const nextReview = reviewQueue[0];
+  const today = getLocalDateKey();
+  const observedMinutesToday = activeWindowSessions
+    .filter((session) => getLocalDateKey(new Date(session.start_time)) === today)
+    .reduce((total, session) => total + session.duration_minutes, 0);
+  const observedHours = `${Math.floor(observedMinutesToday / 60)}h ${observedMinutesToday % 60}m`;
 
   return (
-    <section className="compact-widget">
-      <section className="compact-hero">
-        <div className="compact-status-line">
-          <span className={paused ? "live-dot is-paused" : "live-dot"} />
-          <span>{paused ? "Private mode" : "Live"}</span>
-        </div>
+    <section className="quick-view">
+      <header className="quick-view-header">
         <div>
-          <p>{paused ? "Capture paused" : "Now observing"}</p>
-          <h1>{paused ? "Paused" : latestSample?.app_name ?? "Waiting"}</h1>
-          <small>{latestSample?.window_title ?? "No active-window sample yet"}</small>
+          <span className={paused ? "live-dot is-paused" : "live-dot"} />
+          <strong>{paused ? "Tracking paused" : "Tracking"}</strong>
         </div>
-        <div className="compact-capacity">
-          <span>Reliable capacity</span>
-          <strong>{snapshot.allocated_pct > 0 ? pct(snapshot.reliable_new_work_capacity_pct) : "--"}</strong>
+      </header>
+
+      <section className="quick-current">
+        <span>Current activity</span>
+        <div>
+          <Monitor size={18} />
+          <div>
+            <strong>{paused ? "Private mode" : latestSample?.app_name ?? "Waiting for activity"}</strong>
+            <small>{paused ? "Resume when you are ready" : latestSample?.window_title ?? "No active-window sample yet"}</small>
+          </div>
         </div>
+        {latestSession && !paused && <p>{latestSession.duration_minutes} min in this session</p>}
       </section>
 
-      <div className="compact-center">
-        <section className="compact-card compact-observation">
-          <div className="compact-title">
-            <Monitor size={15} />
-            <span>Observation</span>
-          </div>
-          <p>{observation}</p>
-          <div className="compact-metrics">
-            <span>{activeWindowSamples.length} samples</span>
-            <span>{activeWindowSessions.length} sessions</span>
-            <span>{visualContextInsights.length} visual insights</span>
-          </div>
-        </section>
+      <section className="quick-stats">
+        <button type="button" onClick={() => onOpenScreen("ledger")}>
+          <span>Observed today</span>
+          <strong>{observedMinutesToday > 0 ? observedHours : "--"}</strong>
+        </button>
+        <button type="button" onClick={() => onOpenScreen("weekly")}>
+          <span>Reliable capacity</span>
+          <strong>{snapshot.allocated_pct > 0 ? pct(snapshot.reliable_new_work_capacity_pct) : "--"}</strong>
+        </button>
+      </section>
 
-        <section className="compact-card compact-narrative">
-          <div className="compact-title">
-            <FileText size={15} />
-            <span>Narrative</span>
-          </div>
-          <p>{generatedNarrative ? displayNarrative.headline : "No generated narrative yet. Local signal will shape this summary as capture continues."}</p>
-        </section>
-      </div>
+      <section className={reviewQueue.length > 0 ? "quick-review has-items" : "quick-review"}>
+        <div>
+          <span>Today’s review</span>
+          <strong>{reviewQueue.length > 0 ? `${reviewQueue.length} item${reviewQueue.length === 1 ? "" : "s"} need attention` : "You’re all caught up"}</strong>
+          <small>{nextReview ? nextReview.project_name : "New inferred work will appear here."}</small>
+        </div>
+        {nextReview && (
+          <button type="button" onClick={() => onConfirm(nextReview.work_block_id)}>
+            <Check size={16} />
+            Confirm
+          </button>
+        )}
+      </section>
 
-      <div className="compact-stream">
-        <section className="compact-card compact-sessions">
-          <div className="compact-title">
-            <Activity size={15} />
-            <span>Sessions</span>
-          </div>
-          {activeWindowSessions.length === 0 ? (
-            <p>No grouped sessions yet.</p>
-          ) : (
-            activeWindowSessions.slice(0, 3).map((session) => (
-              <div className="compact-row" key={session.session_id}>
-                <strong>{session.app_name}</strong>
-                <span>{session.duration_minutes} min</span>
-                <small>{session.window_title ?? "Window title unavailable"}</small>
-              </div>
-            ))
-          )}
-        </section>
+      {reviewQueue.length > 0 && (
+        <button className="quick-primary" type="button" onClick={() => onOpenScreen("daily")}>
+          Review {reviewQueue.length} item{reviewQueue.length === 1 ? "" : "s"}
+          <ChevronRight size={17} />
+        </button>
+      )}
 
-        <section className="compact-card compact-audit">
-          <div className="compact-title">
-            <AlignLeft size={15} />
-            <span>Audit stream</span>
-          </div>
-          {recentAuditEvents.length === 0 ? (
-            <p>No audit events yet.</p>
-          ) : (
-            recentAuditEvents.map((event) => (
-              <div className="compact-row" key={event.event_id}>
-                <strong>{event.title}</strong>
-                <span>{formatAuditTime(event.timestamp)}</span>
-                <small>{event.summary}</small>
-              </div>
-            ))
-          )}
-        </section>
-      </div>
+      <button className="quick-pause" type="button" onClick={() => onPauseChange(!paused)}>
+        {paused ? <Play size={16} /> : <Pause size={16} />}
+        {paused ? "Resume tracking" : "Pause tracking"}
+      </button>
+
+      <footer className="quick-footer">
+        <button type="button" onClick={() => onOpenScreen("weekly")}>Open weekly summary</button>
+        <button type="button" onClick={() => onOpenScreen("setup")}>Settings</button>
+      </footer>
     </section>
   );
 }
@@ -1926,8 +1956,10 @@ export function App() {
   const nextWeekId = useMemo(() => getCurrentIsoWeekId(addDays(new Date(), 7)), []);
   const nextWeekRangeLabel = useMemo(() => getBusinessWeekRangeLabel(addDays(new Date(), 7)), []);
   const initialBlocks = removeSeededWorkBlocks(persistedSnapshot?.blocks ?? []);
-  const [active, setActive] = useState<Screen>("weekly");
-  const [paused, setPaused] = useState(() => persistedSnapshot?.paused ?? false);
+  const [active, setActive] = useState<Screen>(() =>
+    initialBlocks.some((block) => !block.user_verified) ? "daily" : "weekly"
+  );
+  const [paused, setPaused] = useState(() => persistedSnapshot?.paused ?? true);
   const [blocks, setBlocks] = useState<WorkBlock[]>(() => initialBlocks);
   const [calendarEvents, setCalendarEvents] = useState<OutlookCalendarEvent[]>(
     () => persistedSnapshot?.calendarEvents ?? []
@@ -2000,16 +2032,11 @@ export function App() {
     : `${activeWindowSessions.length} sessions, ${calendarEvents.length} Outlook events`;
   const toolbarActions: AppToolbarAction[] = (() => {
     if (active === "setup") {
-      return [
-        {
-          label: visualContextEnabled ? "Visual On" : "Visual Off",
-          icon: visualContextEnabled ? Eye : Moon,
-          onClick: () => setVisualContextEnabled(!visualContextEnabled)
-        }
-      ];
+      return [];
     }
 
     if (active === "ledger") {
+      if (unclassifiedSessionCount === 0) return [];
       return [
         {
           label: classificationStatus === "classifying" ? "Classifying" : "Classify",
@@ -2022,6 +2049,7 @@ export function App() {
     }
 
     if (active === "daily") {
+      if (reviewQueue.length === 0) return [];
       return [
         {
           label: reviewCopilotStatus === "generating" ? "Thinking" : "Review Copilot",
@@ -2040,6 +2068,7 @@ export function App() {
     }
 
     if (active === "weekly") {
+      if (blocks.length === 0) return [];
       return [
         {
           label: forecastStatus === "generating" ? "Forecasting" : "Forecast",
@@ -2052,6 +2081,7 @@ export function App() {
     }
 
     if (active === "narrative") {
+      if (!hasNarrativeEvidence) return [];
       return [
         {
           label: narrativeGenerationStatus === "generating" ? "Generating" : generatedNarrative ? "Regenerate" : "Generate",
@@ -2079,8 +2109,9 @@ export function App() {
   useEffect(() => {
     function navigateFromNative(event: Event) {
       const screen = (event as CustomEvent<Screen>).detail;
-      if (screens.some((candidate) => candidate.id === screen)) {
+      if (screen in screenLabels) {
         setActive(screen);
+        setWindowMode("large");
       }
     }
 
@@ -2088,12 +2119,24 @@ export function App() {
       setPaused((current) => !current);
     }
 
+    function openQuickViewFromNative() {
+      setWindowMode("compact");
+    }
+
+    function openLargeViewFromNative() {
+      setWindowMode("large");
+    }
+
     window.addEventListener("clear-capacity:navigate", navigateFromNative);
     window.addEventListener("clear-capacity:toggle-pause", togglePauseFromNative);
+    window.addEventListener("clear-capacity:quick-view", openQuickViewFromNative);
+    window.addEventListener("clear-capacity:large-view", openLargeViewFromNative);
 
     return () => {
       window.removeEventListener("clear-capacity:navigate", navigateFromNative);
       window.removeEventListener("clear-capacity:toggle-pause", togglePauseFromNative);
+      window.removeEventListener("clear-capacity:quick-view", openQuickViewFromNative);
+      window.removeEventListener("clear-capacity:large-view", openLargeViewFromNative);
     };
   }, []);
 
@@ -3065,7 +3108,7 @@ export function App() {
     setVisualContextError(null);
     setImportError(null);
     setCaptureError(null);
-    setPaused(false);
+    setPaused(true);
   }
 
   function importOutlookIcs(file: File) {
@@ -3138,6 +3181,11 @@ export function App() {
     reader.readAsText(file);
   }
 
+  function openScreenFromQuickView(screen: Screen) {
+    setActive(screen);
+    setWindowMode("large");
+  }
+
   return (
     <AppShell
       active={active}
@@ -3146,6 +3194,7 @@ export function App() {
       toolbarStatus={toolbarStatus}
       snapshot={snapshot}
       hasWorkBlocks={blocks.length > 0}
+      reviewCount={reviewQueue.length}
       paused={paused}
       setPaused={setPaused}
       sidebarCollapsed={sidebarCollapsed}
@@ -3158,12 +3207,11 @@ export function App() {
           paused={paused}
           activeWindowSamples={activeWindowSamples}
           activeWindowSessions={activeWindowSessions}
-          visualContextInsights={visualContextInsights}
-          auditEvents={auditEvents}
-          generatedNarrative={generatedNarrative}
-          narrative={narrative}
-          weekRangeLabel={currentWeekRangeLabel}
+          blocks={blocks}
           snapshot={snapshot}
+          onPauseChange={setPaused}
+          onOpenScreen={openScreenFromQuickView}
+          onConfirm={confirmBlock}
         />
       ) : (
         <>

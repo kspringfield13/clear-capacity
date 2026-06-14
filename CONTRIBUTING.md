@@ -15,7 +15,7 @@ For native macOS functionality:
 npm run desktop:dev
 ```
 
-Optional AI features require `OPENAI_API_KEY` in the desktop process environment. Never commit credentials, local work data, calendar exports, screenshots, or generated build artifacts.
+Optional AI features require `OPENAI_API_KEY`. Copy `.env.example` to `.env`, add the key locally, and restart the desktop app. Never commit credentials, local work data, calendar exports, screenshots, or generated build artifacts.
 
 ## Before Opening a Pull Request
 

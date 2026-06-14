@@ -18,7 +18,7 @@ This data is stored in the Tauri webview's local storage. It is not currently en
 
 ## OpenAI API Data
 
-AI features require `OPENAI_API_KEY` in the desktop process environment. When an AI feature runs, ClearCapacity sends the prompt context required by that feature to the OpenAI Responses API. Classification, review suggestions, and forecasts are user-triggered; weekly narrative generation can run automatically after workload evidence exists.
+AI features require `OPENAI_API_KEY`, normally configured in the repository's ignored `.env` file for local development. ClearCapacity loads this file into the native desktop process at startup; the key is not exposed through the Vite browser bundle. When an AI feature runs, ClearCapacity sends the prompt context required by that feature to the OpenAI Responses API. Classification, review suggestions, and forecasts are user-triggered; weekly narrative generation can run automatically after workload evidence exists.
 
 Depending on the feature, prompt context can include:
 

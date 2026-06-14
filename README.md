@@ -59,6 +59,18 @@ Install JavaScript dependencies:
 npm install
 ```
 
+Create your local environment file:
+
+```bash
+cp .env.example .env
+```
+
+Add an OpenAI API key to `.env` if you want to use the optional AI features:
+
+```dotenv
+OPENAI_API_KEY=your-api-key
+```
+
 Run the web interface:
 
 ```bash
@@ -75,16 +87,21 @@ Install Rust if needed:
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
-Optional AI features read credentials from the desktop process environment:
+Optional AI features read credentials from the repository's `.env` file when the desktop app starts:
+
+```dotenv
+OPENAI_API_KEY=your-api-key
+OPENAI_MODEL=
+OPENAI_VISION_MODEL=
+```
+
+Then run:
 
 ```bash
-export OPENAI_API_KEY="your-api-key"
-export OPENAI_MODEL="your-supported-model"
-export OPENAI_VISION_MODEL="your-supported-vision-model"
 npm run desktop:dev
 ```
 
-`OPENAI_MODEL` and `OPENAI_VISION_MODEL` are optional overrides. Never commit API keys or `.env` files.
+`OPENAI_MODEL` and `OPENAI_VISION_MODEL` are optional overrides. Exported shell variables still work and take precedence over `.env`. The real `.env` file is ignored by Git; only `.env.example` should be committed.
 
 The app launches in the macOS menu bar with the main window hidden. macOS may request Accessibility or Automation permission for foreground-window metadata and Screen Recording permission if visual context is explicitly enabled.
 

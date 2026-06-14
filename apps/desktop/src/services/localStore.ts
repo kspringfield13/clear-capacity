@@ -92,7 +92,7 @@ export function readPersistedState(): PersistedAppState | null {
           : null,
       lastNarrativeAutoRunDate:
         typeof parsed.lastNarrativeAutoRunDate === "string" ? parsed.lastNarrativeAutoRunDate : null,
-      paused: typeof parsed.paused === "boolean" ? parsed.paused : false
+      paused: typeof parsed.paused === "boolean" ? parsed.paused : true
     };
   } catch {
     return null;

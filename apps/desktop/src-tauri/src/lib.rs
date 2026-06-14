@@ -14,7 +14,7 @@ use std::{
 use tauri::{
     image::Image,
     menu::{Menu, MenuItem, PredefinedMenuItem},
-    tray::TrayIconBuilder,
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, State, WebviewUrl,
     WebviewWindowBuilder, WindowEvent, Wry,
 };
@@ -199,18 +199,17 @@ fn show_dashboard(app: &AppHandle) {
         .build();
 }
 
-#[tauri::command]
-fn set_clear_capacity_window_mode(app: AppHandle, mode: String) {
+fn apply_window_mode(app: &AppHandle, mode: &str) {
     if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
-        match mode.as_str() {
+        match mode {
             "compact" => {
-                let _ = window.set_min_size(Some(PhysicalSize::new(760, 320)));
-                let _ = window.set_size(PhysicalSize::new(860, 380));
+                let _ = window.set_min_size(Some(PhysicalSize::new(340, 440)));
+                let _ = window.set_size(PhysicalSize::new(380, 480));
                 if let Ok(Some(monitor)) = window.current_monitor() {
                     let monitor_position = monitor.position();
                     let monitor_size = monitor.size();
-                    let x = monitor_position.x + monitor_size.width as i32 - 888;
-                    let y = monitor_position.y + 72;
+                    let x = monitor_position.x + monitor_size.width as i32 - 396;
+                    let y = monitor_position.y + 44;
                     let _ = window.set_position(PhysicalPosition::new(x, y));
                 }
             }
@@ -221,6 +220,31 @@ fn set_clear_capacity_window_mode(app: AppHandle, mode: String) {
             }
         }
     }
+}
+
+fn show_quick_view(app: &AppHandle) {
+    show_dashboard(app);
+    apply_window_mode(app, "compact");
+    if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
+        let _ = window.eval(
+            "window.dispatchEvent(new CustomEvent('clear-capacity:quick-view'))",
+        );
+    }
+}
+
+fn show_large_dashboard(app: &AppHandle) {
+    show_dashboard(app);
+    apply_window_mode(app, "large");
+    if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
+        let _ = window.eval(
+            "window.dispatchEvent(new CustomEvent('clear-capacity:large-view'))",
+        );
+    }
+}
+
+#[tauri::command]
+fn set_clear_capacity_window_mode(app: AppHandle, mode: String) {
+    apply_window_mode(&app, &mode);
 }
 
 fn now_ms() -> u64 {
@@ -378,13 +402,21 @@ fn set_activity_capture_paused(activity_state: State<'_, ActivityCaptureState>, 
     activity_state.paused.store(paused, Ordering::SeqCst);
 }
 
+fn openai_api_key() -> Result<String, String> {
+    env::var("OPENAI_API_KEY")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .ok_or_else(|| {
+            "OPENAI_API_KEY is not configured. Add it to the repository's .env file and restart ClearCapacity."
+                .to_string()
+        })
+}
+
 #[tauri::command]
 async fn generate_weekly_narrative_with_openai(
     request: NarrativeGenerationRequest,
 ) -> Result<NarrativeGenerationResponse, String> {
-    let api_key = env::var("OPENAI_API_KEY").map_err(|_| {
-        "OPENAI_API_KEY is not configured for this ClearCapacity process.".to_string()
-    })?;
+    let api_key = openai_api_key()?;
     let model = request
         .model
         .or_else(|| env::var("OPENAI_MODEL").ok())
@@ -459,9 +491,7 @@ async fn generate_weekly_narrative_with_openai(
 async fn classify_active_window_sessions_with_openai(
     request: WorkBlockClassificationRequest,
 ) -> Result<WorkBlockClassificationResponse, String> {
-    let api_key = env::var("OPENAI_API_KEY").map_err(|_| {
-        "OPENAI_API_KEY is not configured for this ClearCapacity process.".to_string()
-    })?;
+    let api_key = openai_api_key()?;
     let model = request
         .model
         .or_else(|| env::var("OPENAI_MODEL").ok())
@@ -597,9 +627,7 @@ async fn classify_active_window_sessions_with_openai(
 async fn generate_review_copilot_suggestions_with_openai(
     request: ReviewCopilotRequest,
 ) -> Result<ReviewCopilotResponse, String> {
-    let api_key = env::var("OPENAI_API_KEY").map_err(|_| {
-        "OPENAI_API_KEY is not configured for this ClearCapacity process.".to_string()
-    })?;
+    let api_key = openai_api_key()?;
     let model = request
         .model
         .or_else(|| env::var("OPENAI_MODEL").ok())
@@ -750,9 +778,7 @@ async fn generate_review_copilot_suggestions_with_openai(
 async fn generate_forecast_agent_with_openai(
     request: ForecastAgentRequest,
 ) -> Result<ForecastAgentResponse, String> {
-    let api_key = env::var("OPENAI_API_KEY").map_err(|_| {
-        "OPENAI_API_KEY is not configured for this ClearCapacity process.".to_string()
-    })?;
+    let api_key = openai_api_key()?;
     let model = request
         .model
         .or_else(|| env::var("OPENAI_MODEL").ok())
@@ -861,9 +887,7 @@ async fn generate_forecast_agent_with_openai(
 async fn capture_visual_context_with_openai(
     request: VisualContextRequest,
 ) -> Result<VisualContextResponse, String> {
-    let api_key = env::var("OPENAI_API_KEY").map_err(|_| {
-        "OPENAI_API_KEY is not configured for this ClearCapacity process.".to_string()
-    })?;
+    let api_key = openai_api_key()?;
     let model = request
         .model
         .or_else(|| env::var("OPENAI_VISION_MODEL").ok())
@@ -1071,9 +1095,19 @@ fn configure_tray(app: &tauri::App) -> tauri::Result<()> {
         .icon(icon)
         .icon_as_template(true)
         .menu(&menu)
-        .show_menu_on_left_click(true)
+        .show_menu_on_left_click(false)
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } = event
+            {
+                show_quick_view(tray.app_handle());
+            }
+        })
         .on_menu_event(move |app, event| match event.id.as_ref() {
-            "open-dashboard" => show_dashboard(app),
+            "open-dashboard" => show_large_dashboard(app),
             "live-ledger" => navigate(app, "ledger"),
             "daily-review" => navigate(app, "daily"),
             "weekly-capacity" => navigate(app, "weekly"),
@@ -1118,7 +1152,11 @@ fn configure_tray(app: &tauri::App) -> tauri::Result<()> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let activity_capture_paused = Arc::new(AtomicBool::new(false));
+    // Load local development configuration without overriding exported variables.
+    let _ = dotenvy::dotenv();
+
+    // Default to no collection until the frontend restores an explicit user choice.
+    let activity_capture_paused = Arc::new(AtomicBool::new(true));
 
     tauri::Builder::default()
         .manage(ActivityCaptureState {
