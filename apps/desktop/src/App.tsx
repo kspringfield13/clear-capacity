@@ -55,6 +55,7 @@ import type {
 } from "../../../packages/domain/src/models";
 import { clearPersistedState, readPersistedState, writePersistedState } from "./services/localStore";
 import type { PersistedForecastRecord, PersistedNarrativeRecord } from "./services/localStore";
+import { createDemoState } from "./services/demoData";
 import { buildForecastAgentPrompt, FORECAST_AGENT_PROMPT_VERSION } from "./services/forecastAgentPrompt";
 import { buildWeeklyNarrativePrompt, NARRATIVE_PROMPT_VERSION } from "./services/narrativePrompt";
 import { buildReviewCopilotPrompt, REVIEW_COPILOT_PROMPT_VERSION } from "./services/reviewCopilotPrompt";
@@ -390,6 +391,7 @@ function AppShell({
   setSidebarCollapsed,
   windowMode,
   setWindowMode,
+  demoMode,
   children
 }: {
   active: Screen;
@@ -405,6 +407,7 @@ function AppShell({
   setSidebarCollapsed: (value: boolean) => void;
   windowMode: WindowMode;
   setWindowMode: (value: WindowMode) => void;
+  demoMode: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -419,6 +422,7 @@ function AppShell({
         setSidebarCollapsed={setSidebarCollapsed}
         windowMode={windowMode}
         setWindowMode={setWindowMode}
+        demoMode={demoMode}
       />
       {windowMode === "large" && (
       <aside className="sidebar" aria-label="Primary navigation">
@@ -484,7 +488,8 @@ function AppToolbar({
   sidebarCollapsed,
   setSidebarCollapsed,
   windowMode,
-  setWindowMode
+  setWindowMode,
+  demoMode
 }: {
   active: Screen;
   actions: AppToolbarAction[];
@@ -495,6 +500,7 @@ function AppToolbar({
   setSidebarCollapsed: (value: boolean) => void;
   windowMode: WindowMode;
   setWindowMode: (value: WindowMode) => void;
+  demoMode: boolean;
 }) {
   function startToolbarDrag(event: React.PointerEvent<HTMLElement>) {
     if (event.button !== 0) {
@@ -523,7 +529,10 @@ function AppToolbar({
           </button>
         )}
         <div className="toolbar-title">
-          <strong>{windowMode === "compact" ? "ClearCapacity" : screenLabels[active]}</strong>
+          <div>
+            <strong>{windowMode === "compact" ? "ClearCapacity" : screenLabels[active]}</strong>
+            {demoMode && <b className="demo-badge">Demo</b>}
+          </div>
           <span>{paused ? "Private mode on" : status}</span>
         </div>
       </div>
@@ -852,7 +861,7 @@ function LedgerScreen({
   ).length;
   const current = blocks[7] ?? blocks[0];
   return (
-    <section className="screen">
+    <section className="screen ledger-screen">
       <div className="screen-header compact">
         <div>
           <p className="eyebrow">Live work ledger</p>
@@ -1046,7 +1055,7 @@ function DailyReviewScreen({
 
   if (blocks.length === 0) {
     return (
-      <section className="screen">
+      <section className="screen review-screen">
         <div className="screen-header compact">
           <div>
             <p className="eyebrow">Today</p>
@@ -1063,7 +1072,7 @@ function DailyReviewScreen({
   }
 
   return (
-    <section className="screen">
+    <section className="screen review-screen">
       <div className="screen-header compact">
         <div>
           <p className="eyebrow">Daily review</p>
@@ -1350,7 +1359,7 @@ function WeeklyCapacityScreen({
 }) {
   if (!hasWorkBlocks) {
     return (
-      <section className="screen">
+      <section className="screen capacity-screen">
         <div className="screen-header">
           <div>
             <p className="eyebrow">Weekly capacity view</p>
@@ -1371,22 +1380,13 @@ function WeeklyCapacityScreen({
   }
 
   return (
-    <section className="screen">
+    <section className="screen capacity-screen">
       <div className="screen-header">
         <div>
           <p className="eyebrow">Weekly capacity view</p>
           <h1>{weekRangeLabel}: {pct(snapshot.reliable_new_work_capacity_pct)} reliable capacity for new planned work.</h1>
         </div>
         <div className="header-actions">
-          <button
-            className="secondary-action"
-            type="button"
-            disabled={forecastStatus === "generating"}
-            onClick={onGenerateForecast}
-          >
-            <RefreshCw size={17} />
-            <span>{forecastStatus === "generating" ? "Forecasting" : "Forecast next week"}</span>
-          </button>
           <div className="summary-score">
             <span>Summary confidence</span>
             <strong>{Math.round(snapshot.summary_confidence * 100)}%</strong>
@@ -1410,7 +1410,7 @@ function WeeklyCapacityScreen({
         onGenerate={onGenerateForecast}
       />
 
-      <section className="capacity-section">
+      <section className="capacity-section capacity-model">
         <div className="section-title">
           <h2>100% weekly capacity model</h2>
           <span>standard 40-hour baseline</span>
@@ -1427,7 +1427,7 @@ function WeeklyCapacityScreen({
         </div>
       </section>
 
-      <div className="two-column">
+      <div className="two-column capacity-risk-grid">
         <section className="capacity-section">
           <div className="section-title">
             <h2>Planned vs reactive</h2>
@@ -1608,7 +1608,7 @@ function NarrativeScreen({
 
   if (!hasNarrativeEvidence) {
     return (
-      <section className="screen">
+      <section className="screen narrative-screen">
         <div className="screen-header">
           <div>
             <p className="eyebrow">Weekly narrative</p>
@@ -1626,7 +1626,7 @@ function NarrativeScreen({
 
   if (!generatedNarrative) {
     return (
-      <section className="screen">
+      <section className="screen narrative-screen">
         <div className="screen-header">
           <div>
             <p className="eyebrow">Weekly narrative</p>
@@ -1653,7 +1653,7 @@ function NarrativeScreen({
   }
 
   return (
-    <section className="screen">
+    <section className="screen narrative-screen">
       <div className="screen-header">
         <div>
           <p className="eyebrow">Weekly narrative</p>
@@ -1766,7 +1766,7 @@ function AuditLogScreen({ auditEvents }: { auditEvents: AuditEvent[] }) {
     .sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime());
 
   return (
-    <section className="screen">
+    <section className="screen audit-screen">
       <div className="screen-header">
         <div>
           <p className="eyebrow">Audit log</p>
@@ -1950,15 +1950,19 @@ function CompactWidget({
 }
 
 export function App() {
-  const [persistedSnapshot] = useState(() => readPersistedState());
+  const [isDemoMode] = useState(() => new URLSearchParams(window.location.search).get("demo") === "1");
+  const [persistedSnapshot] = useState(() => isDemoMode ? createDemoState() : readPersistedState());
   const currentWeekId = useMemo(() => getCurrentIsoWeekId(), []);
   const currentWeekRangeLabel = useMemo(() => getBusinessWeekRangeLabel(), []);
   const nextWeekId = useMemo(() => getCurrentIsoWeekId(addDays(new Date(), 7)), []);
   const nextWeekRangeLabel = useMemo(() => getBusinessWeekRangeLabel(addDays(new Date(), 7)), []);
   const initialBlocks = removeSeededWorkBlocks(persistedSnapshot?.blocks ?? []);
-  const [active, setActive] = useState<Screen>(() =>
-    initialBlocks.some((block) => !block.user_verified) ? "daily" : "weekly"
-  );
+  const [active, setActive] = useState<Screen>(() => {
+    const requested = new URLSearchParams(window.location.search).get("screen") as Screen | null;
+    return isDemoMode && requested && requested in screenLabels
+      ? requested
+      : initialBlocks.some((block) => !block.user_verified) ? "daily" : "weekly";
+  });
   const [paused, setPaused] = useState(() => persistedSnapshot?.paused ?? true);
   const [blocks, setBlocks] = useState<WorkBlock[]>(() => initialBlocks);
   const [calendarEvents, setCalendarEvents] = useState<OutlookCalendarEvent[]>(
@@ -2006,7 +2010,9 @@ export function App() {
   const [importError, setImportError] = useState<string | null>(null);
   const [captureError, setCaptureError] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [windowMode, setWindowMode] = useState<WindowMode>("large");
+  const [windowMode, setWindowMode] = useState<WindowMode>(() =>
+    isDemoMode && new URLSearchParams(window.location.search).get("mode") === "compact" ? "compact" : "large"
+  );
 
   const snapshot = useMemo(() => computeWeeklyCapacitySnapshot(currentWeekId, blocks), [blocks, currentWeekId]);
   const narrative = useMemo(() => generateWeeklyNarrative(snapshot), [snapshot]);
@@ -2022,89 +2028,11 @@ export function App() {
   );
   const hasNarrativeEvidence = blocks.length > 0 || activeWindowSessions.length > 0 || calendarEvents.length > 0;
   const todayKey = useMemo(() => getLocalDateKey(), []);
-  const classifiedSessionIds = useMemo(() => new Set(blocks.flatMap((block) => block.derived_from)), [blocks]);
-  const unclassifiedSessionCount = activeWindowSessions.filter(
-    (session) => !classifiedSessionIds.has(session.session_id) && session.sample_count >= 2
-  ).length;
   const reviewQueue = blocks.filter((block) => !block.user_verified);
   const toolbarStatus = blocks.length > 0
     ? `${pct(snapshot.reliable_new_work_capacity_pct)} reliable new-work capacity`
     : `${activeWindowSessions.length} sessions, ${calendarEvents.length} Outlook events`;
-  const toolbarActions: AppToolbarAction[] = (() => {
-    if (active === "setup") {
-      return [];
-    }
-
-    if (active === "ledger") {
-      if (unclassifiedSessionCount === 0) return [];
-      return [
-        {
-          label: classificationStatus === "classifying" ? "Classifying" : "Classify",
-          icon: RefreshCw,
-          onClick: () => void classifyActiveWindowSessions(),
-          disabled: classificationStatus === "classifying" || unclassifiedSessionCount === 0,
-          tone: "primary"
-        }
-      ];
-    }
-
-    if (active === "daily") {
-      if (reviewQueue.length === 0) return [];
-      return [
-        {
-          label: reviewCopilotStatus === "generating" ? "Thinking" : "Review Copilot",
-          icon: RefreshCw,
-          onClick: () => void generateReviewCopilotSuggestions(),
-          disabled: reviewCopilotStatus === "generating" || reviewQueue.length === 0,
-          tone: "primary"
-        },
-        {
-          label: "Confirm Visible",
-          icon: Check,
-          onClick: () => reviewQueue.forEach((block) => confirmBlock(block.work_block_id)),
-          disabled: reviewQueue.length === 0
-        }
-      ];
-    }
-
-    if (active === "weekly") {
-      if (blocks.length === 0) return [];
-      return [
-        {
-          label: forecastStatus === "generating" ? "Forecasting" : "Forecast",
-          icon: RefreshCw,
-          onClick: () => void generateForecastAgent(),
-          disabled: forecastStatus === "generating" || blocks.length === 0,
-          tone: "primary"
-        }
-      ];
-    }
-
-    if (active === "narrative") {
-      if (!hasNarrativeEvidence) return [];
-      return [
-        {
-          label: narrativeGenerationStatus === "generating" ? "Generating" : generatedNarrative ? "Regenerate" : "Generate",
-          icon: RefreshCw,
-          onClick: () => void regenerateNarrative("manual"),
-          disabled: narrativeGenerationStatus === "generating" || !hasNarrativeEvidence,
-          tone: "primary"
-        },
-        {
-          label: "Copy Summary",
-          icon: ClipboardCopy,
-          onClick: () => {
-            if (managerText) {
-              void navigator.clipboard?.writeText(managerText);
-            }
-          },
-          disabled: !managerText
-        }
-      ];
-    }
-
-    return [];
-  })();
+  const toolbarActions: AppToolbarAction[] = [];
 
   useEffect(() => {
     function navigateFromNative(event: Event) {
@@ -2163,6 +2091,7 @@ export function App() {
   }, [managerText]);
 
   useEffect(() => {
+    if (isDemoMode) return;
     writePersistedState({
       version: 1,
       blocks,
@@ -2192,13 +2121,15 @@ export function App() {
     managerSummaryText,
     generatedNarrative,
     lastNarrativeAutoRunDate,
-    paused
+    paused,
+    isDemoMode
   ]);
 
   useEffect(() => {
+    if (isDemoMode) return;
     void invoke("set_pause_menu_label", { paused }).catch(() => undefined);
     void invoke("set_activity_capture_paused", { paused }).catch(() => undefined);
-  }, [paused]);
+  }, [isDemoMode, paused]);
 
   useEffect(() => {
     if (windowMode === "compact") {
@@ -2208,6 +2139,7 @@ export function App() {
   }, [windowMode]);
 
   useEffect(() => {
+    if (isDemoMode) return;
     setAuditEvents((current) => [
       ...current,
       createAuditEvent({
@@ -2225,9 +2157,10 @@ export function App() {
         }
       })
     ].slice(-1000));
-  }, [paused]);
+  }, [isDemoMode, paused]);
 
   useEffect(() => {
+    if (isDemoMode) return;
     let unlisten: (() => void) | null = null;
 
     void listen<NativeActiveWindowPayload>("clear-capacity:active-window-sample", (event) => {
@@ -2285,9 +2218,10 @@ export function App() {
     return () => {
       unlisten?.();
     };
-  }, []);
+  }, [isDemoMode]);
 
   useEffect(() => {
+    if (isDemoMode) return;
     if (activeWindowSessions.length === 0) {
       return;
     }
@@ -2319,7 +2253,7 @@ export function App() {
         })
       ].slice(-1000);
     });
-  }, [activeWindowSessions]);
+  }, [activeWindowSessions, isDemoMode]);
 
   useEffect(() => {
     if (!hasNarrativeEvidence || lastNarrativeAutoRunDate === todayKey || narrativeGenerationStatus !== "idle") {
@@ -2403,6 +2337,7 @@ export function App() {
   }
 
   async function regenerateNarrative(trigger: "auto" | "manual") {
+    if (isDemoMode) return;
     if (!hasNarrativeEvidence || narrativeGenerationStatus === "generating") {
       return;
     }
@@ -2491,6 +2426,7 @@ export function App() {
   }
 
   async function captureVisualContext(session: ActivitySession, captureCountToday: number) {
+    if (isDemoMode) return;
     const startedAt = new Date().toISOString();
     const prompt = buildVisualContextPrompt({
       session,
@@ -2631,6 +2567,7 @@ export function App() {
   }
 
   async function classifyActiveWindowSessions() {
+    if (isDemoMode) return;
     if (classificationStatus === "classifying") {
       return;
     }
@@ -2727,6 +2664,7 @@ export function App() {
   }
 
   async function generateReviewCopilotSuggestions() {
+    if (isDemoMode) return;
     if (reviewCopilotStatus === "generating") {
       return;
     }
@@ -2817,6 +2755,7 @@ export function App() {
   }
 
   async function generateForecastAgent() {
+    if (isDemoMode) return;
     if (forecastStatus === "generating") {
       return;
     }
@@ -3082,6 +3021,10 @@ export function App() {
   }
 
   function resetLocalData() {
+    if (isDemoMode) {
+      window.location.reload();
+      return;
+    }
     clearPersistedState();
     setBlocks([]);
     setCalendarEvents([]);
@@ -3201,6 +3144,7 @@ export function App() {
       setSidebarCollapsed={setSidebarCollapsed}
       windowMode={windowMode}
       setWindowMode={setWindowMode}
+      demoMode={isDemoMode}
     >
       {windowMode === "compact" ? (
         <CompactWidget
