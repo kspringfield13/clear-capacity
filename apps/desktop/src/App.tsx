@@ -28,6 +28,7 @@ import {
   Settings,
   ShieldCheck,
   SplitSquareHorizontal,
+  Sun,
   Tag,
   TimerReset,
   Upload,
@@ -53,8 +54,15 @@ import type {
   WorkCategory,
   WorkMode
 } from "../../../packages/domain/src/models";
-import { clearPersistedState, readPersistedState, writePersistedState } from "./services/localStore";
-import type { PersistedForecastRecord, PersistedNarrativeRecord } from "./services/localStore";
+import {
+  clearPersistedState,
+  readPersistedState,
+  readThemePreference,
+  writePersistedState,
+  writeThemePreference
+} from "./services/localStore";
+import type { AppTheme, PersistedForecastRecord, PersistedNarrativeRecord } from "./services/localStore";
+import { createDemoState } from "./services/demoData";
 import { buildForecastAgentPrompt, FORECAST_AGENT_PROMPT_VERSION } from "./services/forecastAgentPrompt";
 import { buildWeeklyNarrativePrompt, NARRATIVE_PROMPT_VERSION } from "./services/narrativePrompt";
 import { buildReviewCopilotPrompt, REVIEW_COPILOT_PROMPT_VERSION } from "./services/reviewCopilotPrompt";
@@ -171,11 +179,11 @@ const primaryNavigation: Array<{
 
 const screenLabels: Record<Screen, string> = {
   setup: "Settings",
-  ledger: "Activity ledger",
+  ledger: "Activity Ledger",
   daily: "Today",
-  weekly: "Weekly capacity",
-  narrative: "Weekly summary",
-  audit: "Audit history"
+  weekly: "Weekly Capacity",
+  narrative: "Weekly Summary",
+  audit: "Audit History"
 };
 
 function primarySectionForScreen(screen: Screen): PrimarySection | null {
@@ -390,6 +398,9 @@ function AppShell({
   setSidebarCollapsed,
   windowMode,
   setWindowMode,
+  theme,
+  setTheme,
+  demoMode,
   children
 }: {
   active: Screen;
@@ -405,6 +416,9 @@ function AppShell({
   setSidebarCollapsed: (value: boolean) => void;
   windowMode: WindowMode;
   setWindowMode: (value: WindowMode) => void;
+  theme: AppTheme;
+  setTheme: (value: AppTheme) => void;
+  demoMode: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -419,6 +433,9 @@ function AppShell({
         setSidebarCollapsed={setSidebarCollapsed}
         windowMode={windowMode}
         setWindowMode={setWindowMode}
+        theme={theme}
+        setTheme={setTheme}
+        demoMode={demoMode}
       />
       {windowMode === "large" && (
       <aside className="sidebar" aria-label="Primary navigation">
@@ -426,7 +443,7 @@ function AppShell({
           <div className="brand-mark">cc</div>
           <div>
             <strong>ClearCapacity</strong>
-            <span>Explainable analyst capacity</span>
+            <span>Explainable Workload Intelligence</span>
           </div>
         </div>
         <nav className="nav-list">
@@ -451,13 +468,13 @@ function AppShell({
           })}
         </nav>
         <div className="side-metric">
-          <span>Reliable new-work capacity</span>
+          <span>Reliable New-Work Capacity</span>
           <strong>{hasWorkBlocks ? pct(snapshot.reliable_new_work_capacity_pct) : "--"}</strong>
-          <small>{hasWorkBlocks ? "of next week" : "needs local signal"}</small>
+          <small>{hasWorkBlocks ? "Forecast For Next Week" : "Needs Local Signal"}</small>
         </div>
         <button className={paused ? "pause-button is-paused" : "pause-button"} type="button" onClick={() => setPaused(!paused)}>
           {paused ? <Moon size={18} /> : <Pause size={18} />}
-          <span>{paused ? "Private mode on" : "Pause tracking"}</span>
+          <span>{paused ? "Resume Tracking" : "Pause Tracking"}</span>
         </button>
         <button className={active === "setup" ? "settings-button is-active" : "settings-button"} type="button" onClick={() => setActive("setup")}>
           <Settings size={17} />
@@ -484,7 +501,10 @@ function AppToolbar({
   sidebarCollapsed,
   setSidebarCollapsed,
   windowMode,
-  setWindowMode
+  setWindowMode,
+  theme,
+  setTheme,
+  demoMode
 }: {
   active: Screen;
   actions: AppToolbarAction[];
@@ -495,6 +515,9 @@ function AppToolbar({
   setSidebarCollapsed: (value: boolean) => void;
   windowMode: WindowMode;
   setWindowMode: (value: WindowMode) => void;
+  theme: AppTheme;
+  setTheme: (value: AppTheme) => void;
+  demoMode: boolean;
 }) {
   function startToolbarDrag(event: React.PointerEvent<HTMLElement>) {
     if (event.button !== 0) {
@@ -517,20 +540,23 @@ function AppToolbar({
             className="chrome-button"
             type="button"
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            title={sidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
+            title={sidebarCollapsed ? "Show Sidebar" : "Hide Sidebar"}
           >
             <PanelLeft size={15} />
           </button>
         )}
         <div className="toolbar-title">
-          <strong>{windowMode === "compact" ? "ClearCapacity" : screenLabels[active]}</strong>
+          <div>
+            <strong>{windowMode === "compact" ? "ClearCapacity" : screenLabels[active]}</strong>
+            {demoMode && <b className="demo-badge">Demo</b>}
+          </div>
           <span>{paused ? "Private mode on" : status}</span>
         </div>
       </div>
 
       <div className="toolbar-drag-region" />
 
-      <div className="toolbar-actions">
+      <div className="toolbar-actions" onPointerDown={(event) => event.stopPropagation()}>
         {windowMode === "large" &&
           actions.map((action) => {
             const Icon = action.icon;
@@ -552,15 +578,25 @@ function AppToolbar({
           className={paused ? "chrome-button is-paused" : "chrome-button"}
           type="button"
           onClick={() => setPaused(!paused)}
-          title={paused ? "Resume tracking" : "Pause tracking"}
+          title={paused ? "Resume Tracking" : "Pause Tracking"}
         >
           {paused ? <Play size={15} /> : <Pause size={15} />}
+        </button>
+        <button
+          aria-label={theme === "dark" ? "Use Light Theme" : "Use Dark Theme"}
+          aria-pressed={theme === "dark"}
+          className="chrome-button theme-toggle"
+          type="button"
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          title={theme === "dark" ? "Use Light Theme" : "Use Dark Theme"}
+        >
+          {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
         </button>
         <button
           className="chrome-button"
           type="button"
           onClick={() => setWindowMode(windowMode === "compact" ? "large" : "compact")}
-          title={windowMode === "compact" ? "Use large window" : "Use compact widget"}
+          title={windowMode === "compact" ? "Use Large Window" : "Use Compact Widget"}
         >
           {windowMode === "compact" ? <Maximize2 size={15} /> : <Minimize2 size={15} />}
         </button>
@@ -642,7 +678,7 @@ function SetupScreen({
         </div>
         <button className="primary-action" type="button" onClick={() => setPaused(!paused)}>
           {paused ? <Play size={18} /> : <Pause size={18} />}
-          <span>{paused ? "Resume tracking" : "Pause tracking"}</span>
+          <span>{paused ? "Resume Tracking" : "Pause Tracking"}</span>
         </button>
       </div>
 
@@ -681,7 +717,7 @@ function SetupScreen({
         </div>
         <button className="settings-control" type="button" onClick={() => setPaused(!paused)}>
           {paused ? <Play size={16} /> : <Pause size={16} />}
-          {paused ? "Resume" : "Pause"}
+          {paused ? "Resume Tracking" : "Pause Tracking"}
         </button>
       </section>
 
@@ -698,7 +734,7 @@ function SetupScreen({
         </div>
         <label className="settings-control">
           <Upload size={16} />
-          <span>Import</span>
+          <span>Import Calendar</span>
           <input
             accept=".ics,text/calendar"
             type="file"
@@ -722,7 +758,7 @@ function SetupScreen({
           <span>{visualCapturesToday}/{MAX_VISUAL_CONTEXT_CAPTURES_PER_DAY} captures today</span>
         </div>
         <button className={visualContextEnabled ? "settings-control is-on" : "settings-control"} type="button" onClick={() => setVisualContextEnabled(!visualContextEnabled)}>
-          {visualContextEnabled ? "Disable" : "Enable"}
+          {visualContextEnabled ? "Disable Visual Context" : "Enable Visual Context"}
         </button>
       </section>
 
@@ -800,15 +836,15 @@ function BlockCard({
       <div className="block-actions">
         <button type="button" onClick={() => onConfirm(block.work_block_id)}>
           <Check size={16} />
-          <span>Confirm</span>
+          <span>Confirm Block</span>
         </button>
         <button type="button">
           <SplitSquareHorizontal size={16} />
-          <span>Split</span>
+          <span>Split Block</span>
         </button>
         <button type="button" onClick={() => onExclude(block.work_block_id)}>
           <X size={16} />
-          <span>Exclude</span>
+          <span>Exclude Block</span>
         </button>
       </div>
     </article>
@@ -852,7 +888,7 @@ function LedgerScreen({
   ).length;
   const current = blocks[7] ?? blocks[0];
   return (
-    <section className="screen">
+    <section className="screen ledger-screen">
       <div className="screen-header compact">
         <div>
           <p className="eyebrow">Live work ledger</p>
@@ -955,7 +991,7 @@ function ActivityCapturePanel({
             onClick={onClassifySessions}
           >
             <RefreshCw size={16} />
-            <span>{classificationStatus === "classifying" ? "Classifying" : "Classify sessions"}</span>
+            <span>{classificationStatus === "classifying" ? "Classifying…" : "Classify Sessions"}</span>
           </button>
           <ConfidenceChip value={captureError ? 0.4 : paused ? 0.72 : 0.9} />
         </div>
@@ -1046,7 +1082,7 @@ function DailyReviewScreen({
 
   if (blocks.length === 0) {
     return (
-      <section className="screen">
+      <section className="screen review-screen">
         <div className="screen-header compact">
           <div>
             <p className="eyebrow">Today</p>
@@ -1063,7 +1099,7 @@ function DailyReviewScreen({
   }
 
   return (
-    <section className="screen">
+    <section className="screen review-screen">
       <div className="screen-header compact">
         <div>
           <p className="eyebrow">Daily review</p>
@@ -1078,7 +1114,7 @@ function DailyReviewScreen({
         {reviewQueue.length > 0 && (
           <button className="primary-action" type="button" onClick={() => reviewQueue.forEach((block) => onConfirm(block.work_block_id))}>
             <Check size={18} />
-            <span>Confirm all visible</span>
+            <span>Confirm Visible Blocks</span>
           </button>
         )}
       </div>
@@ -1206,7 +1242,7 @@ function ReviewCopilotPanel({
           title="Generate review suggestions"
         >
           <RefreshCw size={15} />
-          <span>{status === "generating" ? "Thinking" : "Suggest"}</span>
+          <span>{status === "generating" ? "Generating…" : "Generate Suggestions"}</span>
         </button>
       </div>
       <p>Suggests cleanup actions for unverified blocks. You approve every change.</p>
@@ -1226,8 +1262,8 @@ function ReviewCopilotPanel({
               <p>{suggestion.rationale}</p>
               <small>{suggestion.work_block_ids.length} block{suggestion.work_block_ids.length === 1 ? "" : "s"}</small>
               <div className="copilot-actions">
-                <button type="button" onClick={() => onApply(suggestion)}>Apply</button>
-                <button type="button" onClick={() => onDismiss(suggestion.suggestion_id)}>Dismiss</button>
+                <button type="button" onClick={() => onApply(suggestion)}>Apply Suggestion</button>
+                <button type="button" onClick={() => onDismiss(suggestion.suggestion_id)}>Dismiss Suggestion</button>
               </div>
             </li>
           ))}
@@ -1350,7 +1386,7 @@ function WeeklyCapacityScreen({
 }) {
   if (!hasWorkBlocks) {
     return (
-      <section className="screen">
+      <section className="screen capacity-screen">
         <div className="screen-header">
           <div>
             <p className="eyebrow">Weekly capacity view</p>
@@ -1371,22 +1407,13 @@ function WeeklyCapacityScreen({
   }
 
   return (
-    <section className="screen">
+    <section className="screen capacity-screen">
       <div className="screen-header">
         <div>
           <p className="eyebrow">Weekly capacity view</p>
           <h1>{weekRangeLabel}: {pct(snapshot.reliable_new_work_capacity_pct)} reliable capacity for new planned work.</h1>
         </div>
         <div className="header-actions">
-          <button
-            className="secondary-action"
-            type="button"
-            disabled={forecastStatus === "generating"}
-            onClick={onGenerateForecast}
-          >
-            <RefreshCw size={17} />
-            <span>{forecastStatus === "generating" ? "Forecasting" : "Forecast next week"}</span>
-          </button>
           <div className="summary-score">
             <span>Summary confidence</span>
             <strong>{Math.round(snapshot.summary_confidence * 100)}%</strong>
@@ -1410,7 +1437,7 @@ function WeeklyCapacityScreen({
         onGenerate={onGenerateForecast}
       />
 
-      <section className="capacity-section">
+      <section className="capacity-section capacity-model">
         <div className="section-title">
           <h2>100% weekly capacity model</h2>
           <span>standard 40-hour baseline</span>
@@ -1427,7 +1454,7 @@ function WeeklyCapacityScreen({
         </div>
       </section>
 
-      <div className="two-column">
+      <div className="two-column capacity-risk-grid">
         <section className="capacity-section">
           <div className="section-title">
             <h2>Planned vs reactive</h2>
@@ -1488,7 +1515,7 @@ function ForecastAgentPanel({
           onClick={onGenerate}
         >
           <RefreshCw size={16} />
-          <span>{status === "generating" ? "Forecasting" : forecast ? "Regenerate" : "Generate"}</span>
+          <span>{status === "generating" ? "Forecasting…" : forecast ? "Regenerate Forecast" : "Generate Forecast"}</span>
         </button>
       </div>
       {error && <p className="forecast-error">{error}</p>}
@@ -1608,7 +1635,7 @@ function NarrativeScreen({
 
   if (!hasNarrativeEvidence) {
     return (
-      <section className="screen">
+      <section className="screen narrative-screen">
         <div className="screen-header">
           <div>
             <p className="eyebrow">Weekly narrative</p>
@@ -1626,7 +1653,7 @@ function NarrativeScreen({
 
   if (!generatedNarrative) {
     return (
-      <section className="screen">
+      <section className="screen narrative-screen">
         <div className="screen-header">
           <div>
             <p className="eyebrow">Weekly narrative</p>
@@ -1639,7 +1666,7 @@ function NarrativeScreen({
             onClick={onRegenerate}
           >
             <RefreshCw size={18} />
-            <span>{generationStatus === "generating" ? "Generating" : "Generate now"}</span>
+            <span>{generationStatus === "generating" ? "Generating…" : "Generate Narrative"}</span>
           </button>
         </div>
         <EmptyState
@@ -1653,11 +1680,16 @@ function NarrativeScreen({
   }
 
   return (
-    <section className="screen">
-      <div className="screen-header">
-        <div>
+    <section className="screen narrative-screen">
+      <div className="screen-header narrative-hero">
+        <div className="narrative-hero-copy">
           <p className="eyebrow">Weekly narrative</p>
           <h1>{displayNarrative.headline}</h1>
+          <div className="narrative-status">
+            <span>Generated {formatAuditTime(generatedNarrative.generated_at)}</span>
+            <span>{generatedNarrative.model}</span>
+            <span>{generatedNarrative.trigger === "auto" ? "Daily automatic run" : "Manual regeneration"}</span>
+          </div>
         </div>
         <div className="narrative-actions">
           <button
@@ -1667,7 +1699,7 @@ function NarrativeScreen({
             onClick={onRegenerate}
           >
             <RefreshCw size={17} />
-            <span>{generationStatus === "generating" ? "Generating" : "Regenerate"}</span>
+            <span>{generationStatus === "generating" ? "Generating…" : "Regenerate Narrative"}</span>
           </button>
           <button
             className="primary-action"
@@ -1679,48 +1711,64 @@ function NarrativeScreen({
             }}
           >
             <ClipboardCopy size={18} />
-            <span>{copied ? "Copied" : "Copy summary"}</span>
+            <span>{copied ? "Summary Copied" : "Copy Summary"}</span>
           </button>
         </div>
-      </div>
-      <div className="narrative-status">
-        <span>Generated {formatAuditTime(generatedNarrative.generated_at)}</span>
-        <span>{generatedNarrative.model}</span>
-        <span>{generatedNarrative.trigger === "auto" ? "daily automatic run" : "manual regeneration"}</span>
       </div>
       {generationError && <p className="narrative-error">{generationError}</p>}
 
       <div className="narrative-layout">
-        <section className="narrative-panel">
-          <div className="section-title">
-            <h2>Analyst view</h2>
-            <span>for 1:1 prep</span>
+        <section className="narrative-panel analyst-narrative">
+          <div className="narrative-panel-header">
+            <div>
+              <span className="narrative-panel-kicker">Internal assessment</span>
+              <h2>Analyst view</h2>
+            </div>
+            <span className="narrative-panel-purpose">For 1:1 prep</span>
           </div>
-          <p>{displayNarrative.summary_text}</p>
+          <div className="narrative-copy">
+            <span>Weekly assessment</span>
+            <p>{displayNarrative.summary_text}</p>
+          </div>
+          <div className="driver-heading">
+            <div>
+              <span>Evidence considered</span>
+              <small>{displayNarrative.key_drivers.length} signals</small>
+            </div>
+          </div>
           <div className="driver-list">
-            {displayNarrative.key_drivers.map((driver) => (
+            {displayNarrative.key_drivers.map((driver, index) => (
               <div key={driver}>
-                <Tag size={16} />
+                <b>{String(index + 1).padStart(2, "0")}</b>
                 <span>{driver}</span>
               </div>
             ))}
           </div>
         </section>
         <section className="narrative-panel manager">
-          <div className="section-title">
-            <h2>Manager-ready version</h2>
-            <span>review before sharing</span>
+          <div className="narrative-panel-header">
+            <div>
+              <span className="narrative-panel-kicker">Shareable draft</span>
+              <h2>Manager-ready version</h2>
+            </div>
+            <span className="narrative-panel-purpose">Review before sharing</span>
           </div>
-          <p>{displayNarrative.manager_ready_summary}</p>
           <div className="textarea-toolbar">
-            <Pencil size={16} />
-            <span>Edits save locally</span>
+            <div>
+              <Pencil size={15} />
+              <span>Editable draft</span>
+            </div>
+            <small>Changes save locally</small>
           </div>
           <textarea
             aria-label="Editable manager summary"
+            className="narrative-editor"
             value={managerText}
             onChange={(event) => onManagerSummaryChange(event.target.value)}
           />
+          <p className="manager-editor-note">
+            This version is formatted for sharing. Validate the underlying work blocks before using it for planning.
+          </p>
         </section>
       </div>
     </section>
@@ -1766,7 +1814,7 @@ function AuditLogScreen({ auditEvents }: { auditEvents: AuditEvent[] }) {
     .sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime());
 
   return (
-    <section className="screen">
+    <section className="screen audit-screen">
       <div className="screen-header">
         <div>
           <p className="eyebrow">Audit log</p>
@@ -1845,7 +1893,7 @@ function AuditEventRow({ event }: { event: AuditEvent }) {
             }}
           >
             <ClipboardCopy size={15} />
-            {copied ? "Copied" : "Copy JSON"}
+            {copied ? "JSON Copied" : "Copy JSON"}
           </button>
         </div>
         <pre>{detailsJson}</pre>
@@ -1924,7 +1972,7 @@ function CompactWidget({
         {nextReview && (
           <button type="button" onClick={() => onConfirm(nextReview.work_block_id)}>
             <Check size={16} />
-            Confirm
+            Confirm Block
           </button>
         )}
       </section>
@@ -1938,7 +1986,7 @@ function CompactWidget({
 
       <button className="quick-pause" type="button" onClick={() => onPauseChange(!paused)}>
         {paused ? <Play size={16} /> : <Pause size={16} />}
-        {paused ? "Resume tracking" : "Pause tracking"}
+        {paused ? "Resume Tracking" : "Pause Tracking"}
       </button>
 
       <footer className="quick-footer">
@@ -1950,15 +1998,19 @@ function CompactWidget({
 }
 
 export function App() {
-  const [persistedSnapshot] = useState(() => readPersistedState());
+  const [isDemoMode] = useState(() => new URLSearchParams(window.location.search).get("demo") === "1");
+  const [persistedSnapshot] = useState(() => isDemoMode ? createDemoState() : readPersistedState());
   const currentWeekId = useMemo(() => getCurrentIsoWeekId(), []);
   const currentWeekRangeLabel = useMemo(() => getBusinessWeekRangeLabel(), []);
   const nextWeekId = useMemo(() => getCurrentIsoWeekId(addDays(new Date(), 7)), []);
   const nextWeekRangeLabel = useMemo(() => getBusinessWeekRangeLabel(addDays(new Date(), 7)), []);
   const initialBlocks = removeSeededWorkBlocks(persistedSnapshot?.blocks ?? []);
-  const [active, setActive] = useState<Screen>(() =>
-    initialBlocks.some((block) => !block.user_verified) ? "daily" : "weekly"
-  );
+  const [active, setActive] = useState<Screen>(() => {
+    const requested = new URLSearchParams(window.location.search).get("screen") as Screen | null;
+    return isDemoMode && requested && requested in screenLabels
+      ? requested
+      : initialBlocks.some((block) => !block.user_verified) ? "daily" : "weekly";
+  });
   const [paused, setPaused] = useState(() => persistedSnapshot?.paused ?? true);
   const [blocks, setBlocks] = useState<WorkBlock[]>(() => initialBlocks);
   const [calendarEvents, setCalendarEvents] = useState<OutlookCalendarEvent[]>(
@@ -2006,7 +2058,10 @@ export function App() {
   const [importError, setImportError] = useState<string | null>(null);
   const [captureError, setCaptureError] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [windowMode, setWindowMode] = useState<WindowMode>("large");
+  const [theme, setTheme] = useState<AppTheme>(() => readThemePreference());
+  const [windowMode, setWindowMode] = useState<WindowMode>(() =>
+    isDemoMode && new URLSearchParams(window.location.search).get("mode") === "compact" ? "compact" : "large"
+  );
 
   const snapshot = useMemo(() => computeWeeklyCapacitySnapshot(currentWeekId, blocks), [blocks, currentWeekId]);
   const narrative = useMemo(() => generateWeeklyNarrative(snapshot), [snapshot]);
@@ -2022,89 +2077,16 @@ export function App() {
   );
   const hasNarrativeEvidence = blocks.length > 0 || activeWindowSessions.length > 0 || calendarEvents.length > 0;
   const todayKey = useMemo(() => getLocalDateKey(), []);
-  const classifiedSessionIds = useMemo(() => new Set(blocks.flatMap((block) => block.derived_from)), [blocks]);
-  const unclassifiedSessionCount = activeWindowSessions.filter(
-    (session) => !classifiedSessionIds.has(session.session_id) && session.sample_count >= 2
-  ).length;
   const reviewQueue = blocks.filter((block) => !block.user_verified);
   const toolbarStatus = blocks.length > 0
     ? `${pct(snapshot.reliable_new_work_capacity_pct)} reliable new-work capacity`
     : `${activeWindowSessions.length} sessions, ${calendarEvents.length} Outlook events`;
-  const toolbarActions: AppToolbarAction[] = (() => {
-    if (active === "setup") {
-      return [];
-    }
+  const toolbarActions: AppToolbarAction[] = [];
 
-    if (active === "ledger") {
-      if (unclassifiedSessionCount === 0) return [];
-      return [
-        {
-          label: classificationStatus === "classifying" ? "Classifying" : "Classify",
-          icon: RefreshCw,
-          onClick: () => void classifyActiveWindowSessions(),
-          disabled: classificationStatus === "classifying" || unclassifiedSessionCount === 0,
-          tone: "primary"
-        }
-      ];
-    }
-
-    if (active === "daily") {
-      if (reviewQueue.length === 0) return [];
-      return [
-        {
-          label: reviewCopilotStatus === "generating" ? "Thinking" : "Review Copilot",
-          icon: RefreshCw,
-          onClick: () => void generateReviewCopilotSuggestions(),
-          disabled: reviewCopilotStatus === "generating" || reviewQueue.length === 0,
-          tone: "primary"
-        },
-        {
-          label: "Confirm Visible",
-          icon: Check,
-          onClick: () => reviewQueue.forEach((block) => confirmBlock(block.work_block_id)),
-          disabled: reviewQueue.length === 0
-        }
-      ];
-    }
-
-    if (active === "weekly") {
-      if (blocks.length === 0) return [];
-      return [
-        {
-          label: forecastStatus === "generating" ? "Forecasting" : "Forecast",
-          icon: RefreshCw,
-          onClick: () => void generateForecastAgent(),
-          disabled: forecastStatus === "generating" || blocks.length === 0,
-          tone: "primary"
-        }
-      ];
-    }
-
-    if (active === "narrative") {
-      if (!hasNarrativeEvidence) return [];
-      return [
-        {
-          label: narrativeGenerationStatus === "generating" ? "Generating" : generatedNarrative ? "Regenerate" : "Generate",
-          icon: RefreshCw,
-          onClick: () => void regenerateNarrative("manual"),
-          disabled: narrativeGenerationStatus === "generating" || !hasNarrativeEvidence,
-          tone: "primary"
-        },
-        {
-          label: "Copy Summary",
-          icon: ClipboardCopy,
-          onClick: () => {
-            if (managerText) {
-              void navigator.clipboard?.writeText(managerText);
-            }
-          },
-          disabled: !managerText
-        }
-      ];
-    }
-
-    return [];
-  })();
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    writeThemePreference(theme);
+  }, [theme]);
 
   useEffect(() => {
     function navigateFromNative(event: Event) {
@@ -2163,6 +2145,7 @@ export function App() {
   }, [managerText]);
 
   useEffect(() => {
+    if (isDemoMode) return;
     writePersistedState({
       version: 1,
       blocks,
@@ -2192,22 +2175,27 @@ export function App() {
     managerSummaryText,
     generatedNarrative,
     lastNarrativeAutoRunDate,
-    paused
+    paused,
+    isDemoMode
   ]);
 
   useEffect(() => {
+    if (isDemoMode) return;
     void invoke("set_pause_menu_label", { paused }).catch(() => undefined);
     void invoke("set_activity_capture_paused", { paused }).catch(() => undefined);
-  }, [paused]);
+  }, [isDemoMode, paused]);
 
   useEffect(() => {
     if (windowMode === "compact") {
       setSidebarCollapsed(true);
+    } else {
+      setSidebarCollapsed(false);
     }
     void invoke("set_clear_capacity_window_mode", { mode: windowMode }).catch(() => undefined);
   }, [windowMode]);
 
   useEffect(() => {
+    if (isDemoMode) return;
     setAuditEvents((current) => [
       ...current,
       createAuditEvent({
@@ -2225,9 +2213,10 @@ export function App() {
         }
       })
     ].slice(-1000));
-  }, [paused]);
+  }, [isDemoMode, paused]);
 
   useEffect(() => {
+    if (isDemoMode) return;
     let unlisten: (() => void) | null = null;
 
     void listen<NativeActiveWindowPayload>("clear-capacity:active-window-sample", (event) => {
@@ -2285,9 +2274,10 @@ export function App() {
     return () => {
       unlisten?.();
     };
-  }, []);
+  }, [isDemoMode]);
 
   useEffect(() => {
+    if (isDemoMode) return;
     if (activeWindowSessions.length === 0) {
       return;
     }
@@ -2319,7 +2309,7 @@ export function App() {
         })
       ].slice(-1000);
     });
-  }, [activeWindowSessions]);
+  }, [activeWindowSessions, isDemoMode]);
 
   useEffect(() => {
     if (!hasNarrativeEvidence || lastNarrativeAutoRunDate === todayKey || narrativeGenerationStatus !== "idle") {
@@ -2403,6 +2393,7 @@ export function App() {
   }
 
   async function regenerateNarrative(trigger: "auto" | "manual") {
+    if (isDemoMode) return;
     if (!hasNarrativeEvidence || narrativeGenerationStatus === "generating") {
       return;
     }
@@ -2491,6 +2482,7 @@ export function App() {
   }
 
   async function captureVisualContext(session: ActivitySession, captureCountToday: number) {
+    if (isDemoMode) return;
     const startedAt = new Date().toISOString();
     const prompt = buildVisualContextPrompt({
       session,
@@ -2631,6 +2623,7 @@ export function App() {
   }
 
   async function classifyActiveWindowSessions() {
+    if (isDemoMode) return;
     if (classificationStatus === "classifying") {
       return;
     }
@@ -2727,6 +2720,7 @@ export function App() {
   }
 
   async function generateReviewCopilotSuggestions() {
+    if (isDemoMode) return;
     if (reviewCopilotStatus === "generating") {
       return;
     }
@@ -2817,6 +2811,7 @@ export function App() {
   }
 
   async function generateForecastAgent() {
+    if (isDemoMode) return;
     if (forecastStatus === "generating") {
       return;
     }
@@ -3082,6 +3077,10 @@ export function App() {
   }
 
   function resetLocalData() {
+    if (isDemoMode) {
+      window.location.reload();
+      return;
+    }
     clearPersistedState();
     setBlocks([]);
     setCalendarEvents([]);
@@ -3201,6 +3200,9 @@ export function App() {
       setSidebarCollapsed={setSidebarCollapsed}
       windowMode={windowMode}
       setWindowMode={setWindowMode}
+      theme={theme}
+      setTheme={setTheme}
+      demoMode={isDemoMode}
     >
       {windowMode === "compact" ? (
         <CompactWidget

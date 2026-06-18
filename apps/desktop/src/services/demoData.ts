@@ -1,0 +1,250 @@
+import type {
+  ActiveWindowSample,
+  AuditEvent,
+  OutlookCalendarEvent,
+  ReviewCopilotSuggestion,
+  UserCorrection,
+  VisualContextInsight,
+  WorkBlock
+} from "../../../../packages/domain/src/models";
+import type { PersistedAppState } from "./localStore";
+
+function addMinutes(date: Date, minutes: number) {
+  return new Date(date.getTime() + minutes * 60_000);
+}
+
+function weekStart(reference: Date) {
+  const date = new Date(reference);
+  date.setDate(date.getDate() - (date.getDay() === 0 ? 6 : date.getDay() - 1));
+  date.setHours(9, 0, 0, 0);
+  return date;
+}
+
+function weekId(reference: Date) {
+  const date = new Date(Date.UTC(reference.getFullYear(), reference.getMonth(), reference.getDate()));
+  const day = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const week = Math.ceil(((date.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
+  return `${date.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
+}
+
+function at(start: Date, day: number, minute: number) {
+  const date = new Date(start);
+  date.setDate(date.getDate() + day);
+  return addMinutes(date, minute);
+}
+
+function workBlock(
+  start: Date,
+  id: string,
+  day: number,
+  minute: number,
+  input: Omit<WorkBlock, "work_block_id" | "week_id" | "start_time" | "end_time">
+): WorkBlock {
+  const blockStart = at(start, day, minute);
+  return {
+    ...input,
+    work_block_id: id,
+    week_id: weekId(start),
+    start_time: blockStart.toISOString(),
+    end_time: addMinutes(blockStart, Math.max(45, input.estimated_capacity_pct * 12)).toISOString()
+  };
+}
+
+function samples(app: string, title: string, start: Date, minutes: number): ActiveWindowSample[] {
+  return Array.from({ length: minutes + 1 }, (_, index) => ({
+    sample_id: `demo-${app}-${start.getTime()}-${index}`,
+    timestamp: addMinutes(start, index).toISOString(),
+    app_name: app,
+    window_title: title,
+    source_type: "macos_active_window",
+    privacy_level: "local_only"
+  }));
+}
+
+function audit(
+  type: AuditEvent["type"],
+  timestamp: Date,
+  title: string,
+  summary: string,
+  source: string,
+  privacy_level: AuditEvent["privacy_level"] = "derived_only"
+): AuditEvent {
+  return {
+    event_id: `demo-${type}-${timestamp.getTime()}`,
+    timestamp: timestamp.toISOString(),
+    type,
+    source,
+    title,
+    summary,
+    privacy_level,
+    details: { simulated_demo_data: true, user_review_required: true }
+  };
+}
+
+export function createDemoState(reference = new Date()): PersistedAppState {
+  const monday = weekStart(reference);
+  const currentWeek = weekId(reference);
+  const now = new Date(reference);
+  const importedAt = addMinutes(now, -180);
+  const generatedAt = addMinutes(now, -24);
+  const common = {
+    stakeholder_group: "Analytics",
+    blocker_flag: false,
+    notes: null
+  };
+  const blocks: WorkBlock[] = [
+    workBlock(monday, "demo-capacity-model", 0, 15, {
+      ...common, estimated_capacity_pct: 12, category: "SQL / data modeling / query work", mode: "Deep work",
+      planned_status: "planned", project_name: "Capacity model v2", derived_from: ["demo-session-codex"],
+      evidence: ["Sustained Codex and Terminal session", "Repository context matched the capacity model"],
+      confidence: 0.95, user_verified: true
+    }),
+    workBlock(monday, "demo-dashboard", 1, 25, {
+      ...common, estimated_capacity_pct: 11, category: "Dashboard development / edits", mode: "Deep work",
+      planned_status: "planned", project_name: "Executive capacity dashboard", derived_from: ["demo-session-figma"],
+      evidence: ["Figma prototype and implementation files were active"], confidence: 0.92, user_verified: true
+    }),
+    workBlock(monday, "demo-reporting", 2, 0, {
+      ...common, estimated_capacity_pct: 12, category: "Recurring reporting", mode: "Deep work",
+      planned_status: "fixed", project_name: "Weekly operating metrics", derived_from: ["demo-session-excel"],
+      evidence: ["Recurring workbook and SQL export were active"], confidence: 0.97, user_verified: true
+    }),
+    workBlock(monday, "demo-retention", 2, 180, {
+      ...common, estimated_capacity_pct: 13, category: "Ad hoc stakeholder requests", mode: "Reactive",
+      planned_status: "unplanned", project_name: "Customer retention deep dive", stakeholder_group: "Customer Success",
+      derived_from: ["demo-session-slack"], evidence: ["Slack request preceded a sustained SQL investigation"],
+      confidence: 0.86, user_verified: true, notes: "Unplanned request received Wednesday."
+    }),
+    workBlock(monday, "demo-attribution", 3, 10, {
+      ...common, estimated_capacity_pct: 11, category: "Debugging / issue investigation", mode: "Reactive",
+      planned_status: "unplanned", project_name: "Revenue attribution mismatch", stakeholder_group: "Data Platform",
+      derived_from: ["demo-session-datagrip"], evidence: ["Query and issue-tracker context followed a data alert"],
+      confidence: 0.89, user_verified: true
+    }),
+    workBlock(monday, "demo-planning", 0, 245, {
+      ...common, estimated_capacity_pct: 8, category: "Meetings / stakeholder syncs", mode: "Collaborative",
+      planned_status: "fixed", project_name: "Weekly planning sync", derived_from: ["demo-calendar-planning"],
+      evidence: ["Imported from Outlook calendar", "Six attendee records found"], confidence: 0.98, user_verified: true
+    }),
+    workBlock(monday, "demo-product-review", 1, 285, {
+      ...common, estimated_capacity_pct: 8, category: "Meetings / stakeholder syncs", mode: "Collaborative",
+      planned_status: "fixed", project_name: "Product metrics review", stakeholder_group: "Product",
+      derived_from: ["demo-calendar-product"], evidence: ["Imported from Outlook calendar"], confidence: 0.96,
+      user_verified: true
+    }),
+    workBlock(monday, "demo-requirements", 4, 15, {
+      ...common, estimated_capacity_pct: 9, category: "Documentation / requirement clarification", mode: "Fragmented",
+      planned_status: "planned", project_name: "Self-service analytics requirements", stakeholder_group: "Business Operations",
+      derived_from: ["demo-session-notion"], evidence: ["Notion document and Slack thread crossed two workstreams"],
+      confidence: 0.76, user_verified: false, notes: "Needs confirmation."
+    }),
+    workBlock(monday, "demo-blocker", 4, 130, {
+      ...common, estimated_capacity_pct: 8, category: "Blocked / waiting / dependency delay", mode: "Blocked",
+      planned_status: "blocked", project_name: "Marketing attribution refresh", stakeholder_group: "Marketing Analytics",
+      derived_from: ["demo-session-jira"], evidence: ["Warehouse permission dependency remained unresolved"],
+      confidence: 0.72, user_verified: false, blocker_flag: true, notes: "Waiting for warehouse role approval."
+    })
+  ];
+
+  const activeStart = new Date(now);
+  activeStart.setHours(Math.max(8, now.getHours() - 3), 5, 0, 0);
+  const activeWindowSamples = [
+    ...samples("Codex", "ClearCapacity - capacity model", activeStart, 47),
+    ...samples("Figma", "Executive capacity dashboard", addMinutes(activeStart, 58), 31),
+    ...samples("Slack", "Customer Success - retention request", addMinutes(activeStart, 99), 18)
+  ];
+
+  const calendarEvents: OutlookCalendarEvent[] = [
+    ["demo-calendar-planning", "Weekly planning sync", 0, 245, 60, "planning@example.com", 6],
+    ["demo-calendar-product", "Product metrics review", 1, 285, 60, "product@example.com", 8]
+  ].map(([id, title, day, minute, duration, organizer, attendeeCount]) => ({
+    calendar_event_id: String(id),
+    uid: `${id}@example.com`,
+    title: String(title),
+    start_time: at(monday, Number(day), Number(minute)).toISOString(),
+    end_time: at(monday, Number(day), Number(minute) + Number(duration)).toISOString(),
+    location: "Zoom",
+    organizer: String(organizer),
+    attendee_count: Number(attendeeCount),
+    source: "outlook_ics",
+    imported_at: importedAt.toISOString()
+  }));
+
+  const corrections: UserCorrection[] = [
+    {
+      correction_id: "demo-correction-1", work_block_id: "demo-retention", field: "planned_status",
+      old_value: "planned", new_value: "unplanned", timestamp: addMinutes(now, -68).toISOString(),
+      reason: "User confirmed the request interrupted planned work."
+    },
+    {
+      correction_id: "demo-correction-2", work_block_id: "demo-dashboard", field: "project_name",
+      old_value: "Dashboard work", new_value: "Executive capacity dashboard",
+      timestamp: addMinutes(now, -55).toISOString(), reason: "User applied a more specific label."
+    }
+  ];
+
+  const reviewSuggestions: ReviewCopilotSuggestion[] = [{
+    suggestion_id: "demo-suggestion-1", action: "note", work_block_ids: ["demo-blocker"],
+    title: "Keep the dependency visible",
+    rationale: "The warehouse permission is a concrete carryover risk for next week.", confidence: 0.91,
+    proposed_category: null, proposed_mode: null, proposed_planned_status: null, proposed_project_name: null,
+    proposed_stakeholder_group: null, proposed_blocker_flag: true,
+    proposed_notes: "Waiting for warehouse role approval; follow up Monday morning."
+  }];
+
+  const visualContextInsights: VisualContextInsight[] = [{
+    insight_id: "demo-visual-1", captured_at: addMinutes(activeStart, 25).toISOString(), session_id: null,
+    app_name: "Codex", window_title: "ClearCapacity - capacity model",
+    activity_summary: "Editing capacity logic and reviewing the desktop interface.", visible_tool: "Codex",
+    likely_work_category: "SQL / data modeling / query work", likely_mode: "Deep work",
+    project_hint: "Capacity model v2", sensitive_content_detected: false, confidence: 0.9,
+    evidence: ["Code editor and capacity terminology were visible"], privacy_level: "derived_only",
+    model: "OpenAI vision", raw_screenshot_retained: false
+  }];
+
+  const auditEvents = [
+    audit("calendar_import", importedAt, "Outlook calendar imported", "2 events parsed from outlook-export.ics", "outlook_ics", "local_only"),
+    audit("work_block_classification", addMinutes(now, -94), "Work sessions classified", "7 sessions became explainable work blocks", "openai_classifier"),
+    audit("visual_context", addMinutes(now, -82), "Visual context derived", "Capacity model implementation context added", "openai_vision"),
+    audit("user_correction", addMinutes(now, -68), "Planned status", "planned -> unplanned", "review_layer", "local_only"),
+    audit("review_copilot", addMinutes(now, -41), "Review suggestions generated", "1 suggestion prepared for approval", "openai_review_copilot"),
+    audit("forecast_agent", addMinutes(now, -31), "Capacity forecast generated", "Next-week scenarios estimate 24% likely capacity", "openai_forecast_agent"),
+    audit("narrative_generation", generatedAt, "Weekly narrative generated", "Analyst and manager summaries created", "openai_narrative"),
+    audit("privacy_resume", addMinutes(now, -10), "Tracking resumed", "Active-window sampling resumed locally", "privacy_control", "local_only")
+  ];
+
+  const managerSummary = "This week centered on the capacity model, executive dashboard, and recurring operating metrics. Two unplanned investigations displaced some planned analysis, while fixed meetings and reporting consumed a meaningful share of the week. The current model indicates 24% reliable capacity for new planned work next week, provided the warehouse access blocker clears and protected focus time remains intact. Two lower-confidence blocks should be reviewed before this summary is shared.";
+
+  return {
+    version: 1, blocks, calendarEvents, activeWindowSamples, auditEvents, corrections, reviewSuggestions,
+    visualContextEnabled: true, visualContextInsights, managerSummaryText: managerSummary,
+    generatedForecast: {
+      generated_at: addMinutes(now, -31).toISOString(), generated_for_week: weekId(addMinutes(now, 10_080)),
+      trigger: "manual", model: "OpenAI forecast agent", prompt_version: "clear-capacity-forecast-agent-v1",
+      forecast: {
+        forecast_week_label: "Next week", reliable_new_work_capacity_pct: 24, confidence: 0.88,
+        headline: "Protect one deep-work block before accepting additional analysis.",
+        summary_text: "Recurring commitments and reactive support remain the main constraints. One focused new project is realistic if the access blocker clears.",
+        key_constraints: ["36% fixed and recurring load", "Two recent reactive investigations", "One unresolved access dependency"],
+        risk_flags: ["Reactive requests may displace dashboard work", "Blocked attribution work could carry over"],
+        recommended_actions: ["Reserve two 90-minute focus blocks", "Resolve access before Monday planning", "Batch new ad hoc requests"],
+        assumptions: ["Meeting cadence stays stable", "No new production incident", "Access is restored by Tuesday"],
+        optimistic_capacity_pct: 34, likely_capacity_pct: 24, conservative_capacity_pct: 14
+      }
+    },
+    generatedNarrative: {
+      generated_at: generatedAt.toISOString(), generated_for_date: now.toISOString().slice(0, 10),
+      trigger: "manual", model: "OpenAI narrative", prompt_version: "clear-capacity-weekly-narrative-v2",
+      narrative: {
+        week_id: currentWeek, headline: "Reactive work narrowed an otherwise productive delivery week.",
+        summary_text: "The week was anchored by the capacity model, executive dashboard, and recurring operating metrics. Planned deep work moved forward, but retention and attribution investigations created meaningful reactive load. Fixed meetings and reporting absorbed a substantial portion of the baseline. Two remaining blocks need review before the story is final.",
+        key_drivers: ["Capacity model and dashboard work received the strongest focus windows", "Reactive investigations displaced planned analysis", "Fixed reporting and meetings created a durable baseline", "Warehouse access remains the main carryover risk", "Two blocks still need confirmation"],
+        manager_ready_summary: managerSummary
+      }
+    },
+    lastNarrativeAutoRunDate: now.toISOString().slice(0, 10),
+    paused: false
+  };
+}

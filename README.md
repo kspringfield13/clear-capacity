@@ -79,6 +79,22 @@ npm run dev
 
 Open `http://127.0.0.1:5173`. Native activity capture, menu-bar behavior, and OpenAI commands require the Tauri desktop app.
 
+## Product Demo
+
+Launch a polished, fully populated demo without an API key or real activity data:
+
+[![Watch the ClearCapacity product demo](docs/assets/clear-capacity-demo-poster.png)](docs/assets/clear-capacity-demo.mp4?raw=1)
+
+**[Watch the 16-second product demo (MP4)](docs/assets/clear-capacity-demo.mp4?raw=1)**
+
+```bash
+npm run demo
+```
+
+Demo mode includes realistic work blocks, active-window sessions, Outlook events, review corrections, an AI forecast, an editable weekly narrative, visual-context metadata, and a complete audit trail. It is clearly labeled, does not persist changes, and never overwrites normal local data.
+
+See [Product Demo](docs/DEMO.md) for the three-minute presenter script and direct links to each feature view.
+
 ## Run the Desktop App
 
 Install Rust if needed:
@@ -100,6 +116,11 @@ Then run:
 ```bash
 npm run desktop:dev
 ```
+
+The desktop scripts use Apple’s standalone Command Line Tools when
+`DEVELOPER_DIR` is not already set. This avoids coupling local Tauri builds to
+a full Xcode installation whose license has not been accepted. Set
+`DEVELOPER_DIR` explicitly to build with a specific Xcode version.
 
 `OPENAI_MODEL` and `OPENAI_VISION_MODEL` are optional overrides. Exported shell variables still work and take precedence over `.env`. The real `.env` file is ignored by Git; only `.env.example` should be committed.
 
