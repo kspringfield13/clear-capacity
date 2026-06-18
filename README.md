@@ -117,6 +117,11 @@ Then run:
 npm run desktop:dev
 ```
 
+The desktop scripts use Apple’s standalone Command Line Tools when
+`DEVELOPER_DIR` is not already set. This avoids coupling local Tauri builds to
+a full Xcode installation whose license has not been accepted. Set
+`DEVELOPER_DIR` explicitly to build with a specific Xcode version.
+
 `OPENAI_MODEL` and `OPENAI_VISION_MODEL` are optional overrides. Exported shell variables still work and take precedence over `.env`. The real `.env` file is ignored by Git; only `.env.example` should be committed.
 
 The app launches in the macOS menu bar with the main window hidden. macOS may request Accessibility or Automation permission for foreground-window metadata and Screen Recording permission if visual context is explicitly enabled.

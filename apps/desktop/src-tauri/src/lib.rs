@@ -20,6 +20,10 @@ use tauri::{
 };
 
 const MAIN_WINDOW_LABEL: &str = "main";
+const COMPACT_WINDOW_WIDTH: u32 = 780;
+const COMPACT_WINDOW_HEIGHT: u32 = 980;
+const COMPACT_WINDOW_RIGHT_MARGIN: i32 = 16;
+const COMPACT_WINDOW_TOP_OFFSET: i32 = 44;
 
 struct PauseMenuItem(MenuItem<Wry>);
 
@@ -203,20 +207,25 @@ fn apply_window_mode(app: &AppHandle, mode: &str) {
     if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
         match mode {
             "compact" => {
+                let _ = window.unmaximize();
                 let _ = window.set_min_size(Some(PhysicalSize::new(340, 440)));
-                let _ = window.set_size(PhysicalSize::new(380, 480));
+                let _ = window.set_size(PhysicalSize::new(
+                    COMPACT_WINDOW_WIDTH,
+                    COMPACT_WINDOW_HEIGHT,
+                ));
                 if let Ok(Some(monitor)) = window.current_monitor() {
                     let monitor_position = monitor.position();
                     let monitor_size = monitor.size();
-                    let x = monitor_position.x + monitor_size.width as i32 - 396;
-                    let y = monitor_position.y + 44;
+                    let x = monitor_position.x + monitor_size.width as i32
+                        - COMPACT_WINDOW_WIDTH as i32
+                        - COMPACT_WINDOW_RIGHT_MARGIN;
+                    let y = monitor_position.y + COMPACT_WINDOW_TOP_OFFSET;
                     let _ = window.set_position(PhysicalPosition::new(x, y));
                 }
             }
             _ => {
                 let _ = window.set_min_size(Some(PhysicalSize::new(1024, 720)));
-                let _ = window.set_size(PhysicalSize::new(1280, 860));
-                let _ = window.center();
+                let _ = window.maximize();
             }
         }
     }
@@ -226,9 +235,7 @@ fn show_quick_view(app: &AppHandle) {
     show_dashboard(app);
     apply_window_mode(app, "compact");
     if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
-        let _ = window.eval(
-            "window.dispatchEvent(new CustomEvent('clear-capacity:quick-view'))",
-        );
+        let _ = window.eval("window.dispatchEvent(new CustomEvent('clear-capacity:quick-view'))");
     }
 }
 
@@ -236,9 +243,7 @@ fn show_large_dashboard(app: &AppHandle) {
     show_dashboard(app);
     apply_window_mode(app, "large");
     if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
-        let _ = window.eval(
-            "window.dispatchEvent(new CustomEvent('clear-capacity:large-view'))",
-        );
+        let _ = window.eval("window.dispatchEvent(new CustomEvent('clear-capacity:large-view'))");
     }
 }
 

@@ -11,6 +11,9 @@ import type {
 } from "../../../../packages/domain/src/models";
 
 const STORAGE_KEY = "clear-capacity:v1";
+const THEME_STORAGE_KEY = "clear-capacity:theme";
+
+export type AppTheme = "light" | "dark";
 
 export interface PersistedNarrativeRecord {
   narrative: WeeklyNarrative;
@@ -105,4 +108,20 @@ export function writePersistedState(state: PersistedAppState) {
 
 export function clearPersistedState() {
   window.localStorage.removeItem(STORAGE_KEY);
+}
+
+export function readThemePreference(): AppTheme {
+  try {
+    return window.localStorage.getItem(THEME_STORAGE_KEY) === "dark" ? "dark" : "light";
+  } catch {
+    return "light";
+  }
+}
+
+export function writeThemePreference(theme: AppTheme) {
+  try {
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+  } catch {
+    // The in-memory theme still works when storage is unavailable.
+  }
 }
