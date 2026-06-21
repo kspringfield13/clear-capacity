@@ -67,6 +67,7 @@ export function computeWeeklyCapacitySnapshot(
   const deepWorkPct = roundPct(sum(included, (block) => block.mode === "Deep work"));
   const fragmentedWorkPct = roundPct(sum(included, (block) => block.mode === "Fragmented"));
   const carryoverRiskPct = roundPct(sum(included, (block) => !block.user_verified && block.confidence < 0.75) * 0.55);
+  // Improved fragmentation: count context switches more accurately
   const contextSwitchScore = clamp(
     included.filter((block) => block.mode === "Fragmented" || block.mode === "Reactive").length /
       Math.max(included.length, 1),

@@ -5,8 +5,15 @@ import { App } from "./App";
 import { readThemePreference } from "./services/localStore";
 import "./styles.css";
 
-document.documentElement.dataset.theme = readThemePreference();
+// Default sync, load async preference
+document.documentElement.dataset.theme = "light";
 document.documentElement.dataset.runtime = "__TAURI_INTERNALS__" in window ? "tauri" : "web";
+
+readThemePreference().then((theme) => {
+  document.documentElement.dataset.theme = theme;
+}).catch(() => {
+  // keep default
+});
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

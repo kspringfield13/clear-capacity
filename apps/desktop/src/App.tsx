@@ -52,7 +52,8 @@ import type {
   VisualContextInsight,
   WorkBlock,
   WorkCategory,
-  WorkMode
+  WorkMode,
+  AIConfig
 } from "../../../packages/domain/src/models";
 import {
   clearPersistedState,
@@ -72,17 +73,66 @@ import {
   WORK_BLOCK_CLASSIFIER_PROMPT_VERSION
 } from "./services/workBlockClassifierPrompt";
 
-type Screen = "setup" | "ledger" | "daily" | "weekly" | "narrative" | "audit";
-type WindowMode = "large" | "compact";
-type PrimarySection = "today" | "week" | "history";
+import {
+  addDays,
+  displaySafeNarrative,
+  formatWeekdayMonthDay,
+  getBusinessWeekRangeLabel,
+  getCurrentIsoWeekId,
+  getLocalDateKey,
+  ordinalDay,
+  replaceIsoWeekIds
+} from "./lib/date";
+import {
+  auditTypeLabel,
+  compactCategory,
+  fieldLabel,
+  formatAuditTime,
+  formatRange,
+  formatTime,
+  pct
+} from "./lib/format";
+import { createAuditEvent } from "./lib/audit";
+import {
+  capacityPctFromMinutes,
+  removeSeededCorrections,
+  removeSeededWorkBlocks,
+  stableHash,
+  summarizeRecentSessions
+} from "./lib/blocks";
+import { useDerived } from "./hooks/useDerived";
+import { usePersistence } from "./hooks/usePersistence";
+import { useBlocksLedger } from "./hooks/useBlocksLedger";
+import { useActiveWindow } from "./hooks/useActiveWindow";
 
-interface AppToolbarAction {
-  label: string;
-  icon: typeof ShieldCheck;
-  onClick: () => void;
-  disabled?: boolean;
-  tone?: "default" | "primary";
-}
+import { ConfidenceChip } from "./components/common/ConfidenceChip";
+import { EmptyState } from "./components/common/EmptyState";
+import { MetricCard } from "./components/common/MetricCard";
+import { StackedBar } from "./components/common/StackedBar";
+import { BarLine } from "./components/common/BarLine";
+import { RiskRow } from "./components/common/RiskRow";
+import { ForecastList } from "./components/common/ForecastList";
+import { BlockCard } from "./components/ledger/BlockCard";
+import { screenLabels, primarySectionForScreen, sectionViews } from "./lib/ui";
+import {
+  MAX_VISUAL_CONTEXT_CAPTURES_PER_DAY,
+  MIN_VISUAL_CONTEXT_SESSION_MINUTES,
+  MIN_VISUAL_CONTEXT_GAP_MS
+} from "./lib/constants";
+
+import { AppShell } from "./components/shell/AppShell";
+import { ContextNavigation } from "./components/shell/ContextNavigation";
+import { CompactWidget } from "./components/compact/CompactWidget";
+import { SetupScreen } from "./components/settings/SetupScreen";
+import { LedgerScreen } from "./components/ledger/LedgerScreen";
+import { ActivityCapturePanel } from "./components/ledger/ActivityCapturePanel";
+import { DailyReviewScreen } from "./components/review/DailyReviewScreen";
+import { WeeklyCapacityScreen } from "./components/capacity/WeeklyCapacityScreen";
+import { NarrativeScreen } from "./components/narrative/NarrativeScreen";
+import { AuditLogScreen } from "./components/audit/AuditLogScreen";
+import { AgentScreen } from "./components/agent/AgentScreen";
+
+import type { Screen, WindowMode, PrimarySection, AppToolbarAction } from "./lib/types";
 
 interface NativeActiveWindowPayload {
   timestamp_ms: number;
@@ -165,1845 +215,63 @@ interface NativeVisualContextResponse {
   raw_screenshot_retained: boolean;
 }
 
-const primaryNavigation: Array<{
-  id: PrimarySection;
-  label: string;
-  description: string;
-  screen: Screen;
-  icon: typeof ShieldCheck;
-}> = [
-  { id: "today", label: "Today", description: "Review and current activity", screen: "daily", icon: CalendarCheck },
-  { id: "week", label: "Week", description: "Capacity and summary", screen: "weekly", icon: BarChart3 },
-  { id: "history", label: "History", description: "Ledger and audit trail", screen: "ledger", icon: History }
-];
 
-const screenLabels: Record<Screen, string> = {
-  setup: "Settings",
-  ledger: "Activity Ledger",
-  daily: "Today",
-  weekly: "Weekly Capacity",
-  narrative: "Weekly Summary",
-  audit: "Audit History"
-};
 
-function primarySectionForScreen(screen: Screen): PrimarySection | null {
-  if (screen === "daily") return "today";
-  if (screen === "weekly" || screen === "narrative") return "week";
-  if (screen === "ledger" || screen === "audit") return "history";
-  return null;
-}
 
-function sectionViews(section: PrimarySection | null) {
-  if (section === "week") {
-    return [
-      { id: "weekly" as const, label: "Capacity" },
-      { id: "narrative" as const, label: "Summary" }
-    ];
-  }
 
-  if (section === "history") {
-    return [
-      { id: "ledger" as const, label: "Activity" },
-      { id: "audit" as const, label: "Audit" }
-    ];
-  }
 
-  return [];
-}
 
-const MAX_VISUAL_CONTEXT_CAPTURES_PER_DAY = 8;
-const MIN_VISUAL_CONTEXT_SESSION_MINUTES = 10;
-const MIN_VISUAL_CONTEXT_GAP_MS = 45 * 60 * 1000;
 
-function formatTime(value: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    weekday: "short",
-    hour: "numeric",
-    minute: "2-digit"
-  }).format(new Date(value));
-}
 
-function formatRange(block: WorkBlock) {
-  const start = new Date(block.start_time);
-  const end = new Date(block.end_time);
-  return `${formatTime(block.start_time)} - ${new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
-    minute: "2-digit"
-  }).format(end)} (${Math.round((end.getTime() - start.getTime()) / 60000)} min)`;
-}
 
-function compactCategory(category: WorkCategory) {
-  return category.replace(" / ", " / ").replace(" stakeholder ", " ");
-}
 
-function pct(value: number) {
-  return `${Math.round(value)}%`;
-}
 
-function stableHash(value: string) {
-  let hash = 5381;
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash * 33) ^ value.charCodeAt(index);
-  }
-  return (hash >>> 0).toString(36);
-}
 
-function capacityPctFromMinutes(minutes: number) {
-  return Math.max(0.25, Math.round((Math.max(1, minutes) / (40 * 60)) * 100));
-}
 
-function getCurrentIsoWeekId(date = new Date()) {
-  const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const day = utcDate.getUTCDay() || 7;
-  utcDate.setUTCDate(utcDate.getUTCDate() + 4 - day);
-  const isoYear = utcDate.getUTCFullYear();
-  const yearStart = new Date(Date.UTC(isoYear, 0, 1));
-  const week = Math.ceil(((utcDate.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
 
-  return `${isoYear}-W${String(week).padStart(2, "0")}`;
-}
 
-function ordinalDay(day: number) {
-  const teenRemainder = day % 100;
-  if (teenRemainder >= 11 && teenRemainder <= 13) {
-    return `${day}th`;
-  }
 
-  const suffixes = ["th", "st", "nd", "rd"];
-  return `${day}${suffixes[day % 10] ?? "th"}`;
-}
 
-function formatWeekdayMonthDay(date: Date) {
-  const weekday = new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(date);
-  const month = new Intl.DateTimeFormat("en-US", { month: "short" }).format(date);
 
-  return `${weekday}, ${month} ${ordinalDay(date.getDate())}`;
-}
 
-function getBusinessWeekRangeLabel(date = new Date()) {
-  const monday = new Date(date);
-  const day = monday.getDay() || 7;
-  monday.setHours(12, 0, 0, 0);
-  monday.setDate(monday.getDate() + 1 - day);
 
-  const friday = new Date(monday);
-  friday.setDate(monday.getDate() + 4);
 
-  return `${formatWeekdayMonthDay(monday)} - ${formatWeekdayMonthDay(friday)}`;
-}
-
-function replaceIsoWeekIds(value: string, weekRangeLabel: string) {
-  return value.replace(/\b\d{4}-W\d{2}\b/g, weekRangeLabel);
-}
-
-function displaySafeNarrative(
-  narrative: ReturnType<typeof generateWeeklyNarrative>,
-  weekRangeLabel: string
-): ReturnType<typeof generateWeeklyNarrative> {
-  return {
-    ...narrative,
-    headline: replaceIsoWeekIds(narrative.headline, weekRangeLabel),
-    summary_text: replaceIsoWeekIds(narrative.summary_text, weekRangeLabel),
-    key_drivers: narrative.key_drivers.map((driver) => replaceIsoWeekIds(driver, weekRangeLabel)),
-    manager_ready_summary: replaceIsoWeekIds(narrative.manager_ready_summary, weekRangeLabel)
-  };
-}
-
-function addDays(date: Date, days: number) {
-  const next = new Date(date);
-  next.setDate(next.getDate() + days);
-  return next;
-}
-
-function getLocalDateKey(date = new Date()) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
-function removeSeededWorkBlocks(blocks: WorkBlock[]) {
-  return blocks.filter((block) => !/^wb-\d{3}$/.test(block.work_block_id));
-}
-
-function removeSeededCorrections(corrections: UserCorrection[]) {
-  return corrections.filter((correction) => !/^wb-\d{3}$/.test(correction.work_block_id));
-}
-
-function formatAuditTime(value: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit"
-  }).format(new Date(value));
-}
-
-function fieldLabel(field: UserCorrection["field"]) {
-  const labels: Record<UserCorrection["field"], string> = {
-    category: "Category",
-    mode: "Mode",
-    planned_status: "Planned status",
-    project_name: "Project",
-    stakeholder_group: "Stakeholder",
-    blocker_flag: "Blocked flag",
-    notes: "Notes",
-    exclude: "Excluded block",
-    verification: "Verified block",
-    manager_summary: "Manager summary",
-    calendar_import: "Calendar import"
-  };
-
-  return labels[field];
-}
-
-function auditTypeLabel(type: AuditEventType) {
-  const labels: Record<AuditEventType, string> = {
-    active_window_sample: "Capture",
-    activity_session: "Session",
-    calendar_import: "Calendar",
-    user_correction: "Correction",
-    narrative_generation: "Narrative",
-    work_block_classification: "Classifier",
-    review_copilot: "Copilot",
-    forecast_agent: "Forecast",
-    visual_context: "Visual",
-    privacy_pause: "Privacy",
-    privacy_resume: "Privacy"
-  };
-
-  return labels[type];
-}
-
-function createAuditEvent(input: Omit<AuditEvent, "event_id" | "timestamp"> & { timestamp?: string }): AuditEvent {
-  return {
-    ...input,
-    event_id: crypto.randomUUID(),
-    timestamp: input.timestamp ?? new Date().toISOString()
-  };
-}
-
-function AppShell({
-  active,
-  setActive,
-  toolbarActions,
-  toolbarStatus,
-  snapshot,
-  hasWorkBlocks,
-  reviewCount,
-  paused,
-  setPaused,
-  sidebarCollapsed,
-  setSidebarCollapsed,
-  windowMode,
-  setWindowMode,
-  theme,
-  setTheme,
-  demoMode,
-  children
-}: {
-  active: Screen;
-  setActive: (screen: Screen) => void;
-  toolbarActions: AppToolbarAction[];
-  toolbarStatus: string;
-  snapshot: ReturnType<typeof computeWeeklyCapacitySnapshot>;
-  hasWorkBlocks: boolean;
-  reviewCount: number;
-  paused: boolean;
-  setPaused: (value: boolean) => void;
-  sidebarCollapsed: boolean;
-  setSidebarCollapsed: (value: boolean) => void;
-  windowMode: WindowMode;
-  setWindowMode: (value: WindowMode) => void;
-  theme: AppTheme;
-  setTheme: (value: AppTheme) => void;
-  demoMode: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className={`app ${sidebarCollapsed ? "sidebar-collapsed" : ""} ${windowMode === "compact" ? "is-compact-widget" : ""}`}>
-      <AppToolbar
-        active={active}
-        actions={toolbarActions}
-        status={toolbarStatus}
-        paused={paused}
-        setPaused={setPaused}
-        sidebarCollapsed={sidebarCollapsed}
-        setSidebarCollapsed={setSidebarCollapsed}
-        windowMode={windowMode}
-        setWindowMode={setWindowMode}
-        theme={theme}
-        setTheme={setTheme}
-        demoMode={demoMode}
-      />
-      {windowMode === "large" && (
-      <aside className="sidebar" aria-label="Primary navigation">
-        <div className="brand">
-          <div className="brand-mark">cc</div>
-          <div>
-            <strong>ClearCapacity</strong>
-            <span>Explainable Workload Intelligence</span>
-          </div>
-        </div>
-        <nav className="nav-list">
-          {primaryNavigation.map((item) => {
-            const Icon = item.icon;
-            const selected = primarySectionForScreen(active) === item.id;
-            return (
-              <button
-                className={selected ? "nav-item is-active" : "nav-item"}
-                key={item.id}
-                onClick={() => setActive(item.screen)}
-                type="button"
-              >
-                <Icon size={18} />
-                <span>
-                  <strong>{item.label}</strong>
-                  <small>{item.description}</small>
-                </span>
-                {item.id === "today" && reviewCount > 0 && <b>{reviewCount}</b>}
-              </button>
-            );
-          })}
-        </nav>
-        <div className="side-metric">
-          <span>Reliable New-Work Capacity</span>
-          <strong>{hasWorkBlocks ? pct(snapshot.reliable_new_work_capacity_pct) : "--"}</strong>
-          <small>{hasWorkBlocks ? "Forecast For Next Week" : "Needs Local Signal"}</small>
-        </div>
-        <button className={paused ? "pause-button is-paused" : "pause-button"} type="button" onClick={() => setPaused(!paused)}>
-          {paused ? <Moon size={18} /> : <Pause size={18} />}
-          <span>{paused ? "Resume Tracking" : "Pause Tracking"}</span>
-        </button>
-        <button className={active === "setup" ? "settings-button is-active" : "settings-button"} type="button" onClick={() => setActive("setup")}>
-          <Settings size={17} />
-          <span>Settings</span>
-        </button>
-      </aside>
-      )}
-      <main className="main-panel">
-        {windowMode === "large" && active !== "setup" && (
-          <ContextNavigation active={active} setActive={setActive} />
-        )}
-        {children}
-      </main>
-    </div>
-  );
-}
-
-function AppToolbar({
-  active,
-  actions,
-  status,
-  paused,
-  setPaused,
-  sidebarCollapsed,
-  setSidebarCollapsed,
-  windowMode,
-  setWindowMode,
-  theme,
-  setTheme,
-  demoMode
-}: {
-  active: Screen;
-  actions: AppToolbarAction[];
-  status: string;
-  paused: boolean;
-  setPaused: (value: boolean) => void;
-  sidebarCollapsed: boolean;
-  setSidebarCollapsed: (value: boolean) => void;
-  windowMode: WindowMode;
-  setWindowMode: (value: WindowMode) => void;
-  theme: AppTheme;
-  setTheme: (value: AppTheme) => void;
-  demoMode: boolean;
-}) {
-  function startToolbarDrag(event: React.PointerEvent<HTMLElement>) {
-    if (event.button !== 0) {
-      return;
-    }
-
-    const target = event.target as HTMLElement;
-    if (target.closest("button, input, select, textarea, a, [role='button']")) {
-      return;
-    }
-
-    void getCurrentWindow().startDragging();
-  }
-
-  return (
-    <header className="app-toolbar" onPointerDown={startToolbarDrag}>
-      <div className="toolbar-left">
-        {windowMode === "large" && (
-          <button
-            className="chrome-button"
-            type="button"
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            title={sidebarCollapsed ? "Show Sidebar" : "Hide Sidebar"}
-          >
-            <PanelLeft size={15} />
-          </button>
-        )}
-        <div className="toolbar-title">
-          <div>
-            <strong>{windowMode === "compact" ? "ClearCapacity" : screenLabels[active]}</strong>
-            {demoMode && <b className="demo-badge">Demo</b>}
-          </div>
-          <span>{paused ? "Private mode on" : status}</span>
-        </div>
-      </div>
-
-      <div className="toolbar-drag-region" />
-
-      <div className="toolbar-actions" onPointerDown={(event) => event.stopPropagation()}>
-        {windowMode === "large" &&
-          actions.map((action) => {
-            const Icon = action.icon;
-            return (
-              <button
-                className={`toolbar-action ${action.tone ?? "default"}`}
-                disabled={action.disabled}
-                key={action.label}
-                type="button"
-                onClick={action.onClick}
-                title={action.label}
-              >
-                <Icon size={15} />
-                <span>{action.label}</span>
-              </button>
-            );
-          })}
-        <button
-          className={paused ? "chrome-button is-paused" : "chrome-button"}
-          type="button"
-          onClick={() => setPaused(!paused)}
-          title={paused ? "Resume Tracking" : "Pause Tracking"}
-        >
-          {paused ? <Play size={15} /> : <Pause size={15} />}
-        </button>
-        <button
-          aria-label={theme === "dark" ? "Use Light Theme" : "Use Dark Theme"}
-          aria-pressed={theme === "dark"}
-          className="chrome-button theme-toggle"
-          type="button"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          title={theme === "dark" ? "Use Light Theme" : "Use Dark Theme"}
-        >
-          {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
-        </button>
-        <button
-          className="chrome-button"
-          type="button"
-          onClick={() => setWindowMode(windowMode === "compact" ? "large" : "compact")}
-          title={windowMode === "compact" ? "Use Large Window" : "Use Compact Widget"}
-        >
-          {windowMode === "compact" ? <Maximize2 size={15} /> : <Minimize2 size={15} />}
-        </button>
-      </div>
-    </header>
-  );
-}
-
-function ContextNavigation({
-  active,
-  setActive
-}: {
-  active: Screen;
-  setActive: (screen: Screen) => void;
-}) {
-  const section = primarySectionForScreen(active);
-  const views = sectionViews(section);
-
-  if (views.length === 0) {
-    return null;
-  }
-
-  return (
-    <nav className="context-navigation" aria-label={`${section} views`}>
-      {views.map((view) => (
-        <button
-          className={active === view.id ? "is-active" : ""}
-          key={view.id}
-          type="button"
-          onClick={() => setActive(view.id)}
-        >
-          {view.label}
-        </button>
-      ))}
-    </nav>
-  );
-}
-
-function SetupScreen({
-  paused,
-  setPaused,
-  visualContextEnabled,
-  setVisualContextEnabled,
-  visualContextInsights,
-  calendarEvents,
-  activeWindowSamples,
-  activeWindowSessions,
-  captureError,
-  importError,
-  onImportOutlookIcs
-}: {
-  paused: boolean;
-  setPaused: (value: boolean) => void;
-  visualContextEnabled: boolean;
-  setVisualContextEnabled: (value: boolean) => void;
-  visualContextInsights: VisualContextInsight[];
-  calendarEvents: OutlookCalendarEvent[];
-  activeWindowSamples: ActiveWindowSample[];
-  activeWindowSessions: ActivitySession[];
-  captureError: string | null;
-  importError: string | null;
-  onImportOutlookIcs: (file: File) => void;
-}) {
-  const latestImport = calendarEvents.reduce<string | null>((latest, event) => {
-    if (!latest || new Date(event.imported_at) > new Date(latest)) {
-      return event.imported_at;
-    }
-    return latest;
-  }, null);
-  const visualCapturesToday = visualContextInsights.filter((insight) => getLocalDateKey(new Date(insight.captured_at)) === getLocalDateKey()).length;
-
-  return (
-    <section className="screen settings-screen">
-      <div className="screen-header">
-        <div>
-          <p className="eyebrow">Settings</p>
-          <h1>Privacy and data sources</h1>
-          <p className="screen-intro">ClearCapacity collects only the signals you enable. Tracking can be paused at any time.</p>
-        </div>
-        <button className="primary-action" type="button" onClick={() => setPaused(!paused)}>
-          {paused ? <Play size={18} /> : <Pause size={18} />}
-          <span>{paused ? "Resume Tracking" : "Pause Tracking"}</span>
-        </button>
-      </div>
-
-      <section className="privacy-summary">
-        <div className={paused ? "privacy-state is-paused" : "privacy-state"}>
-          <span className={paused ? "live-dot is-paused" : "live-dot"} />
-          <div>
-            <strong>{paused ? "Tracking is paused" : "Tracking is active"}</strong>
-            <span>{paused ? "No new activity or visual signals are being collected." : "Foreground app and window-title metadata stay on this Mac."}</span>
-          </div>
-        </div>
-        <div className="privacy-facts">
-          <span><Lock size={15} /> Local storage</span>
-          <span><Eye size={15} /> User-reviewed output</span>
-          <span><ShieldCheck size={15} /> No keystrokes or webcam</span>
-        </div>
-      </section>
-
-      <div className="settings-section-heading">
-        <div>
-          <h2>Data sources</h2>
-          <span>Enable sources only when they add useful workload context.</span>
-        </div>
-      </div>
-
-      <section className="settings-row">
-        <div className="settings-row-icon"><Monitor size={18} /></div>
-        <div>
-          <h2>Active window activity</h2>
-          <p>Records foreground app, window title, and timestamp locally. It never records keystrokes or file contents.</p>
-        </div>
-        <div className="settings-row-status">
-          <strong>{activeWindowSessions.length} sessions</strong>
-          <span>{activeWindowSamples.length} samples stored</span>
-          {captureError && <small className="import-error">{captureError}</small>}
-        </div>
-        <button className="settings-control" type="button" onClick={() => setPaused(!paused)}>
-          {paused ? <Play size={16} /> : <Pause size={16} />}
-          {paused ? "Resume Tracking" : "Pause Tracking"}
-        </button>
-      </section>
-
-      <section className="settings-row">
-        <div className="settings-row-icon"><CalendarCheck size={18} /></div>
-        <div>
-          <h2>Outlook calendar</h2>
-          <p>Imports meeting titles and time windows from a local `.ics` export. Email bodies and meeting notes are ignored.</p>
-        </div>
-        <div className="settings-row-status">
-          <strong>{calendarEvents.length} events</strong>
-          <span>{latestImport ? `Imported ${formatAuditTime(latestImport)}` : "Not imported yet"}</span>
-          {importError && <small className="import-error">{importError}</small>}
-        </div>
-        <label className="settings-control">
-          <Upload size={16} />
-          <span>Import Calendar</span>
-          <input
-            accept=".ics,text/calendar"
-            type="file"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) onImportOutlookIcs(file);
-              event.currentTarget.value = "";
-            }}
-          />
-        </label>
-      </section>
-
-      <section className="settings-row">
-        <div className="settings-row-icon"><Eye size={18} /></div>
-        <div>
-          <h2>Visual context</h2>
-          <p>Optional screenshot analysis for sustained sessions. Images are sent to OpenAI with `store: false`, then deleted locally.</p>
-        </div>
-        <div className="settings-row-status">
-          <strong>{visualContextEnabled ? "On" : "Off"}</strong>
-          <span>{visualCapturesToday}/{MAX_VISUAL_CONTEXT_CAPTURES_PER_DAY} captures today</span>
-        </div>
-        <button className={visualContextEnabled ? "settings-control is-on" : "settings-control"} type="button" onClick={() => setVisualContextEnabled(!visualContextEnabled)}>
-          {visualContextEnabled ? "Disable Visual Context" : "Enable Visual Context"}
-        </button>
-      </section>
-
-      <details className="advanced-settings">
-        <summary>
-          <span>
-            <Settings size={17} />
-            <strong>Advanced privacy details</strong>
-          </span>
-          <ChevronRight size={16} />
-        </summary>
-        <div>
-          <p>Raw activity metadata remains in this app's local webview storage. AI classification, forecasts, summaries, and visual context send only the context needed for that feature to the OpenAI API.</p>
-          <p>Window titles and screenshots can contain sensitive information. Pause tracking or disable visual context before working with confidential material.</p>
-        </div>
-      </details>
-    </section>
-  );
-}
-
-function ConfidenceChip({ value }: { value: number }) {
-  const level = value >= 0.85 ? "High" : value >= 0.74 ? "Medium" : "Needs review";
-  return <span className={`confidence ${level === "Needs review" ? "low" : level.toLowerCase()}`}>{level} {Math.round(value * 100)}%</span>;
-}
-
-function BlockCard({
-  block,
-  onConfirm,
-  onExclude,
-  onRelabel
-}: {
-  block: WorkBlock;
-  onConfirm: (blockId: string) => void;
-  onExclude: (blockId: string) => void;
-  onRelabel: <K extends keyof WorkBlock>(blockId: string, field: K, value: WorkBlock[K]) => void;
-}) {
-  return (
-    <article className={block.user_verified ? "block-card verified" : "block-card"}>
-      <div className="block-topline">
-        <span>{formatRange(block)}</span>
-        <ConfidenceChip value={block.confidence} />
-      </div>
-      <div className="block-main">
-        <div>
-          <h3>{block.project_name}</h3>
-          <p>{block.stakeholder_group}</p>
-        </div>
-        <strong>{pct(block.estimated_capacity_pct)}</strong>
-      </div>
-      <div className="tag-grid">
-        <select value={block.category} onChange={(event) => onRelabel(block.work_block_id, "category", event.target.value as WorkCategory)}>
-          {workCategories.map((category) => (
-            <option key={category}>{category}</option>
-          ))}
-        </select>
-        <select value={block.planned_status} onChange={(event) => onRelabel(block.work_block_id, "planned_status", event.target.value as PlannedStatus)}>
-          {plannedStatuses.map((status) => (
-            <option key={status}>{status}</option>
-          ))}
-        </select>
-        <select value={block.mode} onChange={(event) => onRelabel(block.work_block_id, "mode", event.target.value as WorkMode)}>
-          {workModes.map((mode) => (
-            <option key={mode}>{mode}</option>
-          ))}
-        </select>
-      </div>
-      <details className="evidence">
-        <summary>Why this estimate?</summary>
-        <ul>
-          {block.evidence.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ul>
-      </details>
-      <div className="block-actions">
-        <button type="button" onClick={() => onConfirm(block.work_block_id)}>
-          <Check size={16} />
-          <span>Confirm Block</span>
-        </button>
-        <button type="button">
-          <SplitSquareHorizontal size={16} />
-          <span>Split Block</span>
-        </button>
-        <button type="button" onClick={() => onExclude(block.work_block_id)}>
-          <X size={16} />
-          <span>Exclude Block</span>
-        </button>
-      </div>
-    </article>
-  );
-}
-
-function LedgerScreen({
-  blocks,
-  activeWindowSamples,
-  activeWindowSessions,
-  visualContextInsights,
-  captureError,
-  classificationStatus,
-  classificationError,
-  visualContextStatus,
-  visualContextError,
-  paused,
-  onClassifySessions,
-  onConfirm,
-  onExclude,
-  onRelabel
-}: {
-  blocks: WorkBlock[];
-  activeWindowSamples: ActiveWindowSample[];
-  activeWindowSessions: ActivitySession[];
-  visualContextInsights: VisualContextInsight[];
-  captureError: string | null;
-  classificationStatus: "idle" | "classifying" | "error";
-  classificationError: string | null;
-  visualContextStatus: "idle" | "capturing" | "error";
-  visualContextError: string | null;
-  paused: boolean;
-  onClassifySessions: () => void;
-  onConfirm: (blockId: string) => void;
-  onExclude: (blockId: string) => void;
-  onRelabel: <K extends keyof WorkBlock>(blockId: string, field: K, value: WorkBlock[K]) => void;
-}) {
-  const classifiedSessionIds = new Set(blocks.flatMap((block) => block.derived_from));
-  const unclassifiedSessionCount = activeWindowSessions.filter(
-    (session) => !classifiedSessionIds.has(session.session_id) && session.sample_count >= 2
-  ).length;
-  const current = blocks[7] ?? blocks[0];
-  return (
-    <section className="screen ledger-screen">
-      <div className="screen-header compact">
-        <div>
-          <p className="eyebrow">Live work ledger</p>
-          <h1>Explainable inferred work blocks.</h1>
-        </div>
-        <div className="search-box">
-          <Search size={17} />
-          <input aria-label="Search work blocks" placeholder="Search project, stakeholder, category" />
-        </div>
-      </div>
-      {current && (
-        <section className="current-block">
-          <div>
-            <p className="eyebrow">Current block</p>
-            <h2>{current.project_name}</h2>
-            <span>{compactCategory(current.category)} · {current.mode}</span>
-          </div>
-          <div className="pulse-meter">
-            <TimerReset size={20} />
-            <strong>{pct(current.estimated_capacity_pct)}</strong>
-          </div>
-        </section>
-      )}
-      <ActivityCapturePanel
-        activeWindowSamples={activeWindowSamples}
-        activeWindowSessions={activeWindowSessions}
-        visualContextInsights={visualContextInsights}
-        captureError={captureError}
-        classificationStatus={classificationStatus}
-        classificationError={classificationError}
-        visualContextStatus={visualContextStatus}
-        visualContextError={visualContextError}
-        unclassifiedSessionCount={unclassifiedSessionCount}
-        paused={paused}
-        onClassifySessions={onClassifySessions}
-      />
-      {blocks.length === 0 ? (
-        <EmptyState
-          icon={Monitor}
-          title="No work blocks yet."
-          description="ClearCapacity now starts empty. Import an Outlook .ics export or let active-window capture build local sessions, then use Classify sessions to draft reviewable work blocks."
-        />
-      ) : (
-        <div className="ledger-list">
-          {blocks.map((block) => (
-            <BlockCard
-              block={block}
-              key={block.work_block_id}
-              onConfirm={onConfirm}
-              onExclude={onExclude}
-              onRelabel={onRelabel}
-            />
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
-function ActivityCapturePanel({
-  activeWindowSamples,
-  activeWindowSessions,
-  visualContextInsights,
-  captureError,
-  classificationStatus,
-  classificationError,
-  visualContextStatus,
-  visualContextError,
-  unclassifiedSessionCount,
-  paused,
-  onClassifySessions
-}: {
-  activeWindowSamples: ActiveWindowSample[];
-  activeWindowSessions: ActivitySession[];
-  visualContextInsights: VisualContextInsight[];
-  captureError: string | null;
-  classificationStatus: "idle" | "classifying" | "error";
-  classificationError: string | null;
-  visualContextStatus: "idle" | "capturing" | "error";
-  visualContextError: string | null;
-  unclassifiedSessionCount: number;
-  paused: boolean;
-  onClassifySessions: () => void;
-}) {
-  const latestSample = activeWindowSamples[activeWindowSamples.length - 1];
-  const latestSessionSummaries = summarizeRecentSessions(activeWindowSessions);
-
-  return (
-    <section className="activity-capture-panel">
-      <div className="section-title">
-        <div>
-          <h2>Live local capture</h2>
-          <span>{paused ? "Paused" : "Foreground app/window metadata only"}</span>
-        </div>
-        <div className="capture-actions">
-          <button
-            className="secondary-action"
-            type="button"
-            disabled={classificationStatus === "classifying" || unclassifiedSessionCount === 0}
-            onClick={onClassifySessions}
-          >
-            <RefreshCw size={16} />
-            <span>{classificationStatus === "classifying" ? "Classifying…" : "Classify Sessions"}</span>
-          </button>
-          <ConfidenceChip value={captureError ? 0.4 : paused ? 0.72 : 0.9} />
-        </div>
-      </div>
-      <div className="capture-grid">
-        <div className="capture-stat">
-          <span>Current app</span>
-          <strong>{paused ? "Paused" : latestSample?.app_name ?? "Waiting"}</strong>
-          <small>{latestSample?.window_title ?? "No active-window sample yet"}</small>
-        </div>
-        <div className="capture-stat">
-          <span>Samples</span>
-          <strong>{activeWindowSamples.length}</strong>
-          <small>stored locally</small>
-        </div>
-        <div className="capture-stat">
-          <span>Sessions</span>
-          <strong>{activeWindowSessions.length}</strong>
-          <small>{unclassifiedSessionCount} ready for AI classification</small>
-        </div>
-        <div className="capture-stat">
-          <span>Visual context</span>
-          <strong>{visualContextInsights.length}</strong>
-          <small>derived insights, raw images deleted</small>
-        </div>
-      </div>
-      {captureError && <p className="capture-error">{captureError}</p>}
-      {classificationError && <p className="capture-error">{classificationError}</p>}
-      {visualContextStatus === "capturing" && <p className="capture-note">Visual context capture is deriving a local insight.</p>}
-      {visualContextError && <p className="capture-error">{visualContextError}</p>}
-      {latestSessionSummaries.length > 0 && (
-        <div className="session-list">
-          {latestSessionSummaries.map((session) => (
-            <div key={session.app_name}>
-              <span>{session.app_name}</span>
-              <strong>{session.duration_minutes} min</strong>
-              <small>
-                {session.window_title ?? "Window title unavailable"}
-                {session.session_count > 1 ? ` · ${session.session_count} session fragments combined` : ""}
-              </small>
-            </div>
-          ))}
-        </div>
-      )}
-      {visualContextInsights.length > 0 && (
-        <div className="session-list">
-          {visualContextInsights.slice(-3).reverse().map((insight) => (
-            <div key={insight.insight_id}>
-              <span>{insight.visible_tool ?? insight.app_name}</span>
-              <strong>{Math.round(insight.confidence * 100)}%</strong>
-              <small>{insight.activity_summary}</small>
-            </div>
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
-function DailyReviewScreen({
-  blocks,
-  corrections,
-  reviewSuggestions,
-  reviewCopilotStatus,
-  reviewCopilotError,
-  onGenerateReviewSuggestions,
-  onApplyReviewSuggestion,
-  onDismissReviewSuggestion,
-  onConfirm,
-  onExclude,
-  onRelabel,
-  onResetLocalData
-}: {
-  blocks: WorkBlock[];
-  corrections: UserCorrection[];
-  reviewSuggestions: ReviewCopilotSuggestion[];
-  reviewCopilotStatus: "idle" | "generating" | "error";
-  reviewCopilotError: string | null;
-  onGenerateReviewSuggestions: () => void;
-  onApplyReviewSuggestion: (suggestion: ReviewCopilotSuggestion) => void;
-  onDismissReviewSuggestion: (suggestionId: string) => void;
-  onConfirm: (blockId: string) => void;
-  onExclude: (blockId: string) => void;
-  onRelabel: <K extends keyof WorkBlock>(blockId: string, field: K, value: WorkBlock[K]) => void;
-  onResetLocalData: () => void;
-}) {
-  const reviewQueue = blocks.filter((block) => !block.user_verified);
-
-  if (blocks.length === 0) {
-    return (
-      <section className="screen review-screen">
-        <div className="screen-header compact">
-          <div>
-            <p className="eyebrow">Today</p>
-            <h1>Nothing needs your attention.</h1>
-          </div>
-        </div>
-        <EmptyState
-          icon={CalendarCheck}
-          title="Your review queue is empty."
-          description="ClearCapacity will place inferred work here after Outlook meetings are imported or active-window sessions are classified."
-        />
-      </section>
-    );
-  }
-
-  return (
-    <section className="screen review-screen">
-      <div className="screen-header compact">
-        <div>
-          <p className="eyebrow">Daily review</p>
-          <h1>
-            {blocks.length === 0
-              ? "Nothing to review yet."
-              : reviewQueue.length === 0
-                ? "All local work blocks are reviewed."
-                : `${reviewQueue.length} blocks need a quick look.`}
-          </h1>
-        </div>
-        {reviewQueue.length > 0 && (
-          <button className="primary-action" type="button" onClick={() => reviewQueue.forEach((block) => onConfirm(block.work_block_id))}>
-            <Check size={18} />
-            <span>Confirm Visible Blocks</span>
-          </button>
-        )}
-      </div>
-      <div className="review-layout">
-        <div className="review-rail">
-          <strong>Under 2 minutes</strong>
-          <span>Confirm the obvious blocks, relabel the weird ones, exclude anything sensitive.</span>
-          <div className="review-stat">
-            <small>Verified</small>
-            <b>{blocks.filter((block) => block.user_verified).length}/{blocks.length}</b>
-          </div>
-          <CorrectionHistory blocks={blocks} corrections={corrections} onResetLocalData={onResetLocalData} />
-          <ReviewCopilotPanel
-            reviewQueueCount={reviewQueue.length}
-            suggestions={reviewSuggestions}
-            status={reviewCopilotStatus}
-            error={reviewCopilotError}
-            onGenerate={onGenerateReviewSuggestions}
-            onApply={onApplyReviewSuggestion}
-            onDismiss={onDismissReviewSuggestion}
-          />
-        </div>
-        {reviewQueue.length === 0 ? (
-          <EmptyState
-            icon={Check}
-            title="Everything visible is confirmed."
-            description="New Outlook imports and active-window-derived blocks will appear here when they need your review."
-          />
-        ) : (
-          <div className="ledger-list">
-            {reviewQueue.map((block) => (
-              <BlockCard
-                block={block}
-                key={block.work_block_id}
-                onConfirm={onConfirm}
-                onExclude={onExclude}
-                onRelabel={onRelabel}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
-
-function CorrectionHistory({
-  blocks,
-  corrections,
-  onResetLocalData
-}: {
-  blocks: WorkBlock[];
-  corrections: UserCorrection[];
-  onResetLocalData: () => void;
-}) {
-  const recentCorrections = [...corrections]
-    .sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime())
-    .slice(0, 8);
-
-  return (
-    <section className="history-panel">
-      <div className="history-title">
-        <span>
-          <History size={16} />
-          <strong>Correction history</strong>
-        </span>
-        <button type="button" onClick={onResetLocalData} title="Reset local prototype data">
-          <RotateCcw size={15} />
-        </button>
-      </div>
-      {recentCorrections.length === 0 ? (
-        <p>No corrections yet.</p>
-      ) : (
-        <ol className="history-list">
-          {recentCorrections.map((correction) => {
-            const block = blocks.find((candidate) => candidate.work_block_id === correction.work_block_id);
-            const label = block?.project_name ?? correction.old_value;
-
-            return (
-              <li key={correction.correction_id}>
-                <div>
-                  <strong>{fieldLabel(correction.field)}</strong>
-                  <time>{formatAuditTime(correction.timestamp)}</time>
-                </div>
-                <span>{label}</span>
-                <small>{correction.old_value} → {correction.new_value}</small>
-              </li>
-            );
-          })}
-        </ol>
-      )}
-    </section>
-  );
-}
-
-function ReviewCopilotPanel({
-  reviewQueueCount,
-  suggestions,
-  status,
-  error,
-  onGenerate,
-  onApply,
-  onDismiss
-}: {
-  reviewQueueCount: number;
-  suggestions: ReviewCopilotSuggestion[];
-  status: "idle" | "generating" | "error";
-  error: string | null;
-  onGenerate: () => void;
-  onApply: (suggestion: ReviewCopilotSuggestion) => void;
-  onDismiss: (suggestionId: string) => void;
-}) {
-  return (
-    <section className="copilot-panel">
-      <div className="history-title">
-        <span>
-          <RefreshCw size={16} />
-          <strong>Review Copilot</strong>
-        </span>
-        <button
-          className="copilot-generate"
-          type="button"
-          disabled={status === "generating" || reviewQueueCount === 0}
-          onClick={onGenerate}
-          title="Generate review suggestions"
-        >
-          <RefreshCw size={15} />
-          <span>{status === "generating" ? "Generating…" : "Generate Suggestions"}</span>
-        </button>
-      </div>
-      <p>Suggests cleanup actions for unverified blocks. You approve every change.</p>
-      {error && <p className="copilot-error">{error}</p>}
-      {suggestions.length === 0 ? (
-        <span className="copilot-empty">
-          {status === "generating" ? "Generating suggestions..." : "No suggestions yet."}
-        </span>
-      ) : (
-        <ol className="copilot-list">
-          {suggestions.map((suggestion) => (
-            <li key={suggestion.suggestion_id}>
-              <div>
-                <strong>{suggestion.title}</strong>
-                <span>{suggestion.action} · {Math.round(suggestion.confidence * 100)}%</span>
-              </div>
-              <p>{suggestion.rationale}</p>
-              <small>{suggestion.work_block_ids.length} block{suggestion.work_block_ids.length === 1 ? "" : "s"}</small>
-              <div className="copilot-actions">
-                <button type="button" onClick={() => onApply(suggestion)}>Apply Suggestion</button>
-                <button type="button" onClick={() => onDismiss(suggestion.suggestion_id)}>Dismiss Suggestion</button>
-              </div>
-            </li>
-          ))}
-        </ol>
-      )}
-    </section>
-  );
-}
-
-function StackedBar({ snapshot }: { snapshot: ReturnType<typeof computeWeeklyCapacitySnapshot> }) {
-  return (
-    <div className="stacked-bar" aria-label="Capacity category allocation">
-      {snapshot.category_allocation.map((item) => (
-        <span
-          key={item.label}
-          style={{
-            width: `${item.value}%`,
-            background: categoryColors[item.label]
-          }}
-          title={`${item.label}: ${item.value}%`}
-        />
-      ))}
-    </div>
-  );
-}
-
-function MetricCard({ label, value, helper }: { label: string; value: number | string; helper: string }) {
-  return (
-    <div className="metric-card">
-      <span>{label}</span>
-      <strong>{typeof value === "number" ? pct(value) : value}</strong>
-      <small>{helper}</small>
-    </div>
-  );
-}
-
-function EmptyState({
-  icon: Icon,
-  title,
-  description,
-  children
-}: {
-  icon: typeof FileText;
-  title: string;
-  description: string;
-  children?: React.ReactNode;
-}) {
-  return (
-    <section className="empty-state">
-      <div className="empty-state-icon">
-        <Icon size={20} />
-      </div>
-      <div>
-        <strong>{title}</strong>
-        <p>{description}</p>
-      </div>
-      {children && <div className="empty-state-actions">{children}</div>}
-    </section>
-  );
-}
-
-function summarizeRecentSessions(sessions: ActivitySession[], limit = 4) {
-  const summaries = new Map<
-    string,
-    {
-      app_name: string;
-      window_title: string | null;
-      duration_minutes: number;
-      session_count: number;
-      latest_start_time: string;
-    }
-  >();
-
-  sessions.slice(0, 12).forEach((session) => {
-    const existing = summaries.get(session.app_name);
-    if (!existing) {
-      summaries.set(session.app_name, {
-        app_name: session.app_name,
-        window_title: session.window_title,
-        duration_minutes: session.duration_minutes,
-        session_count: 1,
-        latest_start_time: session.start_time
-      });
-      return;
-    }
-
-    const sessionIsNewer = new Date(session.start_time) > new Date(existing.latest_start_time);
-    summaries.set(session.app_name, {
-      app_name: session.app_name,
-      window_title: sessionIsNewer ? session.window_title : existing.window_title,
-      duration_minutes: existing.duration_minutes + session.duration_minutes,
-      session_count: existing.session_count + 1,
-      latest_start_time: sessionIsNewer ? session.start_time : existing.latest_start_time
-    });
-  });
-
-  return [...summaries.values()]
-    .sort((left, right) => new Date(right.latest_start_time).getTime() - new Date(left.latest_start_time).getTime())
-    .slice(0, limit);
-}
-
-function WeeklyCapacityScreen({
-  snapshot,
-  weekRangeLabel,
-  nextWeekRangeLabel,
-  generatedForecast,
-  forecastStatus,
-  forecastError,
-  onGenerateForecast,
-  hasWorkBlocks
-}: {
-  snapshot: ReturnType<typeof computeWeeklyCapacitySnapshot>;
-  weekRangeLabel: string;
-  nextWeekRangeLabel: string;
-  generatedForecast: PersistedForecastRecord | null;
-  forecastStatus: "idle" | "generating" | "error";
-  forecastError: string | null;
-  onGenerateForecast: () => void;
-  hasWorkBlocks: boolean;
-}) {
-  if (!hasWorkBlocks) {
-    return (
-      <section className="screen capacity-screen">
-        <div className="screen-header">
-          <div>
-            <p className="eyebrow">Weekly capacity view</p>
-            <h1>{weekRangeLabel}: waiting for real workload signal.</h1>
-          </div>
-          <div className="summary-score">
-            <span>Summary confidence</span>
-            <strong>--</strong>
-          </div>
-        </div>
-        <EmptyState
-          icon={BarChart3}
-          title="No weekly capacity model yet."
-          description="The percentage breakdown will stay blank until local sources create work blocks. Import Outlook calendar events now, then let active-window sessions become the next inference source."
-        />
-      </section>
-    );
-  }
-
-  return (
-    <section className="screen capacity-screen">
-      <div className="screen-header">
-        <div>
-          <p className="eyebrow">Weekly capacity view</p>
-          <h1>{weekRangeLabel}: {pct(snapshot.reliable_new_work_capacity_pct)} reliable capacity for new planned work.</h1>
-        </div>
-        <div className="header-actions">
-          <div className="summary-score">
-            <span>Summary confidence</span>
-            <strong>{Math.round(snapshot.summary_confidence * 100)}%</strong>
-          </div>
-        </div>
-      </div>
-
-      <div className="hero-metrics">
-        <MetricCard label="Allocated capacity" value={snapshot.allocated_pct} helper="Estimated distribution this week" />
-        <MetricCard label="Effective planned work" value={snapshot.planned_pct} helper="Capacity spent on planned work" />
-        <MetricCard label="Reactive load" value={snapshot.reactive_pct} helper="Unplanned support and interruption work" />
-        <MetricCard label="Reliable new work" value={snapshot.reliable_new_work_capacity_pct} helper="Forecast for next week" />
-      </div>
-
-      <ForecastAgentPanel
-        generatedForecast={generatedForecast}
-        nextWeekRangeLabel={nextWeekRangeLabel}
-        status={forecastStatus}
-        error={forecastError}
-        deterministicReliableCapacity={snapshot.reliable_new_work_capacity_pct}
-        onGenerate={onGenerateForecast}
-      />
-
-      <section className="capacity-section capacity-model">
-        <div className="section-title">
-          <h2>100% weekly capacity model</h2>
-          <span>standard 40-hour baseline</span>
-        </div>
-        <StackedBar snapshot={snapshot} />
-        <div className="allocation-grid">
-          {snapshot.category_allocation.map((item) => (
-            <div className="allocation-row" key={item.label}>
-              <span className="dot" style={{ background: categoryColors[item.label] }} />
-              <span>{item.label}</span>
-              <strong>{pct(item.value)}</strong>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <div className="two-column capacity-risk-grid">
-        <section className="capacity-section">
-          <div className="section-title">
-            <h2>Planned vs reactive</h2>
-            <span>politics-to-math translator</span>
-          </div>
-          <div className="comparison-bars">
-            <BarLine label="Planned" value={snapshot.planned_pct} tone="blue" />
-            <BarLine label="Reactive" value={snapshot.reactive_pct} tone="red" />
-            <BarLine label="Fixed / recurring" value={snapshot.recurring_pct} tone="teal" />
-            <BarLine label="Blocked" value={snapshot.blocked_pct} tone="purple" />
-          </div>
-        </section>
-        <section className="capacity-section">
-          <div className="section-title">
-            <h2>Delivery risk modifiers</h2>
-            <span>forecast inputs</span>
-          </div>
-          <div className="risk-list">
-            <RiskRow label="Context switch burden" value={snapshot.context_switch_score} />
-            <RiskRow label="WIP overload" value={snapshot.wip_load_score} />
-            <RiskRow label="Carryover risk" value={snapshot.carryover_risk_pct / 40} />
-            <RiskRow label="Meeting density" value={snapshot.meeting_pct / 35} />
-          </div>
-        </section>
-      </div>
-    </section>
-  );
-}
-
-function ForecastAgentPanel({
-  generatedForecast,
-  nextWeekRangeLabel,
-  status,
-  error,
-  deterministicReliableCapacity,
-  onGenerate
-}: {
-  generatedForecast: PersistedForecastRecord | null;
-  nextWeekRangeLabel: string;
-  status: "idle" | "generating" | "error";
-  error: string | null;
-  deterministicReliableCapacity: number;
-  onGenerate: () => void;
-}) {
-  const forecast = generatedForecast?.forecast;
-
-  return (
-    <section className="capacity-section forecast-panel">
-      <div className="section-title">
-        <div>
-          <h2>Forecast Agent</h2>
-          <span>{forecast ? `Generated ${formatAuditTime(generatedForecast.generated_at)}` : `Next week: ${nextWeekRangeLabel}`}</span>
-        </div>
-        <button
-          className="secondary-action"
-          type="button"
-          disabled={status === "generating"}
-          onClick={onGenerate}
-        >
-          <RefreshCw size={16} />
-          <span>{status === "generating" ? "Forecasting…" : forecast ? "Regenerate Forecast" : "Generate Forecast"}</span>
-        </button>
-      </div>
-      {error && <p className="forecast-error">{error}</p>}
-      {!forecast ? (
-        <div className="forecast-empty">
-          <strong>No AI forecast yet.</strong>
-          <span>
-            The deterministic estimate is {pct(deterministicReliableCapacity)}. Generate a forecast to add assumptions,
-            constraints, scenarios, and planning recommendations.
-          </span>
-        </div>
-      ) : (
-        <>
-          <div className="forecast-summary">
-            <div>
-              <span>Reliable new-work capacity</span>
-              <strong>{pct(forecast.reliable_new_work_capacity_pct)}</strong>
-              <small>{Math.round(forecast.confidence * 100)}% forecast confidence</small>
-            </div>
-            <div>
-              <span>Conservative</span>
-              <strong>{pct(forecast.conservative_capacity_pct)}</strong>
-              <small>protected planning case</small>
-            </div>
-            <div>
-              <span>Likely</span>
-              <strong>{pct(forecast.likely_capacity_pct)}</strong>
-              <small>expected case</small>
-            </div>
-            <div>
-              <span>Optimistic</span>
-              <strong>{pct(forecast.optimistic_capacity_pct)}</strong>
-              <small>if risks clear</small>
-            </div>
-          </div>
-          <div className="forecast-copy">
-            <h3>{forecast.headline}</h3>
-            <p>{forecast.summary_text}</p>
-          </div>
-          <div className="forecast-grid">
-            <ForecastList title="Constraints" items={forecast.key_constraints} />
-            <ForecastList title="Risk flags" items={forecast.risk_flags} />
-            <ForecastList title="Recommended actions" items={forecast.recommended_actions} />
-            <ForecastList title="Assumptions" items={forecast.assumptions} />
-          </div>
-        </>
-      )}
-    </section>
-  );
-}
-
-function ForecastList({ title, items }: { title: string; items: string[] }) {
-  return (
-    <div className="forecast-list">
-      <strong>{title}</strong>
-      <ul>
-        {items.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function BarLine({ label, value, tone }: { label: string; value: number; tone: "blue" | "red" | "teal" | "purple" }) {
-  return (
-    <div className="bar-line">
-      <div>
-        <span>{label}</span>
-        <strong>{pct(value)}</strong>
-      </div>
-      <div className="bar-track">
-        <span className={tone} style={{ width: `${Math.min(value, 100)}%` }} />
-      </div>
-    </div>
-  );
-}
-
-function RiskRow({ label, value }: { label: string; value: number }) {
-  const bounded = Math.max(0, Math.min(1, value));
-  return (
-    <div className="risk-row">
-      <span>{label}</span>
-      <div className="risk-track">
-        <span style={{ width: `${bounded * 100}%` }} />
-      </div>
-      <strong>{Math.round(bounded * 100)}</strong>
-    </div>
-  );
-}
-
-function NarrativeScreen({
-  narrative,
-  generatedNarrative,
-  weekRangeLabel,
-  hasNarrativeEvidence,
-  generationStatus,
-  generationError,
-  managerSummaryText,
-  onManagerSummaryChange,
-  onRegenerate
-}: {
-  narrative: ReturnType<typeof generateWeeklyNarrative>;
-  generatedNarrative: PersistedNarrativeRecord | null;
-  weekRangeLabel: string;
-  hasNarrativeEvidence: boolean;
-  generationStatus: "idle" | "generating" | "error";
-  generationError: string | null;
-  managerSummaryText: string | null;
-  onManagerSummaryChange: (value: string) => void;
-  onRegenerate: () => void;
-}) {
-  const [copied, setCopied] = useState(false);
-  const displayNarrative = displaySafeNarrative(generatedNarrative?.narrative ?? narrative, weekRangeLabel);
-  const generatedManagerText = `${displayNarrative.headline}\n\n${displayNarrative.manager_ready_summary}`;
-  const managerText = replaceIsoWeekIds(managerSummaryText ?? generatedManagerText, weekRangeLabel);
-
-  if (!hasNarrativeEvidence) {
-    return (
-      <section className="screen narrative-screen">
-        <div className="screen-header">
-          <div>
-            <p className="eyebrow">Weekly narrative</p>
-            <h1>No manager summary until the week has local evidence.</h1>
-          </div>
-        </div>
-        <EmptyState
-          icon={FileText}
-          title="Narrative generation is waiting."
-          description="ClearCapacity will generate analyst and manager-ready text after Outlook imports or active-window-derived work blocks create enough explainable workload evidence."
-        />
-      </section>
-    );
-  }
-
-  if (!generatedNarrative) {
-    return (
-      <section className="screen narrative-screen">
-        <div className="screen-header">
-          <div>
-            <p className="eyebrow">Weekly narrative</p>
-            <h1>Generate an OpenAI-backed weekly narrative.</h1>
-          </div>
-          <button
-            className="primary-action"
-            type="button"
-            disabled={generationStatus === "generating"}
-            onClick={onRegenerate}
-          >
-            <RefreshCw size={18} />
-            <span>{generationStatus === "generating" ? "Generating…" : "Generate Narrative"}</span>
-          </button>
-        </div>
-        <EmptyState
-          icon={FileText}
-          title="Ready to generate."
-          description="The prompt will include the current ledger, daily review corrections, weekly capacity metrics, Outlook imports, and active-window session context. It is sent to OpenAI only when generation runs."
-        />
-        {generationError && <p className="narrative-error">{generationError}</p>}
-      </section>
-    );
-  }
-
-  return (
-    <section className="screen narrative-screen">
-      <div className="screen-header narrative-hero">
-        <div className="narrative-hero-copy">
-          <p className="eyebrow">Weekly narrative</p>
-          <h1>{displayNarrative.headline}</h1>
-          <div className="narrative-status">
-            <span>Generated {formatAuditTime(generatedNarrative.generated_at)}</span>
-            <span>{generatedNarrative.model}</span>
-            <span>{generatedNarrative.trigger === "auto" ? "Daily automatic run" : "Manual regeneration"}</span>
-          </div>
-        </div>
-        <div className="narrative-actions">
-          <button
-            className="secondary-action"
-            type="button"
-            disabled={generationStatus === "generating"}
-            onClick={onRegenerate}
-          >
-            <RefreshCw size={17} />
-            <span>{generationStatus === "generating" ? "Generating…" : "Regenerate Narrative"}</span>
-          </button>
-          <button
-            className="primary-action"
-            type="button"
-            onClick={() => {
-              void navigator.clipboard?.writeText(managerText);
-              setCopied(true);
-              window.setTimeout(() => setCopied(false), 1400);
-            }}
-          >
-            <ClipboardCopy size={18} />
-            <span>{copied ? "Summary Copied" : "Copy Summary"}</span>
-          </button>
-        </div>
-      </div>
-      {generationError && <p className="narrative-error">{generationError}</p>}
-
-      <div className="narrative-layout">
-        <section className="narrative-panel analyst-narrative">
-          <div className="narrative-panel-header">
-            <div>
-              <span className="narrative-panel-kicker">Internal assessment</span>
-              <h2>Analyst view</h2>
-            </div>
-            <span className="narrative-panel-purpose">For 1:1 prep</span>
-          </div>
-          <div className="narrative-copy">
-            <span>Weekly assessment</span>
-            <p>{displayNarrative.summary_text}</p>
-          </div>
-          <div className="driver-heading">
-            <div>
-              <span>Evidence considered</span>
-              <small>{displayNarrative.key_drivers.length} signals</small>
-            </div>
-          </div>
-          <div className="driver-list">
-            {displayNarrative.key_drivers.map((driver, index) => (
-              <div key={driver}>
-                <b>{String(index + 1).padStart(2, "0")}</b>
-                <span>{driver}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-        <section className="narrative-panel manager">
-          <div className="narrative-panel-header">
-            <div>
-              <span className="narrative-panel-kicker">Shareable draft</span>
-              <h2>Manager-ready version</h2>
-            </div>
-            <span className="narrative-panel-purpose">Review before sharing</span>
-          </div>
-          <div className="textarea-toolbar">
-            <div>
-              <Pencil size={15} />
-              <span>Editable draft</span>
-            </div>
-            <small>Changes save locally</small>
-          </div>
-          <textarea
-            aria-label="Editable manager summary"
-            className="narrative-editor"
-            value={managerText}
-            onChange={(event) => onManagerSummaryChange(event.target.value)}
-          />
-          <p className="manager-editor-note">
-            This version is formatted for sharing. Validate the underlying work blocks before using it for planning.
-          </p>
-        </section>
-      </div>
-    </section>
-  );
-}
-
-function AuditLogScreen({ auditEvents }: { auditEvents: AuditEvent[] }) {
-  type AuditFilter = "all" | "capture" | "session" | "visual" | "calendar" | "correction" | "classifier" | "copilot" | "forecast" | "narrative" | "privacy";
-  const [filter, setFilter] = useState<AuditFilter>("all");
-  const [query, setQuery] = useState("");
-  const filters: Array<{ id: AuditFilter; label: string }> = [
-    { id: "all", label: "All" },
-    { id: "capture", label: "Capture" },
-    { id: "session", label: "Session" },
-    { id: "visual", label: "Visual" },
-    { id: "calendar", label: "Calendar" },
-    { id: "correction", label: "Correction" },
-    { id: "classifier", label: "Classifier" },
-    { id: "copilot", label: "Copilot" },
-    { id: "forecast", label: "Forecast" },
-    { id: "narrative", label: "Narrative" },
-    { id: "privacy", label: "Privacy" }
-  ];
-  const filterMatches: Record<AuditFilter, (event: AuditEvent) => boolean> = {
-    all: () => true,
-    capture: (event) => event.type === "active_window_sample",
-    session: (event) => event.type === "activity_session",
-    visual: (event) => event.type === "visual_context",
-    calendar: (event) => event.type === "calendar_import",
-    correction: (event) => event.type === "user_correction",
-    classifier: (event) => event.type === "work_block_classification",
-    copilot: (event) => event.type === "review_copilot",
-    forecast: (event) => event.type === "forecast_agent",
-    narrative: (event) => event.type === "narrative_generation",
-    privacy: (event) => event.type === "privacy_pause" || event.type === "privacy_resume"
-  };
-  const filteredEvents = auditEvents
-    .filter((event) => filterMatches[filter](event))
-    .filter((event) => {
-      const haystack = `${event.title} ${event.summary} ${event.source} ${JSON.stringify(event.details)}`.toLowerCase();
-      return haystack.includes(query.toLowerCase());
-    })
-    .sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime());
-
-  return (
-    <section className="screen audit-screen">
-      <div className="screen-header">
-        <div>
-          <p className="eyebrow">Audit log</p>
-          <h1>Every local signal, inference, correction, and privacy event.</h1>
-        </div>
-        <div className="summary-score">
-          <span>Local events</span>
-          <strong>{auditEvents.length}</strong>
-        </div>
-      </div>
-
-      <div className="audit-toolbar">
-        <div className="audit-filters">
-          {filters.map((item) => (
-            <button
-              className={filter === item.id ? "is-active" : ""}
-              key={item.id}
-              type="button"
-              onClick={() => setFilter(item.id)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-        <div className="search-box">
-          <Search size={17} />
-          <input
-            aria-label="Search audit log"
-            placeholder="Search audit events"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-        </div>
-      </div>
-
-      <div className="audit-list">
-        {filteredEvents.length === 0 ? (
-          <section className="audit-empty">
-            <strong>No audit events match.</strong>
-            <span>Capture samples, imports, corrections, and privacy changes will appear here.</span>
-          </section>
-        ) : (
-          filteredEvents.map((event) => <AuditEventRow event={event} key={event.event_id} />)
-        )}
-      </div>
-    </section>
-  );
-}
-
-function AuditEventRow({ event }: { event: AuditEvent }) {
-  const [copied, setCopied] = useState(false);
-  const detailsJson = JSON.stringify(event.details, null, 2);
-
-  return (
-    <details className="audit-row">
-      <summary>
-        <div>
-          <span className={`audit-badge ${event.type}`}>{auditTypeLabel(event.type)}</span>
-          <time>{formatAuditTime(event.timestamp)}</time>
-        </div>
-        <div>
-          <strong>{event.title}</strong>
-          <small>{event.summary}</small>
-        </div>
-        <span className="audit-privacy">{event.privacy_level}</span>
-      </summary>
-      <div className="audit-detail">
-        <div className="audit-detail-header">
-          <span>{event.source}</span>
-          <button
-            type="button"
-            onClick={() => {
-              void navigator.clipboard?.writeText(JSON.stringify(event, null, 2));
-              setCopied(true);
-              window.setTimeout(() => setCopied(false), 1200);
-            }}
-          >
-            <ClipboardCopy size={15} />
-            {copied ? "JSON Copied" : "Copy JSON"}
-          </button>
-        </div>
-        <pre>{detailsJson}</pre>
-      </div>
-    </details>
-  );
-}
-
-function CompactWidget({
-  paused,
-  activeWindowSamples,
-  activeWindowSessions,
-  blocks,
-  snapshot,
-  onPauseChange,
-  onOpenScreen,
-  onConfirm
-}: {
-  paused: boolean;
-  activeWindowSamples: ActiveWindowSample[];
-  activeWindowSessions: ActivitySession[];
-  blocks: WorkBlock[];
-  snapshot: ReturnType<typeof computeWeeklyCapacitySnapshot>;
-  onPauseChange: (paused: boolean) => void;
-  onOpenScreen: (screen: Screen) => void;
-  onConfirm: (blockId: string) => void;
-}) {
-  const latestSample = activeWindowSamples[activeWindowSamples.length - 1];
-  const latestSession = activeWindowSessions[0];
-  const reviewQueue = blocks.filter((block) => !block.user_verified);
-  const nextReview = reviewQueue[0];
-  const today = getLocalDateKey();
-  const observedMinutesToday = activeWindowSessions
-    .filter((session) => getLocalDateKey(new Date(session.start_time)) === today)
-    .reduce((total, session) => total + session.duration_minutes, 0);
-  const observedHours = `${Math.floor(observedMinutesToday / 60)}h ${observedMinutesToday % 60}m`;
-
-  return (
-    <section className="quick-view">
-      <header className="quick-view-header">
-        <div>
-          <span className={paused ? "live-dot is-paused" : "live-dot"} />
-          <strong>{paused ? "Tracking paused" : "Tracking"}</strong>
-        </div>
-      </header>
-
-      <section className="quick-current">
-        <span>Current activity</span>
-        <div>
-          <Monitor size={18} />
-          <div>
-            <strong>{paused ? "Private mode" : latestSample?.app_name ?? "Waiting for activity"}</strong>
-            <small>{paused ? "Resume when you are ready" : latestSample?.window_title ?? "No active-window sample yet"}</small>
-          </div>
-        </div>
-        {latestSession && !paused && <p>{latestSession.duration_minutes} min in this session</p>}
-      </section>
-
-      <section className="quick-stats">
-        <button type="button" onClick={() => onOpenScreen("ledger")}>
-          <span>Observed today</span>
-          <strong>{observedMinutesToday > 0 ? observedHours : "--"}</strong>
-        </button>
-        <button type="button" onClick={() => onOpenScreen("weekly")}>
-          <span>Reliable capacity</span>
-          <strong>{snapshot.allocated_pct > 0 ? pct(snapshot.reliable_new_work_capacity_pct) : "--"}</strong>
-        </button>
-      </section>
-
-      <section className={reviewQueue.length > 0 ? "quick-review has-items" : "quick-review"}>
-        <div>
-          <span>Today’s review</span>
-          <strong>{reviewQueue.length > 0 ? `${reviewQueue.length} item${reviewQueue.length === 1 ? "" : "s"} need attention` : "You’re all caught up"}</strong>
-          <small>{nextReview ? nextReview.project_name : "New inferred work will appear here."}</small>
-        </div>
-        {nextReview && (
-          <button type="button" onClick={() => onConfirm(nextReview.work_block_id)}>
-            <Check size={16} />
-            Confirm Block
-          </button>
-        )}
-      </section>
-
-      {reviewQueue.length > 0 && (
-        <button className="quick-primary" type="button" onClick={() => onOpenScreen("daily")}>
-          Review {reviewQueue.length} item{reviewQueue.length === 1 ? "" : "s"}
-          <ChevronRight size={17} />
-        </button>
-      )}
-
-      <button className="quick-pause" type="button" onClick={() => onPauseChange(!paused)}>
-        {paused ? <Play size={16} /> : <Pause size={16} />}
-        {paused ? "Resume Tracking" : "Pause Tracking"}
-      </button>
-
-      <footer className="quick-footer">
-        <button type="button" onClick={() => onOpenScreen("weekly")}>Open weekly summary</button>
-        <button type="button" onClick={() => onOpenScreen("setup")}>Settings</button>
-      </footer>
-    </section>
-  );
-}
 
 export function App() {
   const [isDemoMode] = useState(() => new URLSearchParams(window.location.search).get("demo") === "1");
-  const [persistedSnapshot] = useState(() => isDemoMode ? createDemoState() : readPersistedState());
+  const [persistedSnapshot, setPersistedSnapshot] = useState<any>(() => isDemoMode ? createDemoState() : null);
   const currentWeekId = useMemo(() => getCurrentIsoWeekId(), []);
   const currentWeekRangeLabel = useMemo(() => getBusinessWeekRangeLabel(), []);
   const nextWeekId = useMemo(() => getCurrentIsoWeekId(addDays(new Date(), 7)), []);
   const nextWeekRangeLabel = useMemo(() => getBusinessWeekRangeLabel(addDays(new Date(), 7)), []);
+
+  // Async load persisted state (hydrates non-ledger state and forces re-eval)
+  useEffect(() => {
+    if (isDemoMode) return;
+    readPersistedState().then((data) => {
+      if (data) {
+        setPersistedSnapshot(data);
+        // Hydrate chrome + other states
+        setActive((current) => {
+          const requested = new URLSearchParams(window.location.search).get("screen") as Screen | null;
+          if (isDemoMode && requested && requested in screenLabels) return requested;
+          const loadedBlocks = removeSeededWorkBlocks(data.blocks ?? []);
+          return loadedBlocks.some((block) => !block.user_verified) ? "daily" : current;
+        });
+        setPaused(data.paused ?? true);
+        setActiveWindowSamples(data.activeWindowSamples ?? []);
+        setAuditEvents(data.auditEvents ?? []);
+        setGeneratedForecast(data.generatedForecast ?? null);
+        setVisualContextEnabled(data.visualContextEnabled ?? false);
+        setVisualContextInsights(data.visualContextInsights ?? []);
+        setAiConfig(data.aiConfig ?? null);
+        setManagerSummaryText(data.managerSummaryText ?? null);
+        setGeneratedNarrative(data.generatedNarrative ?? null);
+        setLastNarrativeAutoRunDate(data.lastNarrativeAutoRunDate ?? null);
+      }
+    }).catch(() => {});
+  }, [isDemoMode]);
+
   const initialBlocks = removeSeededWorkBlocks(persistedSnapshot?.blocks ?? []);
   const [active, setActive] = useState<Screen>(() => {
     const requested = new URLSearchParams(window.location.search).get("screen") as Screen | null;
@@ -2012,25 +280,18 @@ export function App() {
       : initialBlocks.some((block) => !block.user_verified) ? "daily" : "weekly";
   });
   const [paused, setPaused] = useState(() => persistedSnapshot?.paused ?? true);
-  const [blocks, setBlocks] = useState<WorkBlock[]>(() => initialBlocks);
-  const [calendarEvents, setCalendarEvents] = useState<OutlookCalendarEvent[]>(
-    () => persistedSnapshot?.calendarEvents ?? []
-  );
   const [activeWindowSamples, setActiveWindowSamples] = useState<ActiveWindowSample[]>(
     () => persistedSnapshot?.activeWindowSamples ?? []
   );
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>(() => persistedSnapshot?.auditEvents ?? []);
-  const [corrections, setCorrections] = useState<UserCorrection[]>(
-    () => removeSeededCorrections(persistedSnapshot?.corrections ?? [])
-  );
-  const [reviewSuggestions, setReviewSuggestions] = useState<ReviewCopilotSuggestion[]>(
-    () => persistedSnapshot?.reviewSuggestions ?? []
-  );
   const [generatedForecast, setGeneratedForecast] = useState<PersistedForecastRecord | null>(
     () => persistedSnapshot?.generatedForecast ?? null
   );
   const [visualContextEnabled, setVisualContextEnabled] = useState<boolean>(
     () => persistedSnapshot?.visualContextEnabled ?? false
+  );
+  const [aiConfig, setAiConfig] = useState<AIConfig | null>(
+    () => persistedSnapshot?.aiConfig ?? null
   );
   const [visualContextInsights, setVisualContextInsights] = useState<VisualContextInsight[]>(
     () => persistedSnapshot?.visualContextInsights ?? []
@@ -2058,30 +319,82 @@ export function App() {
   const [importError, setImportError] = useState<string | null>(null);
   const [captureError, setCaptureError] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [theme, setTheme] = useState<AppTheme>(() => readThemePreference());
+  const [theme, setTheme] = useState<AppTheme>("light");
   const [windowMode, setWindowMode] = useState<WindowMode>(() =>
     isDemoMode && new URLSearchParams(window.location.search).get("mode") === "compact" ? "compact" : "large"
   );
 
-  const snapshot = useMemo(() => computeWeeklyCapacitySnapshot(currentWeekId, blocks), [blocks, currentWeekId]);
-  const narrative = useMemo(() => generateWeeklyNarrative(snapshot), [snapshot]);
-  const managerText = generatedNarrative
-    ? replaceIsoWeekIds(
-        managerSummaryText ?? `${generatedNarrative.narrative.headline}\n\n${generatedNarrative.narrative.manager_ready_summary}`,
-        currentWeekRangeLabel
-      )
-    : "";
-  const activeWindowSessions = useMemo(
-    () => sessionizeActiveWindowSamples(activeWindowSamples),
-    [activeWindowSamples]
-  );
-  const hasNarrativeEvidence = blocks.length > 0 || activeWindowSessions.length > 0 || calendarEvents.length > 0;
-  const todayKey = useMemo(() => getLocalDateKey(), []);
-  const reviewQueue = blocks.filter((block) => !block.user_verified);
-  const toolbarStatus = blocks.length > 0
-    ? `${pct(snapshot.reliable_new_work_capacity_pct)} reliable new-work capacity`
-    : `${activeWindowSessions.length} sessions, ${calendarEvents.length} Outlook events`;
-  const toolbarActions: AppToolbarAction[] = [];
+  const ledger = useBlocksLedger({
+    initialBlocks,
+    initialCalendarEvents: persistedSnapshot?.calendarEvents ?? [],
+    initialCorrections: removeSeededCorrections(persistedSnapshot?.corrections ?? []),
+    initialReviewSuggestions: persistedSnapshot?.reviewSuggestions ?? [],
+    currentWeekId,
+    isDemoMode,
+    addAuditEvent: (event) => setAuditEvents((current) => [...current, createAuditEvent(event)].slice(-1000)),
+  });
+
+  const { blocks, setBlocks, calendarEvents, setCalendarEvents, corrections, setCorrections, reviewSuggestions, setReviewSuggestions, updateBlock, confirmBlock, excludeBlock } = ledger;
+
+  // Late hydrate for ledger-owned state if async load completes after mount
+  useEffect(() => {
+    if (isDemoMode || !persistedSnapshot) return;
+    const loadedBlocks = removeSeededWorkBlocks(persistedSnapshot.blocks ?? []);
+    if (loadedBlocks.length > 0 || blocks.length === 0) {
+      setBlocks(loadedBlocks);
+    }
+    setCalendarEvents(persistedSnapshot.calendarEvents ?? []);
+    setCorrections(removeSeededCorrections(persistedSnapshot.corrections ?? []));
+    setReviewSuggestions(persistedSnapshot.reviewSuggestions ?? []);
+  }, [persistedSnapshot, isDemoMode]);
+
+  usePersistence({
+    blocks,
+    calendarEvents,
+    activeWindowSamples,
+    auditEvents,
+    corrections,
+    reviewSuggestions,
+    generatedForecast,
+    visualContextEnabled,
+    visualContextInsights,
+    aiConfig,
+    managerSummaryText,
+    generatedNarrative,
+    lastNarrativeAutoRunDate,
+    paused,
+    isDemoMode,
+  });
+
+  useActiveWindow({
+    isDemoMode,
+    setActiveWindowSamples,
+    setAuditEvents,
+  });
+
+  const derived = useDerived({
+    blocks,
+    activeWindowSamples,
+    calendarEvents,
+    generatedNarrative,
+    managerSummaryText,
+    currentWeekId,
+    currentWeekRangeLabel,
+    nextWeekRangeLabel,
+  });
+
+  const {
+    snapshot,
+    narrative: narrativeFromHook,
+    managerText,
+    activeWindowSessions,
+    hasNarrativeEvidence,
+    todayKey,
+    reviewQueue,
+    toolbarStatus,
+  } = derived;
+
+  const narrative = narrativeFromHook; // keep name for compatibility with existing screens for now
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -2098,7 +411,7 @@ export function App() {
     }
 
     function togglePauseFromNative() {
-      setPaused((current) => !current);
+      setPaused((current: boolean) => !current);
     }
 
     function openQuickViewFromNative() {
@@ -2144,40 +457,6 @@ export function App() {
     };
   }, [managerText]);
 
-  useEffect(() => {
-    if (isDemoMode) return;
-    writePersistedState({
-      version: 1,
-      blocks,
-      calendarEvents,
-      activeWindowSamples,
-      auditEvents,
-      corrections,
-      reviewSuggestions,
-      generatedForecast,
-      visualContextEnabled,
-      visualContextInsights,
-      managerSummaryText,
-      generatedNarrative,
-      lastNarrativeAutoRunDate,
-      paused
-    });
-  }, [
-    blocks,
-    calendarEvents,
-    activeWindowSamples,
-    auditEvents,
-    corrections,
-    reviewSuggestions,
-    generatedForecast,
-    visualContextEnabled,
-    visualContextInsights,
-    managerSummaryText,
-    generatedNarrative,
-    lastNarrativeAutoRunDate,
-    paused,
-    isDemoMode
-  ]);
 
   useEffect(() => {
     if (isDemoMode) return;
@@ -2215,66 +494,6 @@ export function App() {
     ].slice(-1000));
   }, [isDemoMode, paused]);
 
-  useEffect(() => {
-    if (isDemoMode) return;
-    let unlisten: (() => void) | null = null;
-
-    void listen<NativeActiveWindowPayload>("clear-capacity:active-window-sample", (event) => {
-      const payload = event.payload;
-
-      if (payload.capture_error) {
-        setCaptureError(payload.capture_error);
-        return;
-      }
-
-      if (!payload.app_name) {
-        return;
-      }
-
-      setCaptureError(null);
-      setActiveWindowSamples((current) => {
-        const sample: ActiveWindowSample = {
-          sample_id: crypto.randomUUID(),
-          timestamp: new Date(payload.timestamp_ms).toISOString(),
-          app_name: payload.app_name ?? "Unknown app",
-          window_title: payload.window_title || null,
-          source_type: "macos_active_window",
-          privacy_level: "local_only"
-        };
-
-        return [...current, sample].slice(-2000);
-      });
-      setAuditEvents((current) => [
-        ...current,
-        createAuditEvent({
-          type: "active_window_sample",
-          source: "macos_active_window",
-          title: "Active-window sample captured",
-          summary: `${payload.app_name}${payload.window_title ? ` - ${payload.window_title}` : ""}`,
-          privacy_level: "local_only",
-          timestamp: new Date(payload.timestamp_ms).toISOString(),
-          details: {
-            app_name: payload.app_name,
-            window_title: payload.window_title,
-            stored_locally: true,
-            sent_to_cloud: false,
-            screenshots: false,
-            keystrokes: false
-          }
-        })
-      ].slice(-1000));
-    })
-      .then((cleanup) => {
-        unlisten = cleanup;
-      })
-      .catch(() => {
-        setCaptureError("Active-window capture is available in the Tauri desktop app.");
-      });
-
-    return () => {
-      unlisten?.();
-    };
-  }, [isDemoMode]);
 
   useEffect(() => {
     if (isDemoMode) return;
@@ -2416,7 +635,8 @@ export function App() {
     try {
       const response = await invoke<NativeNarrativeGenerationResponse>("generate_weekly_narrative_with_openai", {
         request: {
-          prompt
+          prompt,
+          ai_config: aiConfig
         }
       });
       const sanitizedNarrative = displaySafeNarrative(response.narrative, currentWeekRangeLabel);
@@ -2499,7 +719,8 @@ export function App() {
           prompt,
           appName: session.app_name,
           windowTitle: session.window_title,
-          sessionId: session.session_id
+          sessionId: session.session_id,
+          ai_config: aiConfig
         }
       });
       const insight: VisualContextInsight = {
@@ -2656,7 +877,8 @@ export function App() {
     try {
       const response = await invoke<NativeWorkBlockClassificationResponse>("classify_active_window_sessions_with_openai", {
         request: {
-          prompt
+          prompt,
+          ai_config: aiConfig
         }
       });
       const sessionMap = new Map(candidateSessions.map((session) => [session.session_id, session]));
@@ -2750,7 +972,8 @@ export function App() {
     try {
       const response = await invoke<NativeReviewCopilotResponse>("generate_review_copilot_suggestions_with_openai", {
         request: {
-          prompt
+          prompt,
+          ai_config: aiConfig
         }
       });
       const blockIds = new Set(blocks.map((block) => block.work_block_id));
@@ -2841,7 +1064,8 @@ export function App() {
     try {
       const response = await invoke<NativeForecastAgentResponse>("generate_forecast_agent_with_openai", {
         request: {
-          prompt
+          prompt,
+          ai_config: aiConfig
         }
       });
       const record: PersistedForecastRecord = {
@@ -3005,59 +1229,6 @@ export function App() {
     dismissReviewSuggestion(suggestion.suggestion_id);
   }
 
-  function updateBlock<K extends keyof WorkBlock>(blockId: string, field: K, value: WorkBlock[K]) {
-    const oldBlock = blocks.find((block) => block.work_block_id === blockId);
-    if (!oldBlock || String(oldBlock[field]) === String(value)) {
-      return;
-    }
-
-    setBlocks((current) =>
-      current.map((block) =>
-        block.work_block_id === blockId ? { ...block, [field]: value, user_verified: false } : block
-      )
-    );
-    addCorrection({
-      work_block_id: blockId,
-      field: field as UserCorrection["field"],
-      old_value: String(oldBlock[field]),
-      new_value: String(value),
-      reason: "Manual review adjustment"
-    });
-  }
-
-  function confirmBlock(blockId: string) {
-    const oldBlock = blocks.find((block) => block.work_block_id === blockId);
-    if (!oldBlock || oldBlock.user_verified) {
-      return;
-    }
-
-    setBlocks((current) =>
-      current.map((block) => (block.work_block_id === blockId ? { ...block, user_verified: true, confidence: Math.max(block.confidence, 0.9) } : block))
-    );
-    addCorrection({
-      work_block_id: blockId,
-      field: "verification",
-      old_value: "unverified",
-      new_value: "verified",
-      reason: "User confirmed inferred block"
-    });
-  }
-
-  function excludeBlock(blockId: string) {
-    const oldBlock = blocks.find((block) => block.work_block_id === blockId);
-    if (!oldBlock) {
-      return;
-    }
-
-    setBlocks((current) => current.filter((block) => block.work_block_id !== blockId));
-    addCorrection({
-      work_block_id: blockId,
-      field: "exclude",
-      old_value: oldBlock.project_name,
-      new_value: "excluded",
-      reason: "User excluded sensitive or irrelevant block"
-    });
-  }
 
   function updateManagerSummary(value: string) {
     setManagerSummaryText(value);
@@ -3081,7 +1252,7 @@ export function App() {
       window.location.reload();
       return;
     }
-    clearPersistedState();
+    clearPersistedState().catch(() => {});
     setBlocks([]);
     setCalendarEvents([]);
     setActiveWindowSamples([]);
@@ -3185,6 +1356,22 @@ export function App() {
     setWindowMode("large");
   }
 
+  const toolbarActions: AppToolbarAction[] = (() => {
+    if (isDemoMode) return [];
+    switch (active) {
+      case "ledger":
+        return [{ label: "Classify", icon: Tag, onClick: () => void classifyActiveWindowSessions(), disabled: classificationStatus === "classifying", tone: "primary" as const }];
+      case "daily":
+        return [{ label: "Review Copilot", icon: ShieldCheck, onClick: () => void generateReviewCopilotSuggestions(), disabled: reviewCopilotStatus === "generating" || reviewQueue.length === 0, tone: "primary" as const }];
+      case "weekly":
+        return [{ label: "Forecast", icon: BarChart3, onClick: () => void generateForecastAgent(), disabled: forecastStatus === "generating" || blocks.length === 0, tone: "primary" as const }];
+      case "narrative":
+        return [{ label: "Regenerate", icon: RefreshCw, onClick: () => void regenerateNarrative("manual"), disabled: narrativeGenerationStatus === "generating" || !hasNarrativeEvidence, tone: "primary" as const }];
+      default:
+        return [];
+    }
+  })();
+
   return (
     <AppShell
       active={active}
@@ -3230,6 +1417,8 @@ export function App() {
           captureError={captureError}
           importError={importError}
           onImportOutlookIcs={importOutlookIcs}
+          aiConfig={aiConfig}
+          setAiConfig={setAiConfig}
         />
       )}
       {active === "ledger" && (
@@ -3292,6 +1481,19 @@ export function App() {
         />
       )}
       {active === "audit" && <AuditLogScreen auditEvents={auditEvents} />}
+      {active === "agent" && (
+        <AgentScreen
+          blocks={blocks}
+          snapshot={snapshot}
+          activeWindowSessions={activeWindowSessions}
+          calendarEvents={calendarEvents}
+          corrections={corrections}
+          visualContextInsights={visualContextInsights}
+          todayKey={todayKey}
+          currentWeekRangeLabel={currentWeekRangeLabel}
+          aiConfig={aiConfig}
+        />
+      )}
         </>
       )}
     </AppShell>
