@@ -104,7 +104,7 @@ export function buildWorkBlockClassifierPrompt({
     product: "ClearCapacity",
     prompt_version: WORK_BLOCK_CLASSIFIER_PROMPT_VERSION,
     objective:
-      "Convert active-window sessions into explainable draft work blocks for an analyst workload ledger.",
+      "Convert active-window sessions into explainable draft work blocks for an analyst workload ledger. Use evidence from titles, calendar, and visuals. Be precise with categories.",
     guardrails: [
       "Classify only the provided active-window sessions.",
       "Do not create blocks for Outlook meetings; those are imported separately.",

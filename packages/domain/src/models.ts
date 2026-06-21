@@ -228,3 +228,14 @@ export interface WeeklyNarrative {
   key_drivers: string[];
   manager_ready_summary: string;
 }
+
+export type AIProvider = "openai" | "grok" | "claude" | "deepseek" | "custom";
+
+export interface AIConfig {
+  provider: AIProvider;
+  apiKey: string; // stored locally, not sent to cloud except for the chosen provider
+  baseUrl?: string; // for custom or overrides
+  model: string;
+  visionModel?: string;
+  // future: temperature, etc.
+}
