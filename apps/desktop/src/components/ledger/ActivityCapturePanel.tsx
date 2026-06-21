@@ -78,7 +78,12 @@ export function ActivityCapturePanel({
         </div>
       </div>
       {captureError && <p className="capture-error">{captureError}</p>}
-      {classificationError && <p className="capture-error">{classificationError}</p>}
+      {classificationError && (
+        <div className="error-row">
+          <p className="capture-error">{classificationError}</p>
+          <button type="button" className="error-retry" onClick={onClassifySessions}>Try again</button>
+        </div>
+      )}
       {visualContextStatus === "capturing" && <p className="capture-note">Visual context capture is deriving a local insight.</p>}
       {visualContextError && <p className="capture-error">{visualContextError}</p>}
       {latestSessionSummaries.length > 0 && (
