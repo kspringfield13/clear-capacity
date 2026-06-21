@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useAsyncStatus } from "./hooks/useAsyncStatus";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -305,16 +306,11 @@ export function App() {
   const [lastNarrativeAutoRunDate, setLastNarrativeAutoRunDate] = useState<string | null>(
     () => persistedSnapshot?.lastNarrativeAutoRunDate ?? null
   );
-  const [narrativeGenerationStatus, setNarrativeGenerationStatus] = useState<"idle" | "generating" | "error">("idle");
-  const [narrativeGenerationError, setNarrativeGenerationError] = useState<string | null>(null);
-  const [classificationStatus, setClassificationStatus] = useState<"idle" | "classifying" | "error">("idle");
-  const [classificationError, setClassificationError] = useState<string | null>(null);
-  const [reviewCopilotStatus, setReviewCopilotStatus] = useState<"idle" | "generating" | "error">("idle");
-  const [reviewCopilotError, setReviewCopilotError] = useState<string | null>(null);
-  const [forecastStatus, setForecastStatus] = useState<"idle" | "generating" | "error">("idle");
-  const [forecastError, setForecastError] = useState<string | null>(null);
-  const [visualContextStatus, setVisualContextStatus] = useState<"idle" | "capturing" | "error">("idle");
-  const [visualContextError, setVisualContextError] = useState<string | null>(null);
+  const [narrativeGenerationStatus, narrativeGenerationError, narrativeAsync] = useAsyncStatus<"idle" | "generating">("idle");
+  const [classificationStatus, classificationError, classificationAsync] = useAsyncStatus<"idle" | "classifying">("idle");
+  const [reviewCopilotStatus, reviewCopilotError, reviewCopilotAsync] = useAsyncStatus<"idle" | "generating">("idle");
+  const [forecastStatus, forecastError, forecastAsync] = useAsyncStatus<"idle" | "generating">("idle");
+  const [visualContextStatus, visualContextError, visualContextAsync] = useAsyncStatus<"idle" | "capturing">("idle");
   const [visualContextAttemptedSessionIds, setVisualContextAttemptedSessionIds] = useState<string[]>([]);
   const [importError, setImportError] = useState<string | null>(null);
   const [captureError, setCaptureError] = useState<string | null>(null);
@@ -629,8 +625,7 @@ export function App() {
       corrections
     });
 
-    setNarrativeGenerationStatus("generating");
-    setNarrativeGenerationError(null);
+    narrativeAsync.start("generating");
 
     try {
       const response = await invoke<NativeNarrativeGenerationResponse>("generate_weekly_narrative_with_openai", {
@@ -651,7 +646,7 @@ export function App() {
 
       setGeneratedNarrative(record);
       setManagerSummaryText(null);
-      setNarrativeGenerationStatus("idle");
+      narrativeAsync.setStatus("idle");
       setAuditEvents((current) => [
         ...current,
         createAuditEvent({
@@ -678,8 +673,7 @@ export function App() {
       ].slice(-1000));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      setNarrativeGenerationStatus("error");
-      setNarrativeGenerationError(message);
+      narrativeAsync.fail(message);
       setAuditEvents((current) => [
         ...current,
         createAuditEvent({
@@ -710,8 +704,7 @@ export function App() {
       maxDailyCaptures: MAX_VISUAL_CONTEXT_CAPTURES_PER_DAY
     });
 
-    setVisualContextStatus("capturing");
-    setVisualContextError(null);
+    visualContextAsync.start("capturing");
 
     try {
       const response = await invoke<NativeVisualContextResponse>("capture_visual_context_with_openai", {
@@ -743,7 +736,7 @@ export function App() {
       };
 
       setVisualContextInsights((current) => [...current, insight].slice(-200));
-      setVisualContextStatus("idle");
+      visualContextAsync.setStatus("idle");
       setAuditEvents((current) => [
         ...current,
         createAuditEvent({
@@ -767,8 +760,7 @@ export function App() {
       ].slice(-1000));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      setVisualContextStatus("error");
-      setVisualContextError(message);
+      visualContextAsync.fail(message);
       setAuditEvents((current) => [
         ...current,
         createAuditEvent({
@@ -855,8 +847,7 @@ export function App() {
       .sort((left, right) => new Date(left.start_time).getTime() - new Date(right.start_time).getTime());
 
     if (candidateSessions.length === 0) {
-      setClassificationError("No unclassified active-window sessions are ready yet.");
-      setClassificationStatus("error");
+      classificationAsync.fail("No unclassified active-window sessions are ready yet.");
       return;
     }
 
@@ -871,8 +862,7 @@ export function App() {
       corrections
     });
 
-    setClassificationStatus("classifying");
-    setClassificationError(null);
+    classificationAsync.start("classifying");
 
     try {
       const response = await invoke<NativeWorkBlockClassificationResponse>("classify_active_window_sessions_with_openai", {
@@ -893,7 +883,7 @@ export function App() {
           ...draftBlocks.filter((block) => !existingIds.has(block.work_block_id))
         ].sort((left, right) => new Date(left.start_time).getTime() - new Date(right.start_time).getTime());
       });
-      setClassificationStatus("idle");
+      classificationAsync.setStatus("idle");
       setAuditEvents((current) => [
         ...current,
         createAuditEvent({
@@ -918,8 +908,7 @@ export function App() {
       ].slice(-1000));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      setClassificationStatus("error");
-      setClassificationError(message);
+      classificationAsync.fail(message);
       setAuditEvents((current) => [
         ...current,
         createAuditEvent({
@@ -949,8 +938,7 @@ export function App() {
 
     const reviewQueue = blocks.filter((block) => !block.user_verified);
     if (reviewQueue.length === 0) {
-      setReviewCopilotStatus("error");
-      setReviewCopilotError("There are no unverified blocks for the Review Copilot to inspect.");
+      reviewCopilotAsync.fail("There are no unverified blocks for the Review Copilot to inspect.");
       return;
     }
 
@@ -966,8 +954,7 @@ export function App() {
       corrections
     });
 
-    setReviewCopilotStatus("generating");
-    setReviewCopilotError(null);
+    reviewCopilotAsync.start("generating");
 
     try {
       const response = await invoke<NativeReviewCopilotResponse>("generate_review_copilot_suggestions_with_openai", {
@@ -986,7 +973,7 @@ export function App() {
         .filter((suggestion) => suggestion.work_block_ids.length > 0);
 
       setReviewSuggestions(suggestions);
-      setReviewCopilotStatus("idle");
+      reviewCopilotAsync.setStatus("idle");
       setAuditEvents((current) => [
         ...current,
         createAuditEvent({
@@ -1010,8 +997,7 @@ export function App() {
       ].slice(-1000));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      setReviewCopilotStatus("error");
-      setReviewCopilotError(message);
+      reviewCopilotAsync.fail(message);
       setAuditEvents((current) => [
         ...current,
         createAuditEvent({
@@ -1040,8 +1026,7 @@ export function App() {
     }
 
     if (blocks.length === 0) {
-      setForecastStatus("error");
-      setForecastError("The Forecast Agent needs at least one work block before it can estimate next-week capacity.");
+      forecastAsync.fail("The Forecast Agent needs at least one work block before it can estimate next-week capacity.");
       return;
     }
 
@@ -1058,8 +1043,7 @@ export function App() {
       corrections
     });
 
-    setForecastStatus("generating");
-    setForecastError(null);
+    forecastAsync.start("generating");
 
     try {
       const response = await invoke<NativeForecastAgentResponse>("generate_forecast_agent_with_openai", {
@@ -1078,7 +1062,7 @@ export function App() {
       };
 
       setGeneratedForecast(record);
-      setForecastStatus("idle");
+      forecastAsync.setStatus("idle");
       setAuditEvents((current) => [
         ...current,
         createAuditEvent({
@@ -1108,8 +1092,7 @@ export function App() {
       ].slice(-1000));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      setForecastStatus("error");
-      setForecastError(message);
+      forecastAsync.fail(message);
       setAuditEvents((current) => [
         ...current,
         createAuditEvent({
@@ -1266,16 +1249,11 @@ export function App() {
     setManagerSummaryText(null);
     setGeneratedNarrative(null);
     setLastNarrativeAutoRunDate(null);
-    setNarrativeGenerationStatus("idle");
-    setNarrativeGenerationError(null);
-    setClassificationStatus("idle");
-    setClassificationError(null);
-    setReviewCopilotStatus("idle");
-    setReviewCopilotError(null);
-    setForecastStatus("idle");
-    setForecastError(null);
-    setVisualContextStatus("idle");
-    setVisualContextError(null);
+    narrativeAsync.reset();
+    classificationAsync.reset();
+    reviewCopilotAsync.reset();
+    forecastAsync.reset();
+    visualContextAsync.reset();
     setImportError(null);
     setCaptureError(null);
     setPaused(true);
