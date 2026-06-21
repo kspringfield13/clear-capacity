@@ -1289,6 +1289,33 @@ h3 {
   line-height: 1.45;
 }
 
+.error-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.error-row p {
+  flex: 1;
+  margin: 0;
+}
+
+.error-retry {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: var(--radius);
+  background: transparent;
+  color: #fecaca;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.error-retry:hover {
+  background: rgba(239, 68, 68, 0.12);
+}
+
 .session-list {
   display: grid;
   gap: 8px;

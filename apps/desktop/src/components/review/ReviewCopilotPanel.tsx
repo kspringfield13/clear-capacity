@@ -37,7 +37,12 @@ export function ReviewCopilotPanel({
         </button>
       </div>
       <p>Suggests cleanup actions for unverified blocks. You approve every change.</p>
-      {error && <p className="copilot-error">{error}</p>}
+      {error && (
+        <div className="error-row">
+          <p className="copilot-error">{error}</p>
+          <button type="button" className="error-retry" onClick={onGenerate}>Try again</button>
+        </div>
+      )}
       {suggestions.length === 0 ? (
         <span className="copilot-empty">
           {status === "generating" ? "Generating suggestions..." : "No suggestions yet."}

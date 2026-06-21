@@ -38,7 +38,12 @@ export function ForecastAgentPanel({
           <span>{status === "generating" ? "Forecasting…" : forecast ? "Regenerate Forecast" : "Generate Forecast"}</span>
         </button>
       </div>
-      {error && <p className="forecast-error">{error}</p>}
+      {error && (
+        <div className="error-row">
+          <p className="forecast-error">{error}</p>
+          <button type="button" className="error-retry" onClick={onGenerate}>Try again</button>
+        </div>
+      )}
       {!forecast ? (
         <div className="forecast-empty">
           <strong>No AI forecast yet.</strong>

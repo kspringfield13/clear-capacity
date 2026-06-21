@@ -73,7 +73,12 @@ export function NarrativeScreen({
           title="Ready to generate."
           description="The prompt will include the current ledger, daily review corrections, weekly capacity metrics, Outlook imports, and active-window session context. It is sent to OpenAI only when generation runs."
         />
-        {generationError && <p className="narrative-error">{generationError}</p>}
+        {generationError && (
+          <div className="error-row">
+            <p className="narrative-error">{generationError}</p>
+            <button type="button" className="error-retry" onClick={onRegenerate}>Try again</button>
+          </div>
+        )}
       </section>
     );
   }
@@ -114,7 +119,12 @@ export function NarrativeScreen({
           </button>
         </div>
       </div>
-      {generationError && <p className="narrative-error">{generationError}</p>}
+      {generationError && (
+        <div className="error-row">
+          <p className="narrative-error">{generationError}</p>
+          <button type="button" className="error-retry" onClick={onRegenerate}>Try again</button>
+        </div>
+      )}
 
       <div className="narrative-layout">
         <section className="narrative-panel analyst-narrative">
