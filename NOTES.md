@@ -26,6 +26,9 @@ Cloud sessions are stateless — without this file, every run relearns the codeb
 
 ## Gotchas
 - **Render for visual checks**: the React UI runs in a plain browser via `npm run dev` (Vite, 127.0.0.1:5173); append `?demo=1&screen=<daily|weekly|narrative|ledger|audit|setup>` for synthetic data. Tauri APIs are absent in the browser — demo mode is how you render screens headless.
+- **Headless dark mode**: the app does NOT honor `prefers-color-scheme`. Theme is `document.documentElement.dataset.theme`, sourced from `localStorage["clear-capacity:theme"]` in the browser (no Tauri store). To screenshot dark mode in Playwright, set that key via `addInitScript` before navigating (Playwright's `colorScheme: 'dark'` alone does nothing).
+- **Playwright in the sandbox**: the chromium CDN download is blocked, but a usable browser ships at `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` — pass it as `executablePath`. Install the `playwright` npm module under /tmp, never in the repo.
+- **Icon-only button a11y convention**: chrome/icon buttons should carry both `title` and `aria-label` (plus `aria-pressed` for toggles). The theme toggle in `AppToolbar.tsx` is the reference; match it when adding icon controls.
 - **Verification gate**: `npm run build` (`tsc -b && vite build`) must pass before committing. There is no automated test suite.
 - **Out of loop scope**: `apps/desktop/src-tauri/` (Rust), `.env`, and the 5173 port config are off-limits to the frontend loop. Anything needing Rust (model params, request bodies, JSON schemas, per-command model routing) is a manual follow-up — leave a clear note in STATUS.md.
 

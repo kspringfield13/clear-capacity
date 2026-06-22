@@ -26,16 +26,19 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
-- [ ] **Capacity percentage ring or gauge** — The WeeklyCapacityScreen shows percentage as text. Add a small visual arc/ring component next to the number for immediate at-a-glance reading.
+- [ ] **Dead "Split Block" button** — In `apps/desktop/src/components/ledger/BlockCard.tsx` (line ~62) the "Split Block" button has no `onClick` — it renders fully enabled on both DailyReviewScreen and LedgerScreen but does nothing when clicked, which makes the app feel broken. Minimum safe fix: disable it and add a `title="Block splitting is coming soon"` so it reads as not-yet-available. (Optionally implement a real inline split, but that's a larger change — the disable is the high-value polish.)
+- [ ] **Capacity-model legend is clipped** — On WeeklyCapacityScreen the 8-category legend is squeezed into a fixed inner scroll area, so the last row renders half-visible with no scroll affordance (`.allocation-grid { max-height: 68px; overflow-y: auto }` and `.capacity-model { max-height: 165px; overflow: hidden }` in `apps/desktop/src/styles.css`). Raise/remove those caps so all categories list fully — the page already scrolls vertically.
+- [ ] **Toolbar icon-button accessibility** — In `apps/desktop/src/components/shell/AppToolbar.tsx` the pause, sidebar-toggle, and window-mode chrome buttons have `title` tooltips but no `aria-label`/`aria-pressed`, unlike the theme toggle (lines 89–114). Add matching `aria-label`s (and `aria-pressed` for pause/window-mode) so the icon-only controls are screen-reader-labeled and consistent.
+- [ ] **Blocker flag visual treatment** — `blocker_flag` exists on `WorkBlock` and is produced by the classifier/copilot, but it is never rendered. Add a red "Blocker" badge in the `.block-topline` row of `apps/desktop/src/components/ledger/BlockCard.tsx` (next to `ConfidenceChip`) when `block.blocker_flag` is true, and surface a blocker count in the WeeklyCapacityScreen "Delivery risk modifiers" section. Add a `.blocker-badge` token-based style (light + dark) in `styles.css`.
+- [ ] **Capacity percentage ring or gauge** — The WeeklyCapacityScreen hero metrics show percentages as plain text (`MetricCard`). Add a small visual arc/ring component next to the "Reliable new work" number for immediate at-a-glance reading, reusing CSS-variable tokens for the track/fill so it works in light and dark.
 
 ### New Features
-- [ ] **Export capacity report** — Add a "Copy as Markdown" and "Download .txt" option on the NarrativeScreen that formats the manager-ready narrative with the week date header for easy pasting into email/Slack.
-- [ ] **Block duration edit** — Users can relabel blocks but not adjust their start/end time. Add a time-range editor inline on BlockCard so the duration can be corrected without excluding and re-classifying.
-- [ ] **Blocker flag visual treatment** — `blocker_flag: true` exists in the domain model but it's unclear how prominently it surfaces in the UI. Add a red badge or banner on BlockCard and in the WeeklyCapacityScreen risk summary.
+- [ ] **Downloadable / markdown narrative export** — `NarrativeScreen.tsx` already has a plain-text "Copy Summary" button. Add a "Download .txt" action (and/or a "Copy as Markdown" variant that formats headline + manager summary with the week date header) next to it so the manager-ready narrative is easy to file or paste into email/Slack.
+- [ ] **Block duration edit** — Users can relabel a block's category/status/mode but not adjust its start/end time (it's read-only text via `formatRange` in `BlockCard.tsx`). Add an inline time-range editor so the duration can be corrected without excluding and re-classifying.
 - [ ] **Activity heatmap** — On the ledger screen or as a new panel, show a 7-day heatmap of active-window session density by hour so users can spot focus vs. fragmented time visually.
 
 ### Code Quality
-- [ ] **Split App.tsx** — At 1487 lines, App.tsx is a god component. Move each async operation (classifyActiveWindowSessions, generateReviewCopilotSuggestions, generateForecastAgent, regenerateNarrative, captureVisualContext) into a dedicated custom hook. Keep App.tsx as a thin orchestrator.
+- [ ] **Split App.tsx** — At 1510 lines, App.tsx is a god component. Move each async operation (classifyActiveWindowSessions, generateReviewCopilotSuggestions, generateForecastAgent, regenerateNarrative, captureVisualContext) into a dedicated custom hook (following the `useAsyncStatus` pattern). Keep App.tsx as a thin orchestrator.
 
 ---
 
