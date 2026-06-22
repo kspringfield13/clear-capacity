@@ -26,6 +26,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **Capacity percentage ring or gauge** — added `CapacityRing` SVG arc component; `MetricCard` gained optional `showRing` prop; "Reliable new work" hero card now shows an animated arc ring next to the percentage using `--info`/`--surface-muted` tokens for light+dark. (2026-06-22)
 - [x] **Downloadable / markdown narrative export** — added "Download .txt" button (saves manager-ready text with week-label header) and replaced "Copy Summary" with "Copy as Markdown" (`# / ##` Markdown respecting user edits) in `NarrativeScreen.tsx`. (2026-06-22)
 - [x] **Label the bare capacity percentage** — wrapped `<strong>` in `.block-capacity` with `<span class="capacity-caption">of week</span>` in `BlockCard.tsx`; swapped `TimerReset` → `PieChart` icon and added same caption in `LedgerScreen.tsx` pulse-meter; added `.block-capacity`, `.pulse-meter-val`, `.capacity-caption` CSS rules using `var(--text-subtle)` token; fixed `.pulse-meter` to `align-items: flex-start` for correct icon-to-number alignment; added `flex-shrink: 0` to `.block-capacity`. (2026-06-22)
+- [x] **Theme preference is lost on reload** — added `themeHydrated` ref guard in `App.tsx`; hydration `useEffect` reads `readThemePreference()` on mount and sets the ref before calling `setTheme`; write-back effect skips `writeThemePreference` until the ref is true, preventing the default "light" from clobbering a saved dark preference. (2026-06-22)
 
 ## In Progress
 _(none)_
@@ -33,7 +34,6 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
-- [ ] **Theme preference is lost on reload** — In `App.tsx`, `theme` state inits to `"light"` (line ~323) and the effect at ~line 400 immediately calls `writeThemePreference(theme)` on mount, overwriting the value `main.tsx` loaded from `readThemePreference()`. So a user's dark-mode choice reverts to light after reload. Hydrate the initial `theme` from the persisted preference on mount (e.g. `readThemePreference().then(setTheme)` plus a first-render guard so the write effect doesn't clobber it), keeping the existing `setTheme`/toolbar toggle wiring intact.
 - [ ] **Ambiguous "Pause Tracking" buttons on Settings** — On the Settings screen the same "Pause Tracking" label appears in the toolbar, the sidebar, AND on the "Active window activity" data-source row (the source-row control in the settings component). The duplicate label makes it unclear whether the row pauses only that source or all tracking. Relabel/clarify the per-source control (e.g. a toggle or "Pause this source") in the settings component so its scope is unambiguous.
 - [ ] **Long category labels truncate silently in selects** — In `BlockCard.tsx`, the category `<select>` clips long options like "Documentation / requirement clarificat…" with no way to see the full value. Add `title={block.category}` (and to the status/mode selects) so hovering reveals the full label; consider widening the category select column in `.tag-grid` so the common categories aren't cut off.
 

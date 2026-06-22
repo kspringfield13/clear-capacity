@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAsyncStatus } from "./hooks/useAsyncStatus";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -321,9 +321,19 @@ export function App() {
   const [captureError, setCaptureError] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [theme, setTheme] = useState<AppTheme>("light");
+  const themeHydrated = useRef(false);
   const [windowMode, setWindowMode] = useState<WindowMode>(() =>
     isDemoMode && new URLSearchParams(window.location.search).get("mode") === "compact" ? "compact" : "large"
   );
+
+  // Hydrate theme from persisted preference on mount; the ref prevents the
+  // write-back effect from clobbering the saved value before hydration.
+  useEffect(() => {
+    readThemePreference().then((saved) => {
+      themeHydrated.current = true;
+      setTheme(saved);
+    });
+  }, []);
 
   const ledger = useBlocksLedger({
     initialBlocks,
@@ -399,7 +409,9 @@ export function App() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    writeThemePreference(theme);
+    if (themeHydrated.current) {
+      writeThemePreference(theme);
+    }
   }, [theme]);
 
   useEffect(() => {
