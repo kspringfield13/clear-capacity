@@ -1399,6 +1399,7 @@ export function App() {
           onPauseChange={setPaused}
           onOpenScreen={openScreenFromQuickView}
           onConfirm={confirmBlock}
+          onExclude={excludeBlock}
         />
       ) : (
         <>

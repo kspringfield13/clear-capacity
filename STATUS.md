@@ -17,6 +17,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **Mark all confirmed bulk action** — "Confirm Visible Blocks" button already present in DailyReviewScreen since PR #3 extraction.
 - [x] **Skeleton loading states** — added shimmer skeleton placeholders for ReviewCopilotPanel, ForecastAgentPanel, and NarrativeScreen so layout does not shift when AI results arrive. (2026-06-22)
 - [x] **Empty state polish** — replaced custom `audit-empty` HTML with `EmptyState` + `ScrollText` icon; added "Classify N sessions" CTA to LedgerScreen; added "Generate Narrative" CTA inside NarrativeScreen empty state; added "Clear filters" CTA for filtered-out audit log. (2026-06-22)
+- [x] **CompactWidget quick-confirm** — added inline Confirm + Exclude buttons to the `quick-review` section so users can act on the next unverified block without switching to large mode. (2026-06-22)
 
 ## In Progress
 _(none)_
@@ -24,7 +25,6 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
-- [ ] **CompactWidget quick-confirm** — The compact mode widget shows blocks but confirm/exclude requires switching to large mode. Add inline confirm/exclude swipe or button directly in `CompactWidget`.
 - [ ] **Dark mode token audit** — Run through every screen in dark mode and fix any hardcoded colors or contrast issues that slip past the CSS variable system.
 - [ ] **Capacity percentage ring or gauge** — The WeeklyCapacityScreen shows percentage as text. Add a small visual arc/ring component next to the number for immediate at-a-glance reading.
 

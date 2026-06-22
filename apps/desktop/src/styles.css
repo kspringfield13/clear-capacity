@@ -2782,6 +2782,33 @@ select {
   font-weight: 620;
 }
 
+.quick-review-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.quick-review-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+  background: var(--surface);
+  font-size: 11px;
+  font-weight: 620;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.quick-review-exclude {
+  color: var(--text-subtle) !important;
+}
+
 .quick-primary,
 .quick-pause {
   display: flex;
@@ -4420,6 +4447,7 @@ input:focus {
 }
 
 .quick-review > button,
+.quick-review-actions button,
 .quick-pause {
   border-color: var(--border);
   border-radius: var(--radius);
@@ -4584,6 +4612,7 @@ html[data-theme="dark"] .history-title button,
 html[data-theme="dark"] .audit-detail-header button,
 html[data-theme="dark"] .audit-filters button,
 html[data-theme="dark"] .quick-review > button,
+html[data-theme="dark"] .quick-review-actions button,
 html[data-theme="dark"] .quick-pause,
 html[data-theme="dark"] .quick-view {
   border-color: var(--border);
