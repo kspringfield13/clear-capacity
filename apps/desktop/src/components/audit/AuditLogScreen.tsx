@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Search } from "lucide-react";
+import { Search, ClipboardList } from "lucide-react";
 import type { AuditEvent } from "../../../../../packages/domain/src/models";
 import { auditTypeLabel } from "../../lib/format";
 import { formatAuditTime } from "../../lib/format";
 import { AuditEventRow } from "./AuditEventRow";
+import { EmptyState } from "../common/EmptyState";
 
 export function AuditLogScreen({ auditEvents }: { auditEvents: AuditEvent[] }) {
   type AuditFilter = "all" | "capture" | "session" | "visual" | "calendar" | "correction" | "classifier" | "copilot" | "forecast" | "narrative" | "privacy";
@@ -82,10 +83,19 @@ export function AuditLogScreen({ auditEvents }: { auditEvents: AuditEvent[] }) {
 
       <div className="audit-list">
         {filteredEvents.length === 0 ? (
-          <section className="audit-empty">
-            <strong>No audit events match.</strong>
-            <span>Capture samples, imports, corrections, and privacy changes will appear here.</span>
-          </section>
+          auditEvents.length === 0 ? (
+            <EmptyState
+              icon={ClipboardList}
+              title="No audit events yet."
+              description="Capture samples, calendar imports, user corrections, and privacy changes will appear here as they happen."
+            />
+          ) : (
+            <EmptyState
+              icon={Search}
+              title="No events match your filter."
+              description="Try clearing the search query or switching to a different event type."
+            />
+          )
         ) : (
           filteredEvents.map((event) => <AuditEventRow event={event} key={event.event_id} />)
         )}
