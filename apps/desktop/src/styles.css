@@ -2136,6 +2136,21 @@ select {
   line-height: 1;
 }
 
+.metric-ring-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.capacity-ring-track {
+  stroke: var(--surface-muted);
+}
+
+.capacity-ring-fill {
+  stroke: var(--info);
+  transition: stroke-dashoffset 0.4s ease;
+}
+
 .capacity-section {
   padding: 12px 14px;
   margin-bottom: 10px;
