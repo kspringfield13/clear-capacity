@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ClipboardCopy, Pencil, RefreshCw, FileText } from "lucide-react";
+import { ClipboardCopy, Download, Pencil, RefreshCw, FileText } from "lucide-react";
 import type { PersistedNarrativeRecord } from "../../services/localStore";
 import { generateWeeklyNarrative } from "../../../../../packages/inference/src/capacity";
 import { displaySafeNarrative, replaceIsoWeekIds } from "../../lib/date";
@@ -31,6 +31,23 @@ export function NarrativeScreen({
   const displayNarrative = displaySafeNarrative(generatedNarrative?.narrative ?? narrative, weekRangeLabel);
   const generatedManagerText = `${displayNarrative.headline}\n\n${displayNarrative.manager_ready_summary}`;
   const managerText = replaceIsoWeekIds(managerSummaryText ?? generatedManagerText, weekRangeLabel);
+
+  const firstBreak = managerText.indexOf('\n\n');
+  const markdownContent = firstBreak > -1
+    ? `# Capacity Narrative — ${weekRangeLabel}\n\n## ${managerText.slice(0, firstBreak).trim()}\n\n${managerText.slice(firstBreak + 2).trim()}`
+    : `# Capacity Narrative — ${weekRangeLabel}\n\n${managerText.trim()}`;
+
+  function handleDownload() {
+    const header = `Capacity Narrative — ${weekRangeLabel}\n${"─".repeat(48)}\n\n`;
+    const slug = weekRangeLabel.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+    const blob = new Blob([header + managerText], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `capacity-narrative-${slug}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   if (!hasNarrativeEvidence) {
     return (
@@ -141,16 +158,24 @@ export function NarrativeScreen({
             <span>{generationStatus === "generating" ? "Generating…" : "Regenerate Narrative"}</span>
           </button>
           <button
+            className="secondary-action"
+            type="button"
+            onClick={handleDownload}
+          >
+            <Download size={17} />
+            <span>Download .txt</span>
+          </button>
+          <button
             className="primary-action"
             type="button"
             onClick={() => {
-              void navigator.clipboard?.writeText(managerText);
+              void navigator.clipboard?.writeText(markdownContent);
               setCopied(true);
               window.setTimeout(() => setCopied(false), 1400);
             }}
           >
             <ClipboardCopy size={18} />
-            <span>{copied ? "Summary Copied" : "Copy Summary"}</span>
+            <span>{copied ? "Copied!" : "Copy as Markdown"}</span>
           </button>
         </div>
       </div>

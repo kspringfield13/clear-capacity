@@ -24,6 +24,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **Toolbar icon-button accessibility** — added `aria-label` + `aria-pressed` to sidebar-toggle, pause, and window-mode chrome buttons in `AppToolbar.tsx`, matching the existing theme-toggle reference. (2026-06-22)
 - [x] **Blocker flag visual treatment** — added red "Blocker" pill badge in `BlockCard.tsx` `.block-topline` next to `ConfidenceChip` (via `.block-chips` wrapper); surfaced "Active blockers" count row (red fill bar, red count) in WeeklyCapacityScreen "Delivery risk modifiers" section; added `.blocker-badge` + `.risk-blocker-count` token-based styles (light + dark) in `styles.css`. (2026-06-22)
 - [x] **Capacity percentage ring or gauge** — added `CapacityRing` SVG arc component; `MetricCard` gained optional `showRing` prop; "Reliable new work" hero card now shows an animated arc ring next to the percentage using `--info`/`--surface-muted` tokens for light+dark. (2026-06-22)
+- [x] **Downloadable / markdown narrative export** — added "Download .txt" button (saves manager-ready text with week-label header) and replaced "Copy Summary" with "Copy as Markdown" (`# / ##` Markdown respecting user edits) in `NarrativeScreen.tsx`. (2026-06-22)
 
 ## In Progress
 _(none)_
@@ -33,7 +34,6 @@ _(none)_
 ### UI & UX Polish
 
 ### New Features
-- [ ] **Downloadable / markdown narrative export** — `NarrativeScreen.tsx` already has a plain-text "Copy Summary" button. Add a "Download .txt" action (and/or a "Copy as Markdown" variant that formats headline + manager summary with the week date header) next to it so the manager-ready narrative is easy to file or paste into email/Slack.
 - [ ] **Block duration edit** — Users can relabel a block's category/status/mode but not adjust its start/end time (it's read-only text via `formatRange` in `BlockCard.tsx`). Add an inline time-range editor so the duration can be corrected without excluding and re-classifying.
 - [ ] **Activity heatmap** — On the ledger screen or as a new panel, show a 7-day heatmap of active-window session density by hour so users can spot focus vs. fragmented time visually.
 
