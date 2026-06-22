@@ -1627,7 +1627,7 @@ h3 {
 
 .tag-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.75fr) minmax(0, 0.85fr);
+  grid-template-columns: minmax(0, 1.8fr) minmax(0, 0.75fr) minmax(0, 0.75fr);
   gap: 8px;
 }
 

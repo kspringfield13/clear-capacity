@@ -36,17 +36,17 @@ export function BlockCard({
         </div>
       </div>
       <div className="tag-grid">
-        <select value={block.category} onChange={(event) => onRelabel(block.work_block_id, "category", event.target.value as WorkCategory)}>
+        <select title={block.category} value={block.category} onChange={(event) => onRelabel(block.work_block_id, "category", event.target.value as WorkCategory)}>
           {workCategories.map((category) => (
             <option key={category}>{category}</option>
           ))}
         </select>
-        <select value={block.planned_status} onChange={(event) => onRelabel(block.work_block_id, "planned_status", event.target.value as PlannedStatus)}>
+        <select title={block.planned_status} value={block.planned_status} onChange={(event) => onRelabel(block.work_block_id, "planned_status", event.target.value as PlannedStatus)}>
           {plannedStatuses.map((status) => (
             <option key={status}>{status}</option>
           ))}
         </select>
-        <select value={block.mode} onChange={(event) => onRelabel(block.work_block_id, "mode", event.target.value as WorkMode)}>
+        <select title={block.mode} value={block.mode} onChange={(event) => onRelabel(block.work_block_id, "mode", event.target.value as WorkMode)}>
           {workModes.map((mode) => (
             <option key={mode}>{mode}</option>
           ))}

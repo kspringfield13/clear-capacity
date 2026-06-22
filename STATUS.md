@@ -28,6 +28,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **Label the bare capacity percentage** — wrapped `<strong>` in `.block-capacity` with `<span class="capacity-caption">of week</span>` in `BlockCard.tsx`; swapped `TimerReset` → `PieChart` icon and added same caption in `LedgerScreen.tsx` pulse-meter; added `.block-capacity`, `.pulse-meter-val`, `.capacity-caption` CSS rules using `var(--text-subtle)` token; fixed `.pulse-meter` to `align-items: flex-start` for correct icon-to-number alignment; added `flex-shrink: 0` to `.block-capacity`. (2026-06-22)
 - [x] **Theme preference is lost on reload** — added `themeHydrated` ref guard in `App.tsx`; hydration `useEffect` reads `readThemePreference()` on mount and sets the ref before calling `setTheme`; write-back effect skips `writeThemePreference` until the ref is true, preventing the default "light" from clobbering a saved dark preference. (2026-06-22)
 - [x] **Ambiguous "Pause Tracking" buttons on Settings** — replaced the duplicate "Pause Tracking" button on the "Active window activity" source row with a read-only status badge ("Active" / "Paused") in `SetupScreen.tsx`; global pause action remains only in the screen header. Added `.source-status` styles (light + dark) in `styles.css`. (2026-06-22)
+- [x] **Long category labels truncate silently in selects** — added `title` attribute to all three selects in `BlockCard.tsx` (category, planned_status, mode) showing the current value as a hover tooltip; widened category column in `.tag-grid` from `1.35fr` to `1.8fr` in `styles.css`. (2026-06-22)
 
 ## In Progress
 _(none)_
@@ -35,7 +36,6 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
-- [ ] **Long category labels truncate silently in selects** — In `BlockCard.tsx`, the category `<select>` clips long options like "Documentation / requirement clarificat…" with no way to see the full value. Add `title={block.category}` (and to the status/mode selects) so hovering reveals the full label; consider widening the category select column in `.tag-grid` so the common categories aren't cut off.
 
 ### New Features
 - [ ] **Block duration edit** — Users can relabel a block's category/status/mode but not adjust its start/end time (it's read-only text via `formatRange` in `BlockCard.tsx`). Add an inline time-range editor so the duration can be corrected without excluding and re-classifying.
