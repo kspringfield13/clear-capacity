@@ -599,6 +599,41 @@ input {
   min-width: 0;
 }
 
+.week-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.week-nav h1 {
+  margin: 0;
+  flex: 1;
+}
+
+.week-nav-chevron {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.week-nav-chevron:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.week-nav-chevron:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
 .eyebrow {
   margin: 0 0 9px;
   color: var(--text-subtle);

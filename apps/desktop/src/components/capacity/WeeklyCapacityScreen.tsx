@@ -1,8 +1,11 @@
-import { BarChart3 } from "lucide-react";
+import { useState, useMemo } from "react";
+import { BarChart3, ChevronLeft, ChevronRight } from "lucide-react";
 import type { PersistedForecastRecord } from "../../services/localStore";
+import type { WorkBlock } from "../../../../../packages/domain/src/models";
 import { computeWeeklyCapacitySnapshot } from "../../../../../packages/inference/src/capacity";
 import { categoryColors } from "../../../../../packages/domain/src/taxonomy";
 import { pct } from "../../lib/format";
+import { addDays, getCurrentIsoWeekId, getBusinessWeekRangeLabel } from "../../lib/date";
 import { EmptyState } from "../common/EmptyState";
 import { MetricCard } from "../common/MetricCard";
 import { StackedBar } from "../common/StackedBar";
@@ -11,14 +14,15 @@ import { RiskRow } from "../common/RiskRow";
 import { ForecastAgentPanel } from "./ForecastAgentPanel";
 
 export function WeeklyCapacityScreen({
-  snapshot,
+  snapshot: currentSnapshot,
   weekRangeLabel,
   nextWeekRangeLabel,
   generatedForecast,
   forecastStatus,
   forecastError,
   onGenerateForecast,
-  hasWorkBlocks
+  hasWorkBlocks,
+  blocks,
 }: {
   snapshot: ReturnType<typeof computeWeeklyCapacitySnapshot>;
   weekRangeLabel: string;
@@ -28,7 +32,39 @@ export function WeeklyCapacityScreen({
   forecastError: string | null;
   onGenerateForecast: () => void;
   hasWorkBlocks: boolean;
+  blocks: WorkBlock[];
 }) {
+  const [weekOffset, setWeekOffset] = useState(0);
+
+  const viewedMonday = useMemo(() => {
+    const now = new Date();
+    const day = now.getDay() || 7;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + 1 - day);
+    monday.setHours(0, 0, 0, 0);
+    return addDays(monday, weekOffset * 7);
+  }, [weekOffset]);
+
+  const viewedWeekId = useMemo(() => getCurrentIsoWeekId(viewedMonday), [viewedMonday]);
+  const viewedWeekRangeLabel = useMemo(() => getBusinessWeekRangeLabel(viewedMonday), [viewedMonday]);
+
+  const viewedBlocks = useMemo(() => {
+    if (weekOffset === 0) return blocks;
+    const start = viewedMonday.getTime();
+    const end = addDays(viewedMonday, 7).getTime();
+    return blocks.filter((b) => {
+      const t = new Date(b.start_time).getTime();
+      return t >= start && t < end;
+    });
+  }, [blocks, weekOffset, viewedMonday]);
+
+  const snapshot = useMemo(
+    () => (weekOffset === 0 ? currentSnapshot : computeWeeklyCapacitySnapshot(viewedWeekId, viewedBlocks)),
+    [currentSnapshot, weekOffset, viewedWeekId, viewedBlocks]
+  );
+
+  const isCurrentWeek = weekOffset === 0;
+
   if (!hasWorkBlocks) {
     return (
       <section className="screen capacity-screen">
@@ -56,7 +92,26 @@ export function WeeklyCapacityScreen({
       <div className="screen-header">
         <div>
           <p className="eyebrow">Weekly capacity view</p>
-          <h1>{weekRangeLabel}: {pct(snapshot.reliable_new_work_capacity_pct)} reliable capacity for new planned work.</h1>
+          <div className="week-nav">
+            <button
+              className="week-nav-chevron"
+              type="button"
+              onClick={() => setWeekOffset((o) => o - 1)}
+              aria-label="Previous week"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <h1>{viewedWeekRangeLabel}: {pct(snapshot.reliable_new_work_capacity_pct)} reliable capacity for new planned work.</h1>
+            <button
+              className="week-nav-chevron"
+              type="button"
+              disabled={isCurrentWeek}
+              onClick={() => setWeekOffset((o) => o + 1)}
+              aria-label="Next week"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
         </div>
         <div className="header-actions">
           <div className="summary-score">
@@ -73,14 +128,24 @@ export function WeeklyCapacityScreen({
         <MetricCard label="Reliable new work" value={snapshot.reliable_new_work_capacity_pct} helper="Forecast for next week" />
       </div>
 
-      <ForecastAgentPanel
-        generatedForecast={generatedForecast}
-        nextWeekRangeLabel={nextWeekRangeLabel}
-        status={forecastStatus}
-        error={forecastError}
-        deterministicReliableCapacity={snapshot.reliable_new_work_capacity_pct}
-        onGenerate={onGenerateForecast}
-      />
+      {isCurrentWeek && (
+        <ForecastAgentPanel
+          generatedForecast={generatedForecast}
+          nextWeekRangeLabel={nextWeekRangeLabel}
+          status={forecastStatus}
+          error={forecastError}
+          deterministicReliableCapacity={snapshot.reliable_new_work_capacity_pct}
+          onGenerate={onGenerateForecast}
+        />
+      )}
+
+      {!isCurrentWeek && viewedBlocks.length === 0 && (
+        <EmptyState
+          icon={BarChart3}
+          title={`No work blocks for ${viewedWeekRangeLabel}.`}
+          description="Work blocks are tagged to the week they were classified. Earlier weeks will show data if Outlook imports or classifications were run during that week."
+        />
+      )}
 
       <section className="capacity-section capacity-model">
         <div className="section-title">

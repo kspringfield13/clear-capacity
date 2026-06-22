@@ -1463,6 +1463,7 @@ export function App() {
           forecastError={forecastError}
           onGenerateForecast={() => void generateForecastAgent()}
           hasWorkBlocks={blocks.length > 0}
+          blocks={blocks}
         />
       )}
       {active === "narrative" && (
