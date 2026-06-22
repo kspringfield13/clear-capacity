@@ -167,10 +167,10 @@ export function SetupScreen({
           <span>{activeWindowSamples.length} samples stored</span>
           {captureError && <small className="import-error">{captureError}</small>}
         </div>
-        <button className="settings-control" type="button" onClick={() => setPaused(!paused)}>
-          {paused ? <Play size={16} /> : <Pause size={16} />}
-          {paused ? "Resume Tracking" : "Pause Tracking"}
-        </button>
+        <span className={paused ? "source-status is-paused" : "source-status is-active"}>
+          {paused ? <Pause size={13} /> : <span className="source-status-dot" />}
+          {paused ? "Paused" : "Active"}
+        </span>
       </section>
 
       <section className="settings-row">

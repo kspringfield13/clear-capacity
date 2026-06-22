@@ -1165,6 +1165,37 @@ h3 {
   cursor: pointer;
 }
 
+.source-status {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 620;
+  pointer-events: none;
+  user-select: none;
+}
+
+.source-status.is-active {
+  color: var(--success);
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.source-status.is-paused {
+  color: var(--danger);
+  background: rgba(239, 68, 68, 0.10);
+}
+
+.source-status-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
 .advanced-settings {
   margin-top: 14px;
   border-top: 1px solid var(--border);
@@ -3919,6 +3950,16 @@ h3 {
   border-color: #cae7ff;
   color: #0059ec;
   background: var(--blue-soft);
+}
+
+.source-status.is-active {
+  color: var(--success);
+  background: var(--green-soft);
+}
+
+.source-status.is-paused {
+  color: var(--danger);
+  background: var(--red-soft);
 }
 
 .advanced-settings {
