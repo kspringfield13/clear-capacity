@@ -2225,10 +2225,7 @@ select {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
   gap: 4px 18px;
-  max-height: 68px;
   margin-top: 10px;
-  overflow-y: auto;
-  padding-right: 3px;
 }
 
 .allocation-row {
@@ -2261,8 +2258,6 @@ select {
 
 .capacity-model {
   flex: 0 1 auto;
-  max-height: 165px;
-  overflow: hidden;
 }
 
 .capacity-risk-grid {
