@@ -44,7 +44,24 @@ export function ForecastAgentPanel({
           <button type="button" className="error-retry" onClick={onGenerate}>Try again</button>
         </div>
       )}
-      {!forecast ? (
+      {status === "generating" && !forecast ? (
+        <div className="forecast-skeleton">
+          <div className="forecast-skeleton-grid">
+            {[0, 1, 2, 3].map((i) => (
+              <div className="forecast-skeleton-cell" key={i}>
+                <span className="skeleton-line" style={{ height: 11, width: "55%" }} />
+                <span className="skeleton-line" style={{ height: 22, width: "45%" }} />
+                <span className="skeleton-line" style={{ height: 10, width: "70%" }} />
+              </div>
+            ))}
+          </div>
+          <div className="forecast-skeleton-copy">
+            <span className="skeleton-line" style={{ height: 18, width: "65%" }} />
+            <span className="skeleton-line" style={{ height: 12, width: "90%" }} />
+            <span className="skeleton-line" style={{ height: 12, width: "80%" }} />
+          </div>
+        </div>
+      ) : !forecast ? (
         <div className="forecast-empty">
           <strong>No AI forecast yet.</strong>
           <span>
