@@ -47,7 +47,9 @@ export function fieldLabel(field: UserCorrection["field"]) {
     exclude: "Excluded block",
     verification: "Verified block",
     manager_summary: "Manager summary",
-    calendar_import: "Calendar import"
+    calendar_import: "Calendar import",
+    start_time: "Start time",
+    end_time: "End time"
   };
 
   return labels[field];

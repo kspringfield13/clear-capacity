@@ -29,6 +29,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **Theme preference is lost on reload** — added `themeHydrated` ref guard in `App.tsx`; hydration `useEffect` reads `readThemePreference()` on mount and sets the ref before calling `setTheme`; write-back effect skips `writeThemePreference` until the ref is true, preventing the default "light" from clobbering a saved dark preference. (2026-06-22)
 - [x] **Ambiguous "Pause Tracking" buttons on Settings** — replaced the duplicate "Pause Tracking" button on the "Active window activity" source row with a read-only status badge ("Active" / "Paused") in `SetupScreen.tsx`; global pause action remains only in the screen header. Added `.source-status` styles (light + dark) in `styles.css`. (2026-06-22)
 - [x] **Long category labels truncate silently in selects** — added `title` attribute to all three selects in `BlockCard.tsx` (category, planned_status, mode) showing the current value as a hover tooltip; widened category column in `.tag-grid` from `1.35fr` to `1.8fr` in `styles.css`. (2026-06-22)
+- [x] **Block duration edit** — added inline time-range editor (hover-reveal clock icon → two `<input type="time">` with Save/Cancel) to `BlockCard.tsx`; validates end > start; wires through `onRelabel` for `start_time`/`end_time`; added `"start_time" | "end_time"` to `UserCorrection.field` in `models.ts` and their labels in `format.ts`; added `.block-time`, `.time-edit-btn`, `.time-range-editor` styles in `styles.css`. (2026-06-22)
 
 ## In Progress
 _(none)_
@@ -38,7 +39,6 @@ _(none)_
 ### UI & UX Polish
 
 ### New Features
-- [ ] **Block duration edit** — Users can relabel a block's category/status/mode but not adjust its start/end time (it's read-only text via `formatRange` in `BlockCard.tsx`). Add an inline time-range editor so the duration can be corrected without excluding and re-classifying.
 - [ ] **Activity heatmap** — On the ledger screen or as a new panel, show a 7-day heatmap of active-window session density by hour so users can spot focus vs. fragmented time visually.
 
 ### Code Quality

@@ -142,7 +142,9 @@ export interface UserCorrection {
     | "exclude"
     | "verification"
     | "manager_summary"
-    | "calendar_import";
+    | "calendar_import"
+    | "start_time"
+    | "end_time";
   old_value: string;
   new_value: string;
   timestamp: string;

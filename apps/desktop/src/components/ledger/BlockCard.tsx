@@ -1,9 +1,22 @@
-import { Check, SplitSquareHorizontal, X } from "lucide-react";
+import { useState } from "react";
+import { Check, Clock, SplitSquareHorizontal, X } from "lucide-react";
 import type { WorkBlock, WorkCategory, PlannedStatus, WorkMode } from "../../../../../packages/domain/src/models";
 import { workCategories, plannedStatuses, workModes } from "../../../../../packages/domain/src/taxonomy";
 import { formatRange } from "../../lib/format";
 import { pct } from "../../lib/format";
 import { ConfidenceChip } from "../common/ConfidenceChip";
+
+function toLocalTimeInput(isoString: string): string {
+  const d = new Date(isoString);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function applyLocalTime(originalIso: string, hhmm: string): string {
+  const [hours, minutes] = hhmm.split(":").map(Number);
+  const d = new Date(originalIso);
+  d.setHours(hours, minutes, 0, 0);
+  return d.toISOString();
+}
 
 export function BlockCard({
   block,
@@ -16,10 +29,87 @@ export function BlockCard({
   onExclude: (blockId: string) => void;
   onRelabel: (blockId: string, field: keyof WorkBlock, value: WorkBlock[keyof WorkBlock]) => void;
 }) {
+  const [editingTime, setEditingTime] = useState(false);
+  const [draftStart, setDraftStart] = useState("");
+  const [draftEnd, setDraftEnd] = useState("");
+  const [timeError, setTimeError] = useState(false);
+
+  function handleStartTimeEdit() {
+    setDraftStart(toLocalTimeInput(block.start_time));
+    setDraftEnd(toLocalTimeInput(block.end_time));
+    setTimeError(false);
+    setEditingTime(true);
+  }
+
+  function handleSaveTime() {
+    if (!draftStart || !draftEnd) {
+      setTimeError(true);
+      return;
+    }
+    const [sh, sm] = draftStart.split(":").map(Number);
+    const [eh, em] = draftEnd.split(":").map(Number);
+    if (eh * 60 + em <= sh * 60 + sm) {
+      setTimeError(true);
+      return;
+    }
+    onRelabel(block.work_block_id, "start_time", applyLocalTime(block.start_time, draftStart));
+    onRelabel(block.work_block_id, "end_time", applyLocalTime(block.end_time, draftEnd));
+    setEditingTime(false);
+  }
+
   return (
     <article className={block.user_verified ? "block-card verified" : "block-card"}>
       <div className="block-topline">
-        <span>{formatRange(block)}</span>
+        <div className="block-time">
+          {editingTime ? (
+            <div className={`time-range-editor${timeError ? " time-range-editor--error" : ""}`}>
+              <input
+                type="time"
+                value={draftStart}
+                aria-label="Start time"
+                onChange={(e) => { setDraftStart(e.target.value); setTimeError(false); }}
+              />
+              <span aria-hidden="true">–</span>
+              <input
+                type="time"
+                value={draftEnd}
+                aria-label="End time"
+                onChange={(e) => { setDraftEnd(e.target.value); setTimeError(false); }}
+              />
+              <button
+                type="button"
+                className="time-edit-btn"
+                title={timeError ? "End must be after start" : "Save time"}
+                aria-label="Save time changes"
+                onClick={handleSaveTime}
+              >
+                <Check size={13} />
+              </button>
+              <button
+                type="button"
+                className="time-edit-btn"
+                title="Cancel"
+                aria-label="Cancel time edit"
+                onClick={() => setEditingTime(false)}
+              >
+                <X size={13} />
+              </button>
+            </div>
+          ) : (
+            <>
+              <span>{formatRange(block)}</span>
+              <button
+                type="button"
+                className="time-edit-btn"
+                title="Edit time range"
+                aria-label="Edit block time range"
+                onClick={handleStartTimeEdit}
+              >
+                <Clock size={12} />
+              </button>
+            </>
+          )}
+        </div>
         <div className="block-chips">
           {block.blocker_flag && <span className="blocker-badge">Blocker</span>}
           <ConfidenceChip value={block.confidence} />

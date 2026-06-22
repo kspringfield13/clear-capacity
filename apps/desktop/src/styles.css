@@ -1549,6 +1549,60 @@ h3 {
   font-size: 12px;
 }
 
+.block-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.time-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-subtle);
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.block-time:hover .time-edit-btn,
+.time-range-editor .time-edit-btn {
+  opacity: 1;
+}
+
+.time-edit-btn:hover {
+  background: var(--surface-muted);
+  color: var(--text);
+}
+
+.time-range-editor {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.time-range-editor input[type="time"] {
+  width: 88px;
+  min-height: 26px;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-elevated);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.time-range-editor--error input[type="time"] {
+  border-color: var(--danger);
+}
+
 .block-main strong {
   color: var(--text);
   font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
