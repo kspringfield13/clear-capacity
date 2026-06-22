@@ -1,0 +1,36 @@
+# NOTES.md — Architectural learnings for the ClearCapacity autonomous loop
+
+Cross-run memory for the autonomous agents (hourly improver, 6-hour UX curator) and human readers.
+Cloud sessions are stateless — without this file, every run relearns the codebase from scratch.
+
+**Read this file right after STATUS.md. Append durable learnings here before you commit.**
+
+## How to maintain this file
+- Record only DURABLE, reusable insights: established patterns, conventions, gotchas, non-obvious decisions — things that save the next run time.
+- Do NOT duplicate CLAUDE.md (build commands, repo layout) or STATUS.md (the task backlog). Refer to them instead.
+- Keep it tight and curated (aim < ~150 lines). Update or delete entries that have gone stale; don't append forever.
+- This is not a changelog — per-task "what I shipped" lines belong in CHANGELOG.md.
+
+## Established UI patterns — reuse these, don't reinvent
+- **Async op state** → use the `useAsyncStatus` hook (`apps/desktop/src/hooks/useAsyncStatus.ts`): `start()/fail()/reset()` instead of paired status+error `useState`. All five AI operations already use it.
+- **Empty states** → route every screen's empty case through the shared `EmptyState` component (icon + headline + primary CTA). Don't write ad-hoc empty markup.
+- **Inline error recovery** → wrap AI error text in the `.error-row` / `.error-retry` pattern with a "Try again" button wired to the existing retry callback.
+- **Loading** → use the `skeleton-shimmer` animation + `.skeleton-line` / `.skeleton-block` utility classes so the layout doesn't shift when results arrive (don't show bare "Generating…" strings).
+- **Per-screen toolbar action** → the primary action per screen is wired via the screen-aware `toolbarActions` logic in `App.tsx`.
+- **Screen navigation** → ⌘1–⌘6 keyboard shortcuts live in `App.tsx`; respect the input/textarea focus guard when adding any new key handler.
+
+## Conventions
+- **Styling**: Vercel Geist design tokens via CSS variables in `apps/desktop/src/styles.css`. Support light AND dark. NO hardcoded hex — add a token with light/dark variants instead.
+- **AI prompts**: the five prompt builders in `apps/desktop/src/services/*Prompt.ts` are version-stamped; bump the version string when you change a prompt's behavior.
+- **Domain types**: shared types (`WorkBlock`, `ActivitySession`, `AIConfig`, `AuditEvent`, …) live in `packages/domain/src/models.ts`; capacity/grouping logic in `packages/inference/src/`.
+
+## Gotchas
+- **Render for visual checks**: the React UI runs in a plain browser via `npm run dev` (Vite, 127.0.0.1:5173); append `?demo=1&screen=<daily|weekly|narrative|ledger|audit|setup>` for synthetic data. Tauri APIs are absent in the browser — demo mode is how you render screens headless.
+- **Verification gate**: `npm run build` (`tsc -b && vite build`) must pass before committing. There is no automated test suite.
+- **Out of loop scope**: `apps/desktop/src-tauri/` (Rust), `.env`, and the 5173 port config are off-limits to the frontend loop. Anything needing Rust (model params, request bodies, JSON schemas, per-command model routing) is a manual follow-up — leave a clear note in STATUS.md.
+
+## Open architectural notes
+- `App.tsx` is a large orchestrator (~1.5k lines) being incrementally decomposed into `components/`, `hooks/`, and `lib/`. New async operations should land as dedicated hooks, not inline in `App.tsx`.
+
+---
+_Entries below are appended by autonomous runs. Keep the file curated — prune stale notes as you add new ones._
