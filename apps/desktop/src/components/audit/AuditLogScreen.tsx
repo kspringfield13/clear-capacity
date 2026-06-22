@@ -93,8 +93,16 @@ export function AuditLogScreen({ auditEvents }: { auditEvents: AuditEvent[] }) {
             <EmptyState
               icon={Search}
               title="No events match your filter."
-              description="Try clearing the search query or switching to a different event type."
-            />
+              description="Try broadening the type filter or clearing the search query."
+            >
+              <button
+                className="secondary-action"
+                type="button"
+                onClick={() => { setFilter("all"); setQuery(""); }}
+              >
+                Clear filters
+              </button>
+            </EmptyState>
           )
         ) : (
           filteredEvents.map((event) => <AuditEventRow event={event} key={event.event_id} />)

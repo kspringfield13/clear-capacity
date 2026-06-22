@@ -1,4 +1,4 @@
-import { Search, TimerReset, Monitor } from "lucide-react";
+import { Search, TimerReset, Monitor, Sparkles } from "lucide-react";
 import type {
   WorkBlock,
   ActiveWindowSample,
@@ -89,8 +89,24 @@ export function LedgerScreen({
         <EmptyState
           icon={Monitor}
           title="No work blocks yet."
-          description="ClearCapacity now starts empty. Import an Outlook .ics export or let active-window capture build local sessions, then use Classify sessions to draft reviewable work blocks."
-        />
+          description="Import an Outlook .ics export or let active-window capture build local sessions, then classify them into reviewable work blocks."
+        >
+          {unclassifiedSessionCount > 0 && (
+            <button
+              className="primary-action"
+              type="button"
+              disabled={classificationStatus === "classifying"}
+              onClick={onClassifySessions}
+            >
+              <Sparkles size={16} />
+              <span>
+                {classificationStatus === "classifying"
+                  ? "Classifying…"
+                  : `Classify ${unclassifiedSessionCount} session${unclassifiedSessionCount !== 1 ? "s" : ""}`}
+              </span>
+            </button>
+          )}
+        </EmptyState>
       ) : (
         <div className="ledger-list">
           {blocks.map((block) => (
