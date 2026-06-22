@@ -4142,6 +4142,15 @@ select {
   color: #d8001b !important;
 }
 
+.error-retry {
+  border-color: rgba(234, 0, 29, 0.35);
+  color: #d8001b;
+}
+
+.error-retry:hover {
+  background: rgba(234, 0, 29, 0.08);
+}
+
 .summary-score {
   min-width: 160px;
   padding: 12px 16px;
@@ -4741,6 +4750,26 @@ html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
   background: #5c5c5c;
   background-clip: padding-box;
 }
+
+html[data-theme="dark"] .settings-row-status .import-error,
+html[data-theme="dark"] .integration-status .import-error,
+html[data-theme="dark"] .capture-error {
+  color: #ff8d91;
+}
+
+html[data-theme="dark"] .error-retry {
+  border-color: rgba(255, 141, 145, 0.35);
+  color: #ff8d91;
+}
+
+html[data-theme="dark"] .error-retry:hover {
+  background: rgba(255, 141, 145, 0.1);
+}
+
+html[data-theme="dark"] .bar-track .blue { background: var(--info); }
+html[data-theme="dark"] .bar-track .red { background: var(--danger); }
+html[data-theme="dark"] .bar-track .teal { background: #2dd4bf; }
+html[data-theme="dark"] .bar-track .purple { background: #a78bfa; }
 
 /* Ledger density polish */
 
