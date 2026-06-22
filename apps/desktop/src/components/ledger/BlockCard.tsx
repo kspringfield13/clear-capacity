@@ -30,7 +30,10 @@ export function BlockCard({
           <h3>{block.project_name}</h3>
           <p>{block.stakeholder_group}</p>
         </div>
-        <strong>{pct(block.estimated_capacity_pct)}</strong>
+        <div className="block-capacity">
+          <strong>{pct(block.estimated_capacity_pct)}</strong>
+          <span className="capacity-caption">of week</span>
+        </div>
       </div>
       <div className="tag-grid">
         <select value={block.category} onChange={(event) => onRelabel(block.work_block_id, "category", event.target.value as WorkCategory)}>

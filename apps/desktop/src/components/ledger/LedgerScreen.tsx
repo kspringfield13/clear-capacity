@@ -1,4 +1,4 @@
-import { Search, TimerReset, Monitor } from "lucide-react";
+import { Search, PieChart, Monitor } from "lucide-react";
 import type {
   WorkBlock,
   ActiveWindowSample,
@@ -67,8 +67,11 @@ export function LedgerScreen({
             <span>{compactCategory(current.category)} · {current.mode}</span>
           </div>
           <div className="pulse-meter">
-            <TimerReset size={20} />
-            <strong>{pct(current.estimated_capacity_pct)}</strong>
+            <PieChart size={20} />
+            <div className="pulse-meter-val">
+              <strong>{pct(current.estimated_capacity_pct)}</strong>
+              <span className="capacity-caption">of week</span>
+            </div>
           </div>
         </section>
       )}
