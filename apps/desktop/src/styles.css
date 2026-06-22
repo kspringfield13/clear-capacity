@@ -1752,11 +1752,6 @@ select {
   line-height: 1.35;
 }
 
-.copilot-empty {
-  color: var(--text-subtle);
-  font-size: 13px;
-}
-
 .copilot-error {
   padding: 9px;
   border: 1px solid rgba(239, 68, 68, 0.28);
@@ -2134,22 +2129,11 @@ select {
   overflow-y: auto;
 }
 
-.forecast-empty {
-  display: grid;
-  gap: 6px;
-  padding: 9px 11px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.025);
-}
-
-.forecast-empty strong,
 .forecast-list strong {
   color: var(--text);
   font-size: 13px;
 }
 
-.forecast-empty span,
 .forecast-summary span,
 .forecast-summary small,
 .forecast-copy p,
@@ -2507,24 +2491,13 @@ select {
   flex: 1 1 auto;
 }
 
-.audit-empty,
+.audit-list .empty-state,
 .audit-row {
   flex: 0 0 auto;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
-}
-
-.audit-empty {
-  display: grid;
-  gap: 6px;
-  padding: 18px;
-}
-
-.audit-empty span {
-  color: var(--text-subtle);
-  font-size: 13px;
 }
 
 .audit-row {
@@ -3764,7 +3737,6 @@ h3 {
 .activity-capture-panel,
 .privacy-summary,
 .summary-score,
-.audit-empty,
 .audit-row {
   border-color: var(--border);
   border-radius: var(--radius);
@@ -3940,7 +3912,6 @@ h3 {
 .session-list div,
 .history-list li,
 .copilot-list li,
-.forecast-empty,
 .forecast-summary > div,
 .forecast-list {
   border-color: var(--border);
@@ -4216,13 +4187,11 @@ select {
   max-height: 196px;
 }
 
-.forecast-empty strong,
 .forecast-list strong {
   color: var(--text);
   font-weight: 600;
 }
 
-.forecast-empty span,
 .forecast-summary span,
 .forecast-summary small,
 .forecast-copy p,
@@ -4581,7 +4550,6 @@ html[data-theme="dark"] .empty-state,
 html[data-theme="dark"] .activity-capture-panel,
 html[data-theme="dark"] .privacy-summary,
 html[data-theme="dark"] .summary-score,
-html[data-theme="dark"] .audit-empty,
 html[data-theme="dark"] .audit-row {
   background: var(--surface);
   box-shadow: var(--raised-shadow);
@@ -4594,7 +4562,6 @@ html[data-theme="dark"] .capture-stat,
 html[data-theme="dark"] .session-list div,
 html[data-theme="dark"] .history-list li,
 html[data-theme="dark"] .copilot-list li,
-html[data-theme="dark"] .forecast-empty,
 html[data-theme="dark"] .forecast-summary > div,
 html[data-theme="dark"] .forecast-list,
 html[data-theme="dark"] .driver-list div,
