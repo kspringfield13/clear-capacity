@@ -19,6 +19,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **Empty state polish** — replaced custom `audit-empty` HTML with `EmptyState` + `ScrollText` icon; added "Classify N sessions" CTA to LedgerScreen; added "Generate Narrative" CTA inside NarrativeScreen empty state; added "Clear filters" CTA for filtered-out audit log. (2026-06-22)
 - [x] **CompactWidget quick-confirm** — added inline Confirm + Exclude buttons to the `quick-review` section so users can act on the next unverified block without switching to large mode. (2026-06-22)
 - [x] **Dark mode token audit** — fixed `.error-retry` invisible in light mode, restored dark-appropriate pastel bar-track segment colors, fixed `.capture-error`/`.import-error` low contrast in dark mode. (2026-06-22)
+- [x] **Dead "Split Block" button** — disabled the no-op Split Block button in `BlockCard.tsx` and added `title="Block splitting is coming soon"` so it reads as not-yet-available. (2026-06-22)
 
 ## In Progress
 _(none)_
@@ -26,7 +27,6 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
-- [ ] **Dead "Split Block" button** — In `apps/desktop/src/components/ledger/BlockCard.tsx` (line ~62) the "Split Block" button has no `onClick` — it renders fully enabled on both DailyReviewScreen and LedgerScreen but does nothing when clicked, which makes the app feel broken. Minimum safe fix: disable it and add a `title="Block splitting is coming soon"` so it reads as not-yet-available. (Optionally implement a real inline split, but that's a larger change — the disable is the high-value polish.)
 - [ ] **Capacity-model legend is clipped** — On WeeklyCapacityScreen the 8-category legend is squeezed into a fixed inner scroll area, so the last row renders half-visible with no scroll affordance (`.allocation-grid { max-height: 68px; overflow-y: auto }` and `.capacity-model { max-height: 165px; overflow: hidden }` in `apps/desktop/src/styles.css`). Raise/remove those caps so all categories list fully — the page already scrolls vertically.
 - [ ] **Toolbar icon-button accessibility** — In `apps/desktop/src/components/shell/AppToolbar.tsx` the pause, sidebar-toggle, and window-mode chrome buttons have `title` tooltips but no `aria-label`/`aria-pressed`, unlike the theme toggle (lines 89–114). Add matching `aria-label`s (and `aria-pressed` for pause/window-mode) so the icon-only controls are screen-reader-labeled and consistent.
 - [ ] **Blocker flag visual treatment** — `blocker_flag` exists on `WorkBlock` and is produced by the classifier/copilot, but it is never rendered. Add a red "Blocker" badge in the `.block-topline` row of `apps/desktop/src/components/ledger/BlockCard.tsx` (next to `ConfidenceChip`) when `block.blocker_flag` is true, and surface a blocker count in the WeeklyCapacityScreen "Delivery risk modifiers" section. Add a `.blocker-badge` token-based style (light + dark) in `styles.css`.

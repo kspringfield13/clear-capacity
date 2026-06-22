@@ -59,7 +59,7 @@ export function BlockCard({
           <Check size={16} />
           <span>Confirm Block</span>
         </button>
-        <button type="button">
+        <button type="button" disabled title="Block splitting is coming soon">
           <SplitSquareHorizontal size={16} />
           <span>Split Block</span>
         </button>
