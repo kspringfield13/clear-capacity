@@ -2,6 +2,7 @@ import { History, RotateCcw } from "lucide-react";
 import type { WorkBlock, UserCorrection } from "../../../../../packages/domain/src/models";
 import { fieldLabel } from "../../lib/format";
 import { formatAuditTime } from "../../lib/format";
+import { EmptyState } from "../common/EmptyState";
 
 export function CorrectionHistory({
   blocks,
@@ -28,7 +29,11 @@ export function CorrectionHistory({
         </button>
       </div>
       {recentCorrections.length === 0 ? (
-        <p>No corrections yet.</p>
+        <EmptyState
+          icon={History}
+          title="No corrections yet."
+          description="Edit a block's label, category, or project to create a correction entry."
+        />
       ) : (
         <ol className="history-list">
           {recentCorrections.map((correction) => {
