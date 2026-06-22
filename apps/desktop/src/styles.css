@@ -1550,6 +1550,29 @@ h3 {
   color: #fecaca;
 }
 
+.block-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.blocker-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 23px;
+  padding: 0 8px;
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  border-radius: 999px;
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.risk-blocker-count {
+  color: var(--danger);
+}
+
 .tag-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.75fr) minmax(0, 0.85fr);
@@ -4032,6 +4055,14 @@ h3 {
   color: #aa4d00;
 }
 
+.blocker-badge {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: var(--red-soft);
+  color: #c4001a;
+  font-size: 11px;
+  font-weight: 600;
+}
+
 select,
 textarea {
   border-color: var(--border);
@@ -4662,6 +4693,12 @@ html[data-theme="dark"] .confidence.low {
   border-color: #624b18;
   background: var(--amber-soft);
   color: #f6c65d;
+}
+
+html[data-theme="dark"] .blocker-badge {
+  border-color: rgba(239, 68, 68, 0.45);
+  background: var(--red-soft);
+  color: #fca5a5;
 }
 
 html[data-theme="dark"] .settings-control.is-on {

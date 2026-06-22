@@ -64,6 +64,7 @@ export function WeeklyCapacityScreen({
   );
 
   const isCurrentWeek = weekOffset === 0;
+  const blockerCount = useMemo(() => viewedBlocks.filter((b) => b.blocker_flag).length, [viewedBlocks]);
 
   if (!hasWorkBlocks) {
     return (
@@ -187,6 +188,13 @@ export function WeeklyCapacityScreen({
             <RiskRow label="WIP overload" value={snapshot.wip_load_score} />
             <RiskRow label="Carryover risk" value={snapshot.carryover_risk_pct / 40} />
             <RiskRow label="Meeting density" value={snapshot.meeting_pct / 35} />
+            <div className="risk-row">
+              <span>Active blockers</span>
+              <div className="risk-track">
+                <span style={{ width: `${Math.min(blockerCount / 5, 1) * 100}%`, background: blockerCount > 0 ? "var(--danger)" : undefined }} />
+              </div>
+              <strong className={blockerCount > 0 ? "risk-blocker-count" : ""}>{blockerCount}</strong>
+            </div>
           </div>
         </section>
       </div>

@@ -22,6 +22,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **Dead "Split Block" button** — disabled the no-op Split Block button in `BlockCard.tsx` and added `title="Block splitting is coming soon"` so it reads as not-yet-available. (2026-06-22)
 - [x] **Capacity-model legend is clipped** — removed `max-height: 68px; overflow-y: auto` from `.allocation-grid` and `max-height: 165px; overflow: hidden` from `.capacity-model` in `styles.css` so all 8 categories render fully. (2026-06-22)
 - [x] **Toolbar icon-button accessibility** — added `aria-label` + `aria-pressed` to sidebar-toggle, pause, and window-mode chrome buttons in `AppToolbar.tsx`, matching the existing theme-toggle reference. (2026-06-22)
+- [x] **Blocker flag visual treatment** — added red "Blocker" pill badge in `BlockCard.tsx` `.block-topline` next to `ConfidenceChip` (via `.block-chips` wrapper); surfaced "Active blockers" count row (red fill bar, red count) in WeeklyCapacityScreen "Delivery risk modifiers" section; added `.blocker-badge` + `.risk-blocker-count` token-based styles (light + dark) in `styles.css`. (2026-06-22)
 
 ## In Progress
 _(none)_
@@ -29,7 +30,6 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
-- [ ] **Blocker flag visual treatment** — `blocker_flag` exists on `WorkBlock` and is produced by the classifier/copilot, but it is never rendered. Add a red "Blocker" badge in the `.block-topline` row of `apps/desktop/src/components/ledger/BlockCard.tsx` (next to `ConfidenceChip`) when `block.blocker_flag` is true, and surface a blocker count in the WeeklyCapacityScreen "Delivery risk modifiers" section. Add a `.blocker-badge` token-based style (light + dark) in `styles.css`.
 - [ ] **Capacity percentage ring or gauge** — The WeeklyCapacityScreen hero metrics show percentages as plain text (`MetricCard`). Add a small visual arc/ring component next to the "Reliable new work" number for immediate at-a-glance reading, reusing CSS-variable tokens for the track/fill so it works in light and dark.
 
 ### New Features

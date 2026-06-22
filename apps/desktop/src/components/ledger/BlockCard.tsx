@@ -20,7 +20,10 @@ export function BlockCard({
     <article className={block.user_verified ? "block-card verified" : "block-card"}>
       <div className="block-topline">
         <span>{formatRange(block)}</span>
-        <ConfidenceChip value={block.confidence} />
+        <div className="block-chips">
+          {block.blocker_flag && <span className="blocker-badge">Blocker</span>}
+          <ConfidenceChip value={block.confidence} />
+        </div>
       </div>
       <div className="block-main">
         <div>
