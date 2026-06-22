@@ -453,6 +453,26 @@ export function App() {
     };
   }, [managerText]);
 
+  useEffect(() => {
+    const SCREEN_KEYS: Record<string, Screen> = {
+      "1": "daily",
+      "2": "weekly",
+      "3": "narrative",
+      "4": "ledger",
+      "5": "audit",
+      "6": "setup",
+    };
+    function handleKeyDown(event: KeyboardEvent) {
+      if (!event.metaKey || !(event.key in SCREEN_KEYS)) return;
+      const target = event.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
+      event.preventDefault();
+      setActive(SCREEN_KEYS[event.key]);
+      setWindowMode("large");
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   useEffect(() => {
     if (isDemoMode) return;
