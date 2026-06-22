@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, ClipboardList } from "lucide-react";
+import { Search, ScrollText } from "lucide-react";
 import type { AuditEvent } from "../../../../../packages/domain/src/models";
 import { auditTypeLabel } from "../../lib/format";
 import { formatAuditTime } from "../../lib/format";
@@ -85,19 +85,19 @@ export function AuditLogScreen({ auditEvents }: { auditEvents: AuditEvent[] }) {
         {filteredEvents.length === 0 ? (
           auditEvents.length === 0 ? (
             <EmptyState
-              icon={ClipboardList}
+              icon={ScrollText}
               title="No audit events yet."
-              description="Capture samples, calendar imports, user corrections, and privacy changes will appear here as they happen."
+              description="Capture samples, imports, corrections, and privacy changes will appear here as you use ClearCapacity."
             />
           ) : (
             <EmptyState
-              icon={Search}
-              title="No events match your filter."
-              description="Try broadening the type filter or clearing the search query."
+              icon={ScrollText}
+              title="No events match."
+              description="Try a different filter or search term to find what you're looking for."
             >
               <button
-                className="secondary-action"
                 type="button"
+                className="secondary-action"
                 onClick={() => { setFilter("all"); setQuery(""); }}
               >
                 Clear filters

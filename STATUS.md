@@ -16,7 +16,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **Onboarding progress indicator** — added checklist on SetupScreen showing tracking/calendar/AI/classification status. [PR #8](https://github.com/kspringfield13/clear-capacity/pull/8) (2026-06-21)
 - [x] **Mark all confirmed bulk action** — "Confirm Visible Blocks" button already present in DailyReviewScreen since PR #3 extraction.
 - [x] **Skeleton loading states** — added shimmer skeleton placeholders for ReviewCopilotPanel, ForecastAgentPanel, and NarrativeScreen so layout does not shift when AI results arrive. (2026-06-22)
-- [x] **Empty state polish** — replaced all bespoke empty-state divs with the shared `EmptyState` component; audit log distinguishes "no events yet" vs. "filter returned nothing" with a "Clear filters" CTA; LedgerScreen adds an actionable "Classify N sessions" CTA when unclassified sessions exist; ForecastAgentPanel and ReviewCopilotPanel include primary CTA buttons; harmonized copy across all screens. (2026-06-22)
+- [x] **Empty state polish** — replaced custom `audit-empty` HTML with `EmptyState` + `ScrollText` icon; added "Classify N sessions" CTA to LedgerScreen; added "Generate Narrative" CTA inside NarrativeScreen empty state; added "Clear filters" CTA for filtered-out audit log. (2026-06-22)
 
 ## In Progress
 _(none)_
