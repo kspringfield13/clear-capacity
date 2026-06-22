@@ -49,6 +49,8 @@ export function AppToolbar({
       <div className="toolbar-left">
         {windowMode === "large" && (
           <button
+            aria-label={sidebarCollapsed ? "Show Sidebar" : "Hide Sidebar"}
+            aria-pressed={!sidebarCollapsed}
             className="chrome-button"
             type="button"
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -87,6 +89,8 @@ export function AppToolbar({
             );
           })}
         <button
+          aria-label={paused ? "Resume Tracking" : "Pause Tracking"}
+          aria-pressed={paused}
           className={paused ? "chrome-button is-paused" : "chrome-button"}
           type="button"
           onClick={() => setPaused(!paused)}
@@ -105,6 +109,8 @@ export function AppToolbar({
           {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
         </button>
         <button
+          aria-label={windowMode === "compact" ? "Use Large Window" : "Use Compact Widget"}
+          aria-pressed={windowMode === "compact"}
           className="chrome-button"
           type="button"
           onClick={() => setWindowMode(windowMode === "compact" ? "large" : "compact")}
