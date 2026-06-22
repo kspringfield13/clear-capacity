@@ -73,6 +73,11 @@ import {
   buildWorkBlockClassifierPrompt,
   WORK_BLOCK_CLASSIFIER_PROMPT_VERSION
 } from "./services/workBlockClassifierPrompt";
+import { aiCompleteJson, jsonSchemaFormat } from "./services/aiComplete";
+import {
+  WORK_BLOCK_CLASSIFIER_INSTRUCTIONS,
+  workBlockClassifierSchema
+} from "./services/workBlockClassifierSchema";
 
 import {
   addDays,
@@ -885,14 +890,17 @@ export function App() {
     classificationAsync.start("classifying");
 
     try {
-      const response = await invoke<NativeWorkBlockClassificationResponse>("classify_active_window_sessions_with_openai", {
-        request: {
-          prompt,
-          ai_config: aiConfig
-        }
+      const { data, model } = await aiCompleteJson<{ work_blocks: NativeClassifiedWorkBlock[] }>({
+        prompt,
+        instructions: WORK_BLOCK_CLASSIFIER_INSTRUCTIONS,
+        responseFormat: jsonSchemaFormat(
+          "clear_capacity_work_block_classification",
+          workBlockClassifierSchema
+        ),
+        aiConfig
       });
       const sessionMap = new Map(candidateSessions.map((session) => [session.session_id, session]));
-      const draftBlocks = response.result.work_blocks
+      const draftBlocks = data.work_blocks
         .map((block) => classifiedBlockToWorkBlock(block, sessionMap))
         .filter((block): block is WorkBlock => Boolean(block));
 
@@ -916,7 +924,7 @@ export function App() {
           details: {
             week_id: currentWeekId,
             week_range: currentWeekRangeLabel,
-            model: response.model,
+            model,
             prompt_version: WORK_BLOCK_CLASSIFIER_PROMPT_VERSION,
             input_session_count: candidateSessions.length,
             output_work_block_count: draftBlocks.length,
