@@ -1419,6 +1419,7 @@ export function App() {
           onImportOutlookIcs={importOutlookIcs}
           aiConfig={aiConfig}
           setAiConfig={setAiConfig}
+          hasClassification={blocks.length > 0}
         />
       )}
       {active === "ledger" && (

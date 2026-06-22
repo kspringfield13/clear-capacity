@@ -904,6 +904,75 @@ h3 {
   flex: 0 0 auto;
 }
 
+.onboarding-checklist {
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.onboarding-checklist-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.onboarding-checklist-header strong {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.onboarding-checklist-header span {
+  font-size: 12px;
+  color: var(--text-subtle);
+}
+
+.onboarding-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.onboarding-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.onboarding-step.is-done {
+  color: var(--text);
+}
+
+.onboarding-step.is-done > span:last-child {
+  text-decoration: line-through;
+  color: var(--text-subtle);
+}
+
+.onboarding-step-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  color: var(--text-subtle);
+}
+
+.onboarding-step.is-done .onboarding-step-icon {
+  border-color: var(--success, #22c55e);
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+}
+
 .privacy-summary {
   display: grid;
   gap: 14px;

@@ -1,5 +1,6 @@
 import {
   CalendarCheck,
+  Check,
   ChevronRight,
   Eye,
   Lock,
@@ -35,7 +36,8 @@ export function SetupScreen({
   importError,
   onImportOutlookIcs,
   aiConfig,
-  setAiConfig
+  setAiConfig,
+  hasClassification,
 }: {
   paused: boolean;
   setPaused: (value: boolean) => void;
@@ -50,7 +52,17 @@ export function SetupScreen({
   onImportOutlookIcs: (file: File) => void;
   aiConfig: AIConfig | null;
   setAiConfig: (config: AIConfig | null) => void;
+  hasClassification: boolean;
 }) {
+  const steps = [
+    { label: "Tracking active", done: !paused && activeWindowSamples.length > 0 },
+    { label: "Calendar imported", done: calendarEvents.length > 0 },
+    { label: "AI provider configured", done: Boolean(aiConfig?.apiKey) },
+    { label: "First classification run", done: hasClassification },
+  ];
+  const completedCount = steps.filter((s) => s.done).length;
+  const allDone = completedCount === steps.length;
+
   const latestImport = calendarEvents.reduce<string | null>((latest, event) => {
     if (!latest || new Date(event.imported_at) > new Date(latest)) {
       return event.imported_at;
@@ -102,6 +114,25 @@ export function SetupScreen({
           <span>{paused ? "Resume Tracking" : "Pause Tracking"}</span>
         </button>
       </div>
+
+      {!allDone && (
+        <section className="onboarding-checklist">
+          <div className="onboarding-checklist-header">
+            <strong>Getting started</strong>
+            <span>{completedCount}/{steps.length} complete</span>
+          </div>
+          <ol className="onboarding-steps">
+            {steps.map((step) => (
+              <li key={step.label} className={step.done ? "onboarding-step is-done" : "onboarding-step"}>
+                <span className="onboarding-step-icon">
+                  {step.done ? <Check size={13} /> : null}
+                </span>
+                <span>{step.label}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
 
       <section className="privacy-summary">
         <div className={paused ? "privacy-state is-paused" : "privacy-state"}>
