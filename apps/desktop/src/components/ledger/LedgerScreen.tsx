@@ -90,7 +90,22 @@ export function LedgerScreen({
           icon={Monitor}
           title="No work blocks yet."
           description="ClearCapacity now starts empty. Import an Outlook .ics export or let active-window capture build local sessions, then use Classify sessions to draft reviewable work blocks."
-        />
+        >
+          {unclassifiedSessionCount > 0 && (
+            <button
+              type="button"
+              className="primary-action"
+              disabled={classificationStatus === "classifying"}
+              onClick={onClassifySessions}
+            >
+              <span>
+                {classificationStatus === "classifying"
+                  ? "Classifying…"
+                  : `Classify ${unclassifiedSessionCount} session${unclassifiedSessionCount === 1 ? "" : "s"}`}
+              </span>
+            </button>
+          )}
+        </EmptyState>
       ) : (
         <div className="ledger-list">
           {blocks.map((block) => (

@@ -1,8 +1,9 @@
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, TrendingUp } from "lucide-react";
 import type { PersistedForecastRecord } from "../../services/localStore"; // note: may adjust
 import { pct } from "../../lib/format";
 import { formatAuditTime } from "../../lib/format";
 import { ForecastList } from "../common/ForecastList";
+import { EmptyState } from "../common/EmptyState";
 
 export function ForecastAgentPanel({
   generatedForecast,
@@ -62,13 +63,16 @@ export function ForecastAgentPanel({
           </div>
         </div>
       ) : !forecast ? (
-        <div className="forecast-empty">
-          <strong>No AI forecast yet.</strong>
-          <span>
-            The deterministic estimate is {pct(deterministicReliableCapacity)}. Generate a forecast to add assumptions,
-            constraints, scenarios, and planning recommendations.
-          </span>
-        </div>
+        <EmptyState
+          icon={TrendingUp}
+          title="No AI forecast yet."
+          description={`The deterministic estimate is ${pct(deterministicReliableCapacity)}. Generate a forecast to add assumptions, constraints, scenarios, and planning recommendations.`}
+        >
+          <button className="secondary-action" type="button" onClick={onGenerate}>
+            <RefreshCw size={14} />
+            <span>Generate Forecast</span>
+          </button>
+        </EmptyState>
       ) : (
         <>
           <div className="forecast-summary">

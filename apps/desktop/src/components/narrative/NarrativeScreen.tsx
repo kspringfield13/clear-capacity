@@ -96,7 +96,16 @@ export function NarrativeScreen({
               icon={FileText}
               title="Ready to generate."
               description="The prompt will include the current ledger, daily review corrections, weekly capacity metrics, Outlook imports, and active-window session context. It is sent to OpenAI only when generation runs."
-            />
+            >
+              <button
+                type="button"
+                className="primary-action"
+                onClick={onRegenerate}
+              >
+                <RefreshCw size={18} />
+                <span>Generate Narrative</span>
+              </button>
+            </EmptyState>
             {generationError && (
               <div className="error-row">
                 <p className="narrative-error">{generationError}</p>

@@ -1,5 +1,6 @@
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Sparkles } from "lucide-react";
 import type { ReviewCopilotSuggestion } from "../../../../../packages/domain/src/models";
+import { EmptyState } from "../common/EmptyState";
 
 export function ReviewCopilotPanel({
   reviewQueueCount,
@@ -55,7 +56,18 @@ export function ReviewCopilotPanel({
           ))}
         </div>
       ) : suggestions.length === 0 ? (
-        <span className="copilot-empty">No suggestions yet.</span>
+        <EmptyState
+          icon={Sparkles}
+          title="No suggestions yet."
+          description={reviewQueueCount === 0 ? "Add unconfirmed blocks to the review queue, then generate suggestions." : "Click Generate Suggestions to get AI cleanup recommendations for your unconfirmed blocks."}
+        >
+          {reviewQueueCount > 0 && (
+            <button className="secondary-action" type="button" onClick={onGenerate}>
+              <RefreshCw size={14} />
+              <span>Generate Suggestions</span>
+            </button>
+          )}
+        </EmptyState>
       ) : (
         <ol className="copilot-list">
           {suggestions.map((suggestion) => (
