@@ -43,10 +43,19 @@ export function ReviewCopilotPanel({
           <button type="button" className="error-retry" onClick={onGenerate}>Try again</button>
         </div>
       )}
-      {suggestions.length === 0 ? (
-        <span className="copilot-empty">
-          {status === "generating" ? "Generating suggestions..." : "No suggestions yet."}
-        </span>
+      {status === "generating" && suggestions.length === 0 ? (
+        <div className="copilot-skeleton">
+          {[0, 1, 2].map((i) => (
+            <div className="copilot-skeleton-item" key={i}>
+              <span className="skeleton-line" style={{ height: 14, width: "60%" }} />
+              <span className="skeleton-line" style={{ height: 11, width: "40%" }} />
+              <span className="skeleton-line" style={{ height: 11, width: "85%" }} />
+              <span className="skeleton-line" style={{ height: 11, width: "70%" }} />
+            </div>
+          ))}
+        </div>
+      ) : suggestions.length === 0 ? (
+        <span className="copilot-empty">No suggestions yet.</span>
       ) : (
         <ol className="copilot-list">
           {suggestions.map((suggestion) => (

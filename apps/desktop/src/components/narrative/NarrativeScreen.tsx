@@ -56,7 +56,7 @@ export function NarrativeScreen({
         <div className="screen-header">
           <div>
             <p className="eyebrow">Weekly narrative</p>
-            <h1>Generate an OpenAI-backed weekly narrative.</h1>
+            <h1>{generationStatus === "generating" ? "Generating your narrative…" : "Generate an OpenAI-backed weekly narrative."}</h1>
           </div>
           <button
             className="primary-action"
@@ -68,16 +68,42 @@ export function NarrativeScreen({
             <span>{generationStatus === "generating" ? "Generating…" : "Generate Narrative"}</span>
           </button>
         </div>
-        <EmptyState
-          icon={FileText}
-          title="Ready to generate."
-          description="The prompt will include the current ledger, daily review corrections, weekly capacity metrics, Outlook imports, and active-window session context. It is sent to OpenAI only when generation runs."
-        />
-        {generationError && (
-          <div className="error-row">
-            <p className="narrative-error">{generationError}</p>
-            <button type="button" className="error-retry" onClick={onRegenerate}>Try again</button>
+        {generationStatus === "generating" ? (
+          <div className="narrative-skeleton">
+            <div className="narrative-skeleton-panel">
+              <span className="skeleton-line" style={{ height: 11, width: "35%" }} />
+              <span className="skeleton-line" style={{ height: 20, width: "55%" }} />
+              <span className="skeleton-line" style={{ height: 12, width: "90%", marginTop: 8 }} />
+              <span className="skeleton-line" style={{ height: 12, width: "80%" }} />
+              <span className="skeleton-line" style={{ height: 12, width: "85%" }} />
+              <span className="skeleton-line" style={{ height: 12, width: "60%" }} />
+              <span className="skeleton-line" style={{ height: 11, width: "30%", marginTop: 12 }} />
+              {[0, 1, 2].map((i) => (
+                <span className="skeleton-line" key={i} style={{ height: 11, width: `${70 + i * 7}%` }} />
+              ))}
+            </div>
+            <div className="narrative-skeleton-panel">
+              <span className="skeleton-line" style={{ height: 11, width: "40%" }} />
+              <span className="skeleton-line" style={{ height: 20, width: "65%" }} />
+              <span className="skeleton-line" style={{ height: 80, width: "100%", marginTop: 8, borderRadius: 8 }} />
+              <span className="skeleton-line" style={{ height: 12, width: "75%", marginTop: 4 }} />
+              <span className="skeleton-line" style={{ height: 12, width: "55%" }} />
+            </div>
           </div>
+        ) : (
+          <>
+            <EmptyState
+              icon={FileText}
+              title="Ready to generate."
+              description="The prompt will include the current ledger, daily review corrections, weekly capacity metrics, Outlook imports, and active-window session context. It is sent to OpenAI only when generation runs."
+            />
+            {generationError && (
+              <div className="error-row">
+                <p className="narrative-error">{generationError}</p>
+                <button type="button" className="error-retry" onClick={onRegenerate}>Try again</button>
+              </div>
+            )}
+          </>
         )}
       </section>
     );
