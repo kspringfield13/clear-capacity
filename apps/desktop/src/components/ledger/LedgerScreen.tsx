@@ -10,6 +10,7 @@ import { pct } from "../../lib/format";
 import { BlockCard } from "./BlockCard";
 import { EmptyState } from "../common/EmptyState";
 import { ActivityCapturePanel } from "./ActivityCapturePanel";
+import { ActivityHeatmap } from "./ActivityHeatmap";
 
 export function LedgerScreen({
   blocks,
@@ -88,6 +89,7 @@ export function LedgerScreen({
         paused={paused}
         onClassifySessions={onClassifySessions}
       />
+      <ActivityHeatmap sessions={activeWindowSessions} />
       {blocks.length === 0 ? (
         <EmptyState
           icon={Monitor}

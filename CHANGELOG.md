@@ -16,3 +16,7 @@
 - 21:06 UTC — **improve**: Ambiguous "Pause Tracking" on Settings — replaced the duplicate global-pause button on the "Active window activity" source row with a read-only "Active" / "Paused" status badge in `SetupScreen.tsx`; added `.source-status` pill styles (light + dark) in `styles.css`; passed self-review
 - 22:04 UTC — **improve**: Long category labels truncate silently in selects — added `title` attribute to all three selects (category, planned_status, mode) in `BlockCard.tsx`; widened category column in `.tag-grid` from `1.35fr` to `1.8fr` in `styles.css`; passed self-review
 - 23:07 UTC — **improve**: Block duration edit — added inline time-range editor (hover-reveal clock icon → two `<input type="time">` with Save/Cancel + end-after-start validation) to `BlockCard.tsx`; wires through `onRelabel` for `start_time`/`end_time`; added those fields to `UserCorrection.field` in `models.ts` and their labels in `format.ts`; added `.block-time`/`.time-edit-btn`/`.time-range-editor` styles in `styles.css`; passed self-review
+
+## 2026-06-23
+
+- 00:05 UTC — **improve**: Activity heatmap — added `ActivityHeatmap.tsx` to LedgerScreen showing 7-day × 24-hour session density grid; 5-level `color-mix(--info)` intensity cells with hover tooltips; renders null when no sessions; CSS in `styles.css`; passed self-review

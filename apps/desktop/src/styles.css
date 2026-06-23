@@ -6724,3 +6724,65 @@ html[data-theme="dark"] .agent-active .pause-button:hover {
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
+
+/* Activity heatmap */
+
+.activity-heatmap {
+  flex: 0 0 auto;
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.activity-heatmap .eyebrow {
+  margin: 0;
+}
+
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: 22px repeat(7, 1fr);
+  gap: 3px;
+  align-items: start;
+}
+
+.heatmap-hour-axis,
+.heatmap-day-col {
+  display: grid;
+  grid-template-rows: 18px repeat(24, 7px);
+  gap: 2px;
+}
+
+.heatmap-day-label {
+  font-size: 9px;
+  line-height: 18px;
+  color: var(--text-subtle);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.heatmap-hour-label {
+  height: 7px;
+  line-height: 7px;
+  font-size: 8px;
+  color: var(--text-subtle);
+  text-align: right;
+  padding-right: 3px;
+  white-space: nowrap;
+}
+
+.heatmap-cell {
+  border-radius: 1px;
+  background: var(--surface-muted);
+  cursor: default;
+}
+
+.heatmap-cell[data-level="1"] { background: color-mix(in srgb, var(--info) 18%, var(--surface-muted)); }
+.heatmap-cell[data-level="2"] { background: color-mix(in srgb, var(--info) 36%, var(--surface-muted)); }
+.heatmap-cell[data-level="3"] { background: color-mix(in srgb, var(--info) 56%, var(--surface-muted)); }
+.heatmap-cell[data-level="4"] { background: color-mix(in srgb, var(--info) 76%, var(--surface-muted)); }
+.heatmap-cell[data-level="5"] { background: var(--info); }
