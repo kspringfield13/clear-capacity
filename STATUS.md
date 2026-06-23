@@ -38,6 +38,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **Split App.tsx** — extracted all five AI async operations into dedicated hooks (`useClassification`, `useReviewCopilot`, `useForecastAgent`, `useNarrativeGeneration`, `useVisualContext`); App.tsx reduced from ~1510 to ~870 lines; each hook owns its `useAsyncStatus`, native IPC interfaces, prompt building, and audit event writes; reset functions wired to `resetLocalData`; self-review passed, all candidates refuted as pre-existing patterns. (2026-06-23)
 - [x] **Delivery risk modifiers show unlabeled magnitudes with mixed units** — added `tooltip`/`hint`/`displayValue`/`dangerActive` props to `RiskRow.tsx`; four index rows now show "/100" scale hint with hover tooltip; Active-blockers row converted from inline JSX to `RiskRow` with raw count display (no "/100"); grid column widened to `auto` to avoid overflow; self-review passed. (2026-06-23)
 - [x] **Capacity-model legend is color-only-keyed and two purples collide** — changed "Blocked / waiting / dependency delay" color from `#9333ea` (purple) to `#be185d` (rose) in `taxonomy.ts`; added `hoveredCategory`/`onHoverCategory` crosslink props to `StackedBar.tsx`; wired hover state in `WeeklyCapacityScreen.tsx` (allocation rows dim to 0.35 opacity, bar segments dim to 0.3); added `title` tooltip to each legend row; added `cursor: pointer` to `.allocation-row` in `styles.css`; self-review passed. (2026-06-23)
+- [x] **"politics-to-math translator" section eyebrow is cryptic jargon** — replaced with "where your hours actually went" in `WeeklyCapacityScreen.tsx`; self-review passed. (2026-06-23)
 
 ## In Progress
 _(none)_
@@ -45,7 +46,6 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
-- [ ] **"politics-to-math translator" section eyebrow is cryptic jargon** — On WeeklyCapacityScreen (`WeeklyCapacityScreen.tsx` ~line 155) the "Planned vs reactive" section subtitle reads "politics-to-math translator", which a new analyst can't parse. Replace it with a plain-language descriptor (e.g. "where your hours actually went") matching the tone of the other section eyebrows.
 - [ ] **Lone Review-Copilot suggestion looks marooned in a wide empty band** — On DailyReviewScreen a single "Suggested cleanup" card occupies only the left ~280px of a full-width section, reading as cut off. Constrain or center `.copilot-inline .copilot-list` in `apps/desktop/src/styles.css` (~line 2091) — e.g. cap the grid width or center a single card — so one suggestion doesn't look broken (`ReviewCopilotPanel.tsx`).
 
 ### New Features

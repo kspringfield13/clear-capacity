@@ -160,7 +160,7 @@ export function WeeklyCapacityScreen({
         <section className="capacity-section">
           <div className="section-title">
             <h2>Planned vs reactive</h2>
-            <span>politics-to-math translator</span>
+            <span>where your hours actually went</span>
           </div>
           <div className="comparison-bars">
             <BarLine label="Planned" value={snapshot.planned_pct} tone="blue" />
