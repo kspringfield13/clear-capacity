@@ -134,6 +134,7 @@ import { LedgerScreen } from "./components/ledger/LedgerScreen";
 import { ActivityCapturePanel } from "./components/ledger/ActivityCapturePanel";
 import { DailyReviewScreen } from "./components/review/DailyReviewScreen";
 import { WeeklyCapacityScreen } from "./components/capacity/WeeklyCapacityScreen";
+import { ForecastScreen } from "./components/capacity/ForecastScreen";
 import { NarrativeScreen } from "./components/narrative/NarrativeScreen";
 import { AuditLogScreen } from "./components/audit/AuditLogScreen";
 import { AgentScreen } from "./components/agent/AgentScreen";
@@ -474,10 +475,11 @@ export function App() {
     const SCREEN_KEYS: Record<string, Screen> = {
       "1": "daily",
       "2": "weekly",
-      "3": "narrative",
-      "4": "ledger",
-      "5": "audit",
-      "6": "setup",
+      "3": "forecast",
+      "4": "narrative",
+      "5": "ledger",
+      "6": "audit",
+      "7": "setup",
     };
     function handleKeyDown(event: KeyboardEvent) {
       if (!event.metaKey || !(event.key in SCREEN_KEYS)) return;
@@ -1445,7 +1447,7 @@ export function App() {
         }];
       case "daily":
         return [{ label: "Review Copilot", icon: ShieldCheck, onClick: () => void generateReviewCopilotSuggestions(), disabled: reviewCopilotStatus === "generating" || reviewQueue.length === 0, tone: "primary" as const }];
-      case "weekly":
+      case "forecast":
         return [{ label: "Forecast", icon: BarChart3, onClick: () => void generateForecastAgent(), disabled: forecastStatus === "generating" || blocks.length === 0, tone: "primary" as const }];
       case "narrative":
         return [{ label: "Regenerate", icon: RefreshCw, onClick: () => void regenerateNarrative("manual"), disabled: narrativeGenerationStatus === "generating" || !hasNarrativeEvidence, tone: "primary" as const }];
@@ -1517,10 +1519,12 @@ export function App() {
           visualContextStatus={visualContextStatus}
           visualContextError={visualContextError}
           paused={paused}
+          corrections={corrections}
           onClassifySessions={() => void classifyActiveWindowSessions()}
           onConfirm={confirmBlock}
           onExclude={excludeBlock}
           onRelabel={updateBlock}
+          onResetLocalData={resetLocalData}
         />
       )}
       {active === "daily" && (
@@ -1541,13 +1545,19 @@ export function App() {
         <WeeklyCapacityScreen
           snapshot={snapshot}
           weekRangeLabel={currentWeekRangeLabel}
+          hasWorkBlocks={blocks.length > 0}
+          blocks={blocks}
+        />
+      )}
+      {active === "forecast" && (
+        <ForecastScreen
+          snapshot={snapshot}
           nextWeekRangeLabel={nextWeekRangeLabel}
           generatedForecast={generatedForecast}
           forecastStatus={forecastStatus}
           forecastError={forecastError}
           onGenerateForecast={() => void generateForecastAgent()}
           hasWorkBlocks={blocks.length > 0}
-          blocks={blocks}
         />
       )}
       {active === "narrative" && (

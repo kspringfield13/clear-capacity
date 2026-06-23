@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
 import { BarChart3, ChevronLeft, ChevronRight } from "lucide-react";
-import type { PersistedForecastRecord } from "../../services/localStore";
 import type { WorkBlock } from "../../../../../packages/domain/src/models";
 import { computeWeeklyCapacitySnapshot } from "../../../../../packages/inference/src/capacity";
 import { categoryColors } from "../../../../../packages/domain/src/taxonomy";
@@ -11,26 +10,15 @@ import { MetricCard } from "../common/MetricCard";
 import { StackedBar } from "../common/StackedBar";
 import { BarLine } from "../common/BarLine";
 import { RiskRow } from "../common/RiskRow";
-import { ForecastAgentPanel } from "./ForecastAgentPanel";
 
 export function WeeklyCapacityScreen({
   snapshot: currentSnapshot,
   weekRangeLabel,
-  nextWeekRangeLabel,
-  generatedForecast,
-  forecastStatus,
-  forecastError,
-  onGenerateForecast,
   hasWorkBlocks,
   blocks,
 }: {
   snapshot: ReturnType<typeof computeWeeklyCapacitySnapshot>;
   weekRangeLabel: string;
-  nextWeekRangeLabel: string;
-  generatedForecast: PersistedForecastRecord | null;
-  forecastStatus: "idle" | "generating" | "error";
-  forecastError: string | null;
-  onGenerateForecast: () => void;
   hasWorkBlocks: boolean;
   blocks: WorkBlock[];
 }) {
@@ -132,17 +120,6 @@ export function WeeklyCapacityScreen({
         <MetricCard label="Reactive load" value={snapshot.reactive_pct} helper="Unplanned support and interruption work" />
         <MetricCard label="Reliable new work" value={snapshot.reliable_new_work_capacity_pct} helper="Forecast for next week" showRing />
       </div>
-
-      {isCurrentWeek && (
-        <ForecastAgentPanel
-          generatedForecast={generatedForecast}
-          nextWeekRangeLabel={nextWeekRangeLabel}
-          status={forecastStatus}
-          error={forecastError}
-          deterministicReliableCapacity={snapshot.reliable_new_work_capacity_pct}
-          onGenerate={onGenerateForecast}
-        />
-      )}
 
       {!isCurrentWeek && viewedBlocks.length === 0 && (
         <EmptyState

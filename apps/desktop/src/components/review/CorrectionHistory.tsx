@@ -1,8 +1,7 @@
-import { History, RotateCcw } from "lucide-react";
+import { History, RotateCcw, ArrowRight } from "lucide-react";
 import type { WorkBlock, UserCorrection } from "../../../../../packages/domain/src/models";
 import { fieldLabel } from "../../lib/format";
 import { formatAuditTime } from "../../lib/format";
-import { EmptyState } from "../common/EmptyState";
 
 export function CorrectionHistory({
   blocks,
@@ -15,25 +14,24 @@ export function CorrectionHistory({
 }) {
   const recentCorrections = [...corrections]
     .sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime())
-    .slice(0, 8);
+    .slice(0, 12);
 
   return (
     <section className="history-panel">
       <div className="history-title">
         <span>
-          <History size={16} />
+          <History size={15} />
           <strong>Correction history</strong>
+          {corrections.length > 0 && <span className="history-count">{corrections.length}</span>}
         </span>
         <button type="button" onClick={onResetLocalData} title="Reset local prototype data">
-          <RotateCcw size={15} />
+          <RotateCcw size={14} />
         </button>
       </div>
       {recentCorrections.length === 0 ? (
-        <EmptyState
-          icon={History}
-          title="No corrections yet."
-          description="Edit a block's label, category, or project to create a correction entry."
-        />
+        <p className="history-empty">
+          No corrections yet. Edit a block&apos;s label, category, or project to create an entry.
+        </p>
       ) : (
         <ol className="history-list">
           {recentCorrections.map((correction) => {
@@ -42,12 +40,14 @@ export function CorrectionHistory({
 
             return (
               <li key={correction.correction_id}>
-                <div>
-                  <strong>{fieldLabel(correction.field)}</strong>
-                  <time>{formatAuditTime(correction.timestamp)}</time>
-                </div>
-                <span>{label}</span>
-                <small>{correction.old_value} → {correction.new_value}</small>
+                <span className="correction-field">{fieldLabel(correction.field)}</span>
+                <span className="correction-project" title={label}>{label}</span>
+                <span className="correction-change" title={`${correction.old_value} → ${correction.new_value}`}>
+                  <span className="correction-old">{correction.old_value}</span>
+                  <ArrowRight size={12} />
+                  <span className="correction-new">{correction.new_value}</span>
+                </span>
+                <time>{formatAuditTime(correction.timestamp)}</time>
               </li>
             );
           })}

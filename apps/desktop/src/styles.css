@@ -1465,10 +1465,24 @@ h3 {
 .ledger-screen,
 .review-screen,
 .capacity-screen,
+.forecast-screen,
 .narrative-screen,
 .audit-screen {
   display: flex;
   flex-direction: column;
+}
+
+/* The weekly capacity + forecast views flow top-to-bottom and scroll as a
+   whole page, rather than cramming fixed-height panels that clip internally. */
+.capacity-screen,
+.forecast-screen {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.capacity-screen > *,
+.forecast-screen > * {
+  flex: 0 0 auto;
 }
 
 .ledger-screen .activity-capture-panel {
@@ -1850,6 +1864,176 @@ select {
   background: var(--surface-muted);
 }
 
+.block-actions button.block-confirm {
+  border-color: var(--border-strong);
+  background: var(--accent);
+  color: var(--background);
+}
+
+.block-actions button.block-confirm:hover {
+  background: var(--accent-muted);
+  color: var(--background);
+}
+
+/* Daily review — denser, better-organized block cards.
+   Selects and actions share one row; "Why this estimate?" spans below.
+   Scoped to .review-screen so the History page card layout is untouched. */
+.review-screen .block-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "top   top"
+    "main  main"
+    "tags  actions"
+    "why   why";
+  column-gap: 16px;
+  row-gap: 10px;
+  padding: 14px 16px;
+  transition: border-color 0.15s ease;
+}
+
+.review-screen .block-card:hover {
+  border-color: var(--border-strong);
+}
+
+.review-screen .block-topline {
+  grid-area: top;
+}
+
+.review-screen .block-main {
+  grid-area: main;
+  align-items: flex-start;
+}
+
+.review-screen .block-main h3 {
+  font-size: 15px;
+  line-height: 20px;
+}
+
+.review-screen .block-main strong {
+  font-size: 23px;
+  line-height: 24px;
+  letter-spacing: -0.6px;
+}
+
+.review-screen .tag-grid {
+  grid-area: tags;
+  max-width: 580px;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.review-screen .tag-grid select {
+  min-height: 34px;
+  font-size: 13px;
+}
+
+.review-screen .block-actions {
+  grid-area: actions;
+  justify-self: end;
+  align-self: center;
+  gap: 8px;
+}
+
+.review-screen .evidence {
+  grid-area: why;
+  padding-top: 0;
+}
+
+.review-screen .evidence summary {
+  width: fit-content;
+  font-size: 12px;
+}
+
+/* Daily review — single-column layout */
+.screen-subhead {
+  margin-top: 6px;
+  max-width: 62ch;
+  color: var(--text-subtle);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.review-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.review-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  color: var(--text-subtle);
+  font-size: 12px;
+}
+
+.review-progress b {
+  color: var(--text);
+  font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 600;
+}
+
+.review-progress-track {
+  flex: 1 1 auto;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  overflow: hidden;
+}
+
+.review-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.25s ease;
+}
+
+.review-screen > .ledger-list,
+.review-screen > .empty-state {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Review Copilot — inline results strip (trigger lives in the header) */
+.copilot-inline {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 13px 15px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.copilot-inline-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+}
+
+.copilot-inline-head strong {
+  font-size: 13px;
+}
+
+.copilot-inline-sub {
+  color: var(--text-subtle);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.copilot-inline .copilot-list {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.copilot-list p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 .review-layout {
   display: grid;
   grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
@@ -1951,7 +2135,7 @@ select {
 
 .history-list {
   display: grid;
-  gap: 8px;
+  gap: 4px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1959,44 +2143,98 @@ select {
 
 .history-panel .history-list,
 .copilot-panel .copilot-list {
-  max-height: 240px;
+  max-height: 230px;
   overflow-y: auto;
   padding-right: 3px;
 }
 
+/* Compact, single-line correction rows: field · project · old → new — time */
 .history-list li {
-  display: grid;
-  gap: 4px;
-  padding: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
   border: 1px solid rgba(255, 255, 255, 0.04);
   border-radius: var(--radius);
   background: rgba(255, 255, 255, 0.025);
-}
-
-.history-list div {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  color: var(--text);
   font-size: 12px;
 }
 
-.history-list time {
-  color: var(--text-subtle);
+.history-list li .correction-field {
+  flex: 0 0 auto;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
   white-space: nowrap;
 }
 
-.history-list span {
-  color: var(--text-muted);
-  font-size: 13px;
+.history-list li .correction-project {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
   font-weight: 600;
 }
 
-.history-list small {
-  overflow-wrap: anywhere;
+.history-list li .correction-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 1 1 auto;
+  min-width: 0;
   color: var(--text-subtle);
-  font-size: 12px;
-  line-height: 1.35;
+  font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+}
+
+.history-list li .correction-change svg {
+  flex: 0 0 auto;
+  color: var(--text-subtle);
+}
+
+.history-list li .correction-old,
+.history-list li .correction-new {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-list li .correction-new {
+  color: var(--text-muted);
+}
+
+.history-list time {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: var(--text-subtle);
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+.history-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.history-empty {
+  margin: 0;
+  padding: 2px 0;
+  color: var(--text-subtle);
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .copilot-error {
@@ -2387,8 +2625,6 @@ select {
 .forecast-panel {
   display: grid;
   gap: 10px;
-  max-height: 160px;
-  overflow-y: auto;
 }
 
 .forecast-list strong {
@@ -2524,14 +2760,10 @@ select {
 
 .capacity-risk-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  flex: 1 1 auto;
-  min-height: 0;
 }
 
 .capacity-risk-grid > .capacity-section {
-  min-height: 0;
   margin-bottom: 0;
-  overflow-y: auto;
 }
 
 .comparison-bars {
@@ -4492,10 +4724,6 @@ select {
 .capacity-section {
   padding: 16px;
   margin-bottom: 16px;
-}
-
-.forecast-panel {
-  max-height: 196px;
 }
 
 .forecast-list strong {

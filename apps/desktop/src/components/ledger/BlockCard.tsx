@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Clock, SplitSquareHorizontal, X } from "lucide-react";
+import { Check, Clock, X } from "lucide-react";
 import type { WorkBlock, WorkCategory, PlannedStatus, WorkMode } from "../../../../../packages/domain/src/models";
 import { workCategories, plannedStatuses, workModes } from "../../../../../packages/domain/src/taxonomy";
 import { formatRange } from "../../lib/format";
@@ -151,17 +151,13 @@ export function BlockCard({
         </ul>
       </details>
       <div className="block-actions">
-        <button type="button" onClick={() => onConfirm(block.work_block_id)}>
+        <button type="button" className="block-confirm" onClick={() => onConfirm(block.work_block_id)}>
           <Check size={16} />
-          <span>Confirm Block</span>
+          <span>Confirm</span>
         </button>
-        <button type="button" disabled title="Block splitting is coming soon">
-          <SplitSquareHorizontal size={16} />
-          <span>Split Block</span>
-        </button>
-        <button type="button" onClick={() => onExclude(block.work_block_id)}>
+        <button type="button" className="block-exclude" onClick={() => onExclude(block.work_block_id)}>
           <X size={16} />
-          <span>Exclude Block</span>
+          <span>Exclude</span>
         </button>
       </div>
     </article>
