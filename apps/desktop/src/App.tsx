@@ -1526,7 +1526,6 @@ export function App() {
       {active === "daily" && (
         <DailyReviewScreen
           blocks={blocks}
-          corrections={corrections}
           reviewSuggestions={reviewSuggestions}
           reviewCopilotStatus={reviewCopilotStatus}
           reviewCopilotError={reviewCopilotError}
@@ -1536,7 +1535,6 @@ export function App() {
           onConfirm={confirmBlock}
           onExclude={excludeBlock}
           onRelabel={updateBlock}
-          onResetLocalData={resetLocalData}
         />
       )}
       {active === "weekly" && (

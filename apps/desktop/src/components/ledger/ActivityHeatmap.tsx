@@ -74,6 +74,13 @@ export function ActivityHeatmap({ sessions }: { sessions: ActivitySession[] }) {
           </div>
         ))}
       </div>
+      <div className="heatmap-legend" aria-label="Intensity scale">
+        <span className="heatmap-legend-label">Less</span>
+        {[1, 2, 3, 4, 5].map(level => (
+          <div key={level} className="heatmap-cell" data-level={level} />
+        ))}
+        <span className="heatmap-legend-label">More</span>
+      </div>
     </section>
   );
 }

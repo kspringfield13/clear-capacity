@@ -6904,3 +6904,22 @@ html[data-theme="dark"] .agent-active .pause-button:hover {
 .heatmap-cell[data-level="3"] { background: color-mix(in srgb, var(--info) 56%, var(--surface-muted)); }
 .heatmap-cell[data-level="4"] { background: color-mix(in srgb, var(--info) 76%, var(--surface-muted)); }
 .heatmap-cell[data-level="5"] { background: var(--info); }
+
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  justify-content: flex-end;
+}
+
+.heatmap-legend .heatmap-cell {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+}
+
+.heatmap-legend-label {
+  font-size: 9px;
+  color: var(--text-subtle);
+  line-height: 1;
+}

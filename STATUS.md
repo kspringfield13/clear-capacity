@@ -32,6 +32,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **Block duration edit** — added inline time-range editor (hover-reveal clock icon → two `<input type="time">` with Save/Cancel) to `BlockCard.tsx`; validates end > start; wires through `onRelabel` for `start_time`/`end_time`; added `"start_time" | "end_time"` to `UserCorrection.field` in `models.ts` and their labels in `format.ts`; added `.block-time`, `.time-edit-btn`, `.time-range-editor` styles in `styles.css`. (2026-06-22)
 - [x] **Activity heatmap** — added `ActivityHeatmap` component to LedgerScreen showing a 7-day × 24-hour grid of session density; cells use 5-level `color-mix` intensity from `--info` token; hover tooltips show day/hour/minutes; renders `null` when no sessions. (2026-06-23)
 - [x] **Week-nav chevrons are split across the wide headline** — moved both chevrons into `.week-nav-controls` beside the eyebrow label (above the `<h1>`); disabled next-week chevron now has `opacity: 0.35` + `cursor: not-allowed` in `styles.css`. (2026-06-23)
+- [x] **Activity heatmap has no intensity legend** — added "Less ▢▢▢▢▢ More" legend row beneath the heatmap grid in `ActivityHeatmap.tsx` reusing `.heatmap-cell[data-level]` styles; added `.heatmap-legend` / `.heatmap-legend-label` CSS (flex, right-aligned, token-based) in `styles.css`; also removed spurious `corrections` / `onResetLocalData` props passed to `DailyReviewScreen` in `App.tsx` (pre-existing TS error). (2026-06-23)
 
 ## In Progress
 _(none)_
@@ -39,7 +40,6 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
-- [ ] **Activity heatmap has no intensity legend** — `ActivityHeatmap.tsx` renders 5-level `data-level` cells but no key, so users can't tell that more-saturated = more activity (the grid reads as a faint gray block in light mode). Add a small "Less ▢▢▢▢▢ More" legend row reusing the same `data-level` cell styles beneath the grid, plus `.heatmap-legend` styles (light + dark) in `styles.css`.
 - [ ] **Audit privacy pill shows raw snake_case** — `AuditEventRow.tsx` renders `event.privacy_level` verbatim, so users see "local_only" / "derived_only" / "excluded". Add a `privacyLevelLabel()` helper in `lib/format.ts` (→ "Local only" / "Derived only" / "Excluded") and a `title` tooltip explaining each scope; optionally color-code the `.audit-privacy` pill per level via tokens in `styles.css`.
 - [ ] **Summary-confidence chip floats disconnected on Weekly** — In `WeeklyCapacityScreen.tsx` the `.header-actions .summary-score` box sits orphaned at the far top-right, vertically misaligned against the two-line hero headline (both themes). Tighten alignment with the headline (align to top, match card styling) so it reads as a related stat, not a stray box. (`styles.css` `.summary-score` / `.header-actions`.)
 
