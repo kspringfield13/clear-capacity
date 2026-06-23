@@ -1006,7 +1006,6 @@ h3 {
 }
 
 .onboarding-step.is-done > span:last-child {
-  text-decoration: line-through;
   color: var(--text-subtle);
 }
 
