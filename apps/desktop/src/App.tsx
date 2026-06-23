@@ -1,55 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import {
-  Activity,
-  AlignLeft,
-  BarChart3,
-  CalendarCheck,
-  Check,
-  ChevronRight,
-  ClipboardCopy,
-  Eye,
-  FileText,
-  History,
-  Maximize2,
-  Monitor,
-  Lock,
-  Minimize2,
-  Moon,
-  Pause,
-  PanelLeft,
-  Pencil,
-  Play,
-  RefreshCw,
-  RotateCcw,
-  Search,
-  Settings,
-  ShieldCheck,
-  SplitSquareHorizontal,
-  Sun,
-  Tag,
-  TimerReset,
-  Upload,
-  X
-} from "lucide-react";
-import { computeWeeklyCapacitySnapshot } from "../../../packages/inference/src/capacity";
-import { sessionizeActiveWindowSamples } from "../../../packages/inference/src/sessionizer/activeWindow";
 import { outlookEventsToWorkBlocks, parseOutlookIcs } from "../../../packages/integrations/src/calendar/outlookIcs";
-import { categoryColors, plannedStatuses, workCategories, workModes } from "../../../packages/domain/src/taxonomy";
 import type {
   ActiveWindowSample,
-  ActivitySession,
   AuditEvent,
-  AuditEventType,
-  OutlookCalendarEvent,
-  PlannedStatus,
-  ReviewCopilotAction,
   ReviewCopilotSuggestion,
   UserCorrection,
   VisualContextInsight,
   WorkBlock,
-  WorkCategory,
-  WorkMode,
   AIConfig
 } from "../../../packages/domain/src/models";
 import {
@@ -61,34 +19,15 @@ import {
 } from "./services/localStore";
 import type { AppTheme, PersistedForecastRecord, PersistedNarrativeRecord } from "./services/localStore";
 import { createDemoState } from "./services/demoData";
-
 import {
   addDays,
-  displaySafeNarrative,
-  formatWeekdayMonthDay,
-  getBusinessWeekRangeLabel,
   getCurrentIsoWeekId,
+  getBusinessWeekRangeLabel,
   getLocalDateKey,
-  ordinalDay,
-  replaceIsoWeekIds
 } from "./lib/date";
-import {
-  auditTypeLabel,
-  compactCategory,
-  fieldLabel,
-  formatAuditTime,
-  formatRange,
-  formatTime,
-  pct
-} from "./lib/format";
+import { fieldLabel } from "./lib/format";
 import { createAuditEvent } from "./lib/audit";
-import {
-  capacityPctFromMinutes,
-  removeSeededCorrections,
-  removeSeededWorkBlocks,
-  stableHash,
-  summarizeRecentSessions
-} from "./lib/blocks";
+import { removeSeededCorrections, removeSeededWorkBlocks } from "./lib/blocks";
 import { useDerived } from "./hooks/useDerived";
 import { usePersistence } from "./hooks/usePersistence";
 import { useBlocksLedger } from "./hooks/useBlocksLedger";
@@ -98,37 +37,16 @@ import { useReviewCopilot } from "./hooks/useReviewCopilot";
 import { useForecastAgent } from "./hooks/useForecastAgent";
 import { useNarrativeGeneration } from "./hooks/useNarrativeGeneration";
 import { useVisualContext } from "./hooks/useVisualContext";
-
-import { ConfidenceChip } from "./components/common/ConfidenceChip";
-import { EmptyState } from "./components/common/EmptyState";
-import { MetricCard } from "./components/common/MetricCard";
-import { StackedBar } from "./components/common/StackedBar";
-import { BarLine } from "./components/common/BarLine";
-import { RiskRow } from "./components/common/RiskRow";
-import { ForecastList } from "./components/common/ForecastList";
-import { BlockCard } from "./components/ledger/BlockCard";
-import { screenLabels, primarySectionForScreen, sectionViews } from "./lib/ui";
+import { screenLabels } from "./lib/ui";
 import {
   MAX_VISUAL_CONTEXT_CAPTURES_PER_DAY,
   MIN_VISUAL_CONTEXT_SESSION_MINUTES,
   MIN_VISUAL_CONTEXT_GAP_MS
 } from "./lib/constants";
-
 import { AppShell } from "./components/shell/AppShell";
-import { ContextNavigation } from "./components/shell/ContextNavigation";
-import { CompactWidget } from "./components/compact/CompactWidget";
-import { SetupScreen } from "./components/settings/SetupScreen";
-import { LedgerScreen } from "./components/ledger/LedgerScreen";
-import { ActivityCapturePanel } from "./components/ledger/ActivityCapturePanel";
-import { DailyReviewScreen } from "./components/review/DailyReviewScreen";
-import { WeeklyCapacityScreen } from "./components/capacity/WeeklyCapacityScreen";
-import { ForecastScreen } from "./components/capacity/ForecastScreen";
-import { NarrativeScreen } from "./components/narrative/NarrativeScreen";
-import { AuditLogScreen } from "./components/audit/AuditLogScreen";
-import { CorrectionsScreen } from "./components/review/CorrectionsScreen";
-import { AgentScreen } from "./components/agent/AgentScreen";
-
-import type { Screen, WindowMode, PrimarySection, AppToolbarAction } from "./lib/types";
+import { buildToolbarActions } from "./lib/toolbarActions";
+import { ScreenRouter } from "./components/shell/ScreenRouter";
+import type { Screen, WindowMode } from "./lib/types";
 
 export function App() {
   const [isDemoMode] = useState(() => new URLSearchParams(window.location.search).get("demo") === "1");
@@ -278,7 +196,7 @@ export function App() {
 
   const {
     snapshot,
-    narrative: narrativeFromHook,
+    narrative,
     managerText,
     activeWindowSessions,
     hasNarrativeEvidence,
@@ -286,8 +204,6 @@ export function App() {
     reviewQueue,
     toolbarStatus,
   } = derived;
-
-  const narrative = narrativeFromHook; // keep name for compatibility with existing screens for now
 
   const { classificationStatus, classificationError, classifyActiveWindowSessions, resetClassification } =
     useClassification({
@@ -819,27 +735,21 @@ export function App() {
     setWindowMode("large");
   }
 
-  const toolbarActions: AppToolbarAction[] = (() => {
-    if (isDemoMode) return [];
-    switch (active) {
-      case "ledger":
-        return [{
-          label: classificationStatus === "classifying" ? "Classifying…" : "Classify",
-          icon: Tag,
-          onClick: () => void classifyActiveWindowSessions(),
-          disabled: classificationStatus === "classifying",
-          tone: "primary" as const
-        }];
-      case "daily":
-        return [{ label: "Review Copilot", icon: ShieldCheck, onClick: () => void generateReviewCopilotSuggestions(), disabled: reviewCopilotStatus === "generating" || reviewQueue.length === 0, tone: "primary" as const }];
-      case "forecast":
-        return [{ label: "Forecast", icon: BarChart3, onClick: () => void generateForecastAgent(), disabled: forecastStatus === "generating" || blocks.length === 0, tone: "primary" as const }];
-      case "narrative":
-        return [{ label: "Regenerate", icon: RefreshCw, onClick: () => void regenerateNarrative("manual"), disabled: narrativeGenerationStatus === "generating" || !hasNarrativeEvidence, tone: "primary" as const }];
-      default:
-        return [];
-    }
-  })();
+  const toolbarActions = buildToolbarActions({
+    active,
+    isDemoMode,
+    classificationStatus,
+    classifyActiveWindowSessions,
+    reviewCopilotStatus,
+    reviewQueue,
+    forecastStatus,
+    blocks,
+    narrativeGenerationStatus,
+    hasNarrativeEvidence,
+    generateReviewCopilotSuggestions,
+    generateForecastAgent,
+    regenerateNarrative,
+  });
 
   return (
     <AppShell
@@ -860,125 +770,59 @@ export function App() {
       setTheme={setTheme}
       demoMode={isDemoMode}
     >
-      {windowMode === "compact" ? (
-        <CompactWidget
-          paused={paused}
-          activeWindowSamples={activeWindowSamples}
-          activeWindowSessions={activeWindowSessions}
-          blocks={blocks}
-          snapshot={snapshot}
-          onPauseChange={setPaused}
-          onOpenScreen={openScreenFromQuickView}
-          onConfirm={confirmBlock}
-          onExclude={excludeBlock}
-        />
-      ) : (
-        <>
-      {active === "setup" && (
-        <SetupScreen
-          paused={paused}
-          setPaused={setPaused}
-          visualContextEnabled={visualContextEnabled}
-          setVisualContextEnabled={setVisualContextEnabled}
-          visualContextInsights={visualContextInsights}
-          calendarEvents={calendarEvents}
-          activeWindowSamples={activeWindowSamples}
-          activeWindowSessions={activeWindowSessions}
-          captureError={captureError}
-          importError={importError}
-          onImportOutlookIcs={importOutlookIcs}
-          aiConfig={aiConfig}
-          setAiConfig={setAiConfig}
-          hasClassification={blocks.length > 0}
-        />
-      )}
-      {active === "ledger" && (
-        <LedgerScreen
-          blocks={blocks}
-          activeWindowSamples={activeWindowSamples}
-          activeWindowSessions={activeWindowSessions}
-          visualContextInsights={visualContextInsights}
-          captureError={captureError}
-          classificationStatus={classificationStatus}
-          classificationError={classificationError}
-          visualContextStatus={visualContextStatus}
-          visualContextError={visualContextError}
-          paused={paused}
-          onClassifySessions={() => void classifyActiveWindowSessions()}
-          onConfirm={confirmBlock}
-          onExclude={excludeBlock}
-          onRelabel={updateBlock}
-        />
-      )}
-      {active === "corrections" && (
-        <CorrectionsScreen
-          blocks={blocks}
-          corrections={corrections}
-          onResetLocalData={resetLocalData}
-        />
-      )}
-      {active === "daily" && (
-        <DailyReviewScreen
-          blocks={blocks}
-          reviewSuggestions={reviewSuggestions}
-          reviewCopilotStatus={reviewCopilotStatus}
-          reviewCopilotError={reviewCopilotError}
-          onGenerateReviewSuggestions={() => void generateReviewCopilotSuggestions()}
-          onApplyReviewSuggestion={applyReviewSuggestion}
-          onDismissReviewSuggestion={dismissReviewSuggestion}
-          onConfirm={confirmBlock}
-          onExclude={excludeBlock}
-          onRelabel={updateBlock}
-        />
-      )}
-      {active === "weekly" && (
-        <WeeklyCapacityScreen
-          snapshot={snapshot}
-          weekRangeLabel={currentWeekRangeLabel}
-          hasWorkBlocks={blocks.length > 0}
-          blocks={blocks}
-        />
-      )}
-      {active === "forecast" && (
-        <ForecastScreen
-          snapshot={snapshot}
-          nextWeekRangeLabel={nextWeekRangeLabel}
-          generatedForecast={generatedForecast}
-          forecastStatus={forecastStatus}
-          forecastError={forecastError}
-          onGenerateForecast={() => void generateForecastAgent()}
-          hasWorkBlocks={blocks.length > 0}
-        />
-      )}
-      {active === "narrative" && (
-        <NarrativeScreen
-          narrative={narrative}
-          generatedNarrative={generatedNarrative}
-          weekRangeLabel={currentWeekRangeLabel}
-          hasNarrativeEvidence={hasNarrativeEvidence}
-          generationStatus={narrativeGenerationStatus}
-          generationError={narrativeGenerationError}
-          managerSummaryText={managerSummaryText}
-          onManagerSummaryChange={updateManagerSummary}
-          onRegenerate={() => void regenerateNarrative("manual")}
-        />
-      )}
-      {active === "audit" && <AuditLogScreen auditEvents={auditEvents} />}
-      {active === "agent" && (
-        <AgentScreen
-          blocks={blocks}
-          snapshot={snapshot}
-          activeWindowSessions={activeWindowSessions}
-          calendarEvents={calendarEvents}
-          corrections={corrections}
-          visualContextInsights={visualContextInsights}
-          todayKey={todayKey}
-          currentWeekRangeLabel={currentWeekRangeLabel}
-          aiConfig={aiConfig}
-        />
-      )}
-        </>
-      )}
+      <ScreenRouter
+        active={active}
+        windowMode={windowMode}
+        paused={paused}
+        setPaused={setPaused}
+        blocks={blocks}
+        activeWindowSamples={activeWindowSamples}
+        activeWindowSessions={activeWindowSessions}
+        snapshot={snapshot}
+        onConfirm={confirmBlock}
+        onExclude={excludeBlock}
+        onRelabel={updateBlock}
+        onOpenScreen={openScreenFromQuickView}
+        visualContextEnabled={visualContextEnabled}
+        setVisualContextEnabled={setVisualContextEnabled}
+        visualContextInsights={visualContextInsights}
+        calendarEvents={calendarEvents}
+        captureError={captureError}
+        importError={importError}
+        onImportOutlookIcs={importOutlookIcs}
+        aiConfig={aiConfig}
+        setAiConfig={setAiConfig}
+        classificationStatus={classificationStatus}
+        classificationError={classificationError}
+        visualContextStatus={visualContextStatus}
+        visualContextError={visualContextError}
+        onClassifySessions={() => void classifyActiveWindowSessions()}
+        corrections={corrections}
+        onResetLocalData={resetLocalData}
+        reviewSuggestions={reviewSuggestions}
+        reviewCopilotStatus={reviewCopilotStatus}
+        reviewCopilotError={reviewCopilotError}
+        onGenerateReviewSuggestions={() => void generateReviewCopilotSuggestions()}
+        onApplyReviewSuggestion={applyReviewSuggestion}
+        onDismissReviewSuggestion={dismissReviewSuggestion}
+        weekRangeLabel={currentWeekRangeLabel}
+        nextWeekRangeLabel={nextWeekRangeLabel}
+        generatedForecast={generatedForecast}
+        forecastStatus={forecastStatus}
+        forecastError={forecastError}
+        onGenerateForecast={() => void generateForecastAgent()}
+        narrative={narrative}
+        generatedNarrative={generatedNarrative}
+        hasNarrativeEvidence={hasNarrativeEvidence}
+        narrativeGenerationStatus={narrativeGenerationStatus}
+        narrativeGenerationError={narrativeGenerationError}
+        managerSummaryText={managerSummaryText}
+        onManagerSummaryChange={updateManagerSummary}
+        onRegenerate={() => void regenerateNarrative("manual")}
+        auditEvents={auditEvents}
+        todayKey={todayKey}
+        currentWeekRangeLabel={currentWeekRangeLabel}
+      />
     </AppShell>
   );
 }

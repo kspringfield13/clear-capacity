@@ -41,7 +41,7 @@ Cloud sessions are stateless — without this file, every run relearns the codeb
 - **Color-only legend keys need hover crosslinks**: prefer bidirectional hover-highlight between legend rows and bar segments (dim non-hovered peers to ~0.3–0.35 opacity with a 0.12s transition) over relying on color alone. `categoryColors` palette now has no near-duplicate hues — keep it that way when adding categories.
 
 ## Open architectural notes
-- `App.tsx` is a large orchestrator (~984 lines after the AI-hook extraction; tends to creep back up) being incrementally decomposed into `components/`, `hooks/`, and `lib/`. New async ops land as dedicated hooks; next candidates to extract are the `toolbarActions` IIFE and the screen-routing switch.
+- `App.tsx` is a state-wiring orchestrator (~828 lines). Decomposition complete: AI ops in `hooks/use*.ts`, toolbar actions in `lib/toolbarActions.ts` (`buildToolbarActions`), screen routing in `components/shell/ScreenRouter.tsx`. Future growth should land in new hooks or components, not App.tsx.
 
 ---
 _Entries below are appended by autonomous runs. Keep the file curated — prune stale notes as you add new ones._

@@ -40,6 +40,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **Capacity-model legend is color-only-keyed and two purples collide** — changed "Blocked / waiting / dependency delay" color from `#9333ea` (purple) to `#be185d` (rose) in `taxonomy.ts`; added `hoveredCategory`/`onHoverCategory` crosslink props to `StackedBar.tsx`; wired hover state in `WeeklyCapacityScreen.tsx` (allocation rows dim to 0.35 opacity, bar segments dim to 0.3); added `title` tooltip to each legend row; added `cursor: pointer` to `.allocation-row` in `styles.css`; self-review passed. (2026-06-23)
 - [x] **"politics-to-math translator" section eyebrow is cryptic jargon** — replaced with "where your hours actually went" in `WeeklyCapacityScreen.tsx`; self-review passed. (2026-06-23)
 - [x] **Lone Review-Copilot suggestion looks marooned in a wide empty band** — switched `.copilot-inline .copilot-list` from `auto-fill, minmax(280px, 1fr)` to `auto-fit, minmax(280px, 360px)` in `styles.css`; phantom columns no longer appear with a single suggestion; self-review passed. (2026-06-23)
+- [x] **App.tsx is still the largest file (984 lines)** — extracted `toolbarActions` IIFE to `lib/toolbarActions.ts` (`buildToolbarActions` pure function) and screen-routing JSX to `components/shell/ScreenRouter.tsx`; App.tsx reduced from 984 → 828 lines; removed 27 dead imports; pure refactor, no behavior change; self-review passed. (2026-06-23)
 
 ## In Progress
 _(none)_
@@ -51,7 +52,6 @@ _(none)_
 ### New Features
 
 ### Code Quality
-- [ ] **App.tsx is still the largest file (984 lines)** — After the AI-hook extraction it has grown back to ~984 lines. Extract the screen-aware `toolbarActions` IIFE and the screen-routing/`renderScreen` switch into a dedicated `apps/desktop/src/lib/` module (or `components/shell/`) so `App.tsx` is just composition + state wiring. Pure refactor, no behavior change; verify with `npm run build`.
 
 ---
 
