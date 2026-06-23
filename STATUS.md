@@ -52,6 +52,10 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
+- [ ] **Corrections list shows raw enum / ISO values** — `CorrectionsScreen.tsx` (lines ~99–101) renders `correction.old_value`/`new_value` verbatim, so a planned-status edit reads `planned → unplanned` (lowercase enum, verified on the Ledger → Corrections tab) and a duration edit would show raw ISO timestamp strings. Humanize per field using helpers that already exist in `lib/format.ts`: `plannedStatusLabel()` for `planned_status`, `formatTime()` for `start_time`/`end_time`; leave already-human values (project name, category, mode — all stored as readable strings in `taxonomy.ts`) untouched. Keep the existing `title={old → new}` tooltip humanized too.
+- [ ] **Completed onboarding steps are struck through** — `styles.css` `.onboarding-step.is-done > span:last-child` (~line 1008) applies `text-decoration: line-through`, so finished Getting-started items on `SetupScreen.tsx` read as "removed/cancelled" rather than "done" (seen light + dark). Drop the `line-through`; keep the `--text-subtle` color + green check so completed steps read as settled, not deleted.
+- [ ] **Heatmap cells are invisible to screen readers** — `ActivityHeatmap.tsx` exposes each cell's value only via `data-level` color + hover `title` (not reachable by keyboard/SR), and `.heatmap-grid` has no accessible summary. Following the established `StackedBar`/`RiskRow` a11y pattern, add `role="img"` + a descriptive `aria-label` to each populated cell (e.g. "Today 6–7pm, 45 min") and an `aria-label` summary on the grid (e.g. "7-day activity heatmap, peak 45 min").
+- [ ] **7-day heatmap looks broken when only a day or two has data** — `ActivityHeatmap.tsx` renders the full 7×24 grid whenever `sessions.length > 0`; with sparse data (only "Today" lit, verified on Ledger light + dark) it reads as a rendering bug. When fewer than ~2 days have any activity, render a muted caption (reusing `--text-subtle`) such as "Limited activity so far — the pattern fills in as you keep tracking" so the low-data state is explained rather than looking empty.
 
 ### New Features
 
