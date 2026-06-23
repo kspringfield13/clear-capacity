@@ -21,13 +21,24 @@ Analyst workload is often split across planned projects, recurring reporting, me
 - foreground app and window-title sampling
 - local session grouping and audit history
 - Outlook `.ics` calendar import
+- Today review queue to confirm, relabel, or exclude inferred work blocks
 - reviewable work ledger with confidence and evidence
-- Daily Review corrections and exclusions
 - category, work-mode, planned-status, and project labels
-- explainable weekly capacity calculation
+- explainable weekly capacity model with a dedicated next-week forecast view
+- searchable correction history and a filterable audit trail
+- conversational agent for asking questions about your workload and capacity
 - optional OpenAI-assisted classification, review suggestions, forecasts, and narratives
 - optional screenshot-derived visual context with an explicit opt-in toggle
 - browser-local persistence for prototype data
+
+## App Navigation
+
+The app is organized into four primary sections, each with focused sub-views:
+
+- **Today** — the daily review queue. Confirm, relabel, or exclude inferred work blocks, with an opt-in Review Copilot that suggests cleanup actions you approve before they apply.
+- **Week** — `Capacity` (the explainable weekly allocation model and risk modifiers), `Forecast` (an AI projection of next week's reliable capacity with scenarios, constraints, and recommendations), and `Summary` (an editable analyst or manager narrative).
+- **Agent** — a conversational view to ask questions about your workload, plan, and understand the capacity model.
+- **History** — `Activity` (the live work ledger and capture timeline), `Corrections` (a searchable log of every label, category, project, and planned-status edit), and `Audit` (the filterable trail of all local signals, inferences, and privacy events).
 
 ## Privacy Model
 
