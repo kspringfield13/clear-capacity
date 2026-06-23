@@ -43,10 +43,15 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
+- [ ] **Delivery risk modifiers show unlabeled magnitudes with mixed units** — On WeeklyCapacityScreen the "Delivery risk modifiers" rows render bare numbers ("33 / 90 / 10 / 46") with no scale, and "Active blockers" (a raw count, "1") sits in the same list with identical bar styling, so a user can't tell what "90" is out of or that the last row is a different unit. Add an optional `title` + `suffix`/`hint` prop to `RiskRow` (`apps/desktop/src/components/common/RiskRow.tsx`); render a "/100" scale hint and a one-line `title` tooltip on the four index rows, and give the Active-blockers row in `WeeklyCapacityScreen.tsx` (~lines 169–180) a distinct count-style label so the two unit systems read as different.
+- [ ] **Capacity-model legend is color-only-keyed and two purples collide** — The "100% weekly capacity model" stacked bar keys every category by color alone, and "Dashboard development / edits" (`#7c3aed`) vs "Blocked / waiting / dependency delay" (`#9333ea`) are nearly indistinguishable on the bar. Give one of the two a clearly distinct color in `packages/domain/src/taxonomy.ts` (`categoryColors`), and in `WeeklyCapacityScreen.tsx` make each `.allocation-row` legend entry hover-highlight its matching `StackedBar` segment (shared key) plus carry a `title` tooltip naming the category — so the legend is unambiguous in both themes.
+- [ ] **"politics-to-math translator" section eyebrow is cryptic jargon** — On WeeklyCapacityScreen (`WeeklyCapacityScreen.tsx` ~line 155) the "Planned vs reactive" section subtitle reads "politics-to-math translator", which a new analyst can't parse. Replace it with a plain-language descriptor (e.g. "where your hours actually went") matching the tone of the other section eyebrows.
+- [ ] **Lone Review-Copilot suggestion looks marooned in a wide empty band** — On DailyReviewScreen a single "Suggested cleanup" card occupies only the left ~280px of a full-width section, reading as cut off. Constrain or center `.copilot-inline .copilot-list` in `apps/desktop/src/styles.css` (~line 2091) — e.g. cap the grid width or center a single card — so one suggestion doesn't look broken (`ReviewCopilotPanel.tsx`).
 
 ### New Features
 
 ### Code Quality
+- [ ] **App.tsx is still the largest file (984 lines)** — After the AI-hook extraction it has grown back to ~984 lines. Extract the screen-aware `toolbarActions` IIFE and the screen-routing/`renderScreen` switch into a dedicated `apps/desktop/src/lib/` module (or `components/shell/`) so `App.tsx` is just composition + state wiring. Pure refactor, no behavior change; verify with `npm run build`.
 
 ---
 

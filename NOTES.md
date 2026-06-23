@@ -37,9 +37,11 @@ Cloud sessions are stateless — without this file, every run relearns the codeb
 - **Don't render raw enum/snake_case values in the UI**: domain enums like `PrivacyLevel` (`local_only`/`derived_only`/`excluded`) must pass through a humanizing helper in `lib/format.ts` (the `auditTypeLabel` pattern) before display — never `{event.privacy_level}` directly.
 - **Group paired nav controls**: when chevrons/prev-next controls straddle a long headline (e.g. `.week-nav` in `WeeklyCapacityScreen`), they drift apart and the disabled one becomes invisible. Keep paired controls adjacent and give `:disabled` a visible low-opacity + `cursor: not-allowed` state.
 - **Intensity-coded grids need a legend**: `data-level` heatmap cells (`ActivityHeatmap`) are meaningless without a "Less → More" key.
+- **Numeric metric rows need scale + consistent units**: bare numbers like the `RiskRow` magnitudes ("33/90/10/46") read as ambiguous without a "/100" hint or a `title` tooltip; never mix a raw count (Active blockers) into a list of 0–100 indices with identical bar styling — distinguish the unit visually.
+- **Color-only legend keys fail when palette tokens collide**: the capacity-model legend keys 8 categories by color alone, and `categoryColors` has two near-identical purples (`#7c3aed` vs `#9333ea`). Keep category colors visually distinct and prefer a hover-link between legend row and bar segment over relying on color discrimination.
 
 ## Open architectural notes
-- `App.tsx` is a large orchestrator (~1.5k lines) being incrementally decomposed into `components/`, `hooks/`, and `lib/`. New async operations should land as dedicated hooks, not inline in `App.tsx`.
+- `App.tsx` is a large orchestrator (~984 lines after the AI-hook extraction; tends to creep back up) being incrementally decomposed into `components/`, `hooks/`, and `lib/`. New async ops land as dedicated hooks; next candidates to extract are the `toolbarActions` IIFE and the screen-routing switch.
 
 ---
 _Entries below are appended by autonomous runs. Keep the file curated — prune stale notes as you add new ones._
