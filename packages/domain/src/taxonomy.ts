@@ -35,5 +35,5 @@ export const categoryColors: Record<WorkCategory, string> = {
   "Documentation / requirement clarification": "#4b5563",
   "Meetings / stakeholder syncs": "#16a34a",
   "Admin / coordination": "#64748b",
-  "Blocked / waiting / dependency delay": "#9333ea"
+  "Blocked / waiting / dependency delay": "#be185d"
 };

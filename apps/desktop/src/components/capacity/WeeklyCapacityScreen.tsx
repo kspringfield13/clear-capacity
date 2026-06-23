@@ -23,6 +23,7 @@ export function WeeklyCapacityScreen({
   blocks: WorkBlock[];
 }) {
   const [weekOffset, setWeekOffset] = useState(0);
+  const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
 
   const viewedMonday = useMemo(() => {
     const now = new Date();
@@ -136,10 +137,17 @@ export function WeeklyCapacityScreen({
           <h2>100% weekly capacity model</h2>
           <span>standard 40-hour baseline</span>
         </div>
-        <StackedBar snapshot={snapshot} />
+        <StackedBar snapshot={snapshot} hoveredCategory={hoveredCategory} onHoverCategory={setHoveredCategory} />
         <div className="allocation-grid">
           {snapshot.category_allocation.map((item) => (
-            <div className="allocation-row" key={item.label}>
+            <div
+              className="allocation-row"
+              key={item.label}
+              title={item.label}
+              style={{ opacity: hoveredCategory && hoveredCategory !== item.label ? 0.35 : 1, transition: "opacity 0.12s" }}
+              onMouseEnter={() => setHoveredCategory(item.label)}
+              onMouseLeave={() => setHoveredCategory(null)}
+            >
               <span className="dot" style={{ background: categoryColors[item.label] }} />
               <span>{item.label}</span>
               <strong>{pct(item.value)}</strong>

@@ -2803,6 +2803,7 @@ select {
   min-height: 24px;
   color: var(--text-muted);
   font-size: 12px;
+  cursor: pointer;
 }
 
 .allocation-row strong {
