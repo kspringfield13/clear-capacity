@@ -92,27 +92,31 @@ export function WeeklyCapacityScreen({
     <section className="screen capacity-screen">
       <div className="screen-header">
         <div>
-          <p className="eyebrow">Weekly capacity view</p>
           <div className="week-nav">
-            <button
-              className="week-nav-chevron"
-              type="button"
-              onClick={() => setWeekOffset((o) => o - 1)}
-              aria-label="Previous week"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <h1>{viewedWeekRangeLabel}: {pct(snapshot.reliable_new_work_capacity_pct)} reliable capacity for new planned work.</h1>
-            <button
-              className="week-nav-chevron"
-              type="button"
-              disabled={isCurrentWeek}
-              onClick={() => setWeekOffset((o) => o + 1)}
-              aria-label="Next week"
-            >
-              <ChevronRight size={16} />
-            </button>
+            <p className="eyebrow">Weekly capacity view</p>
+            <div className="week-nav-controls">
+              <button
+                className="week-nav-chevron"
+                type="button"
+                onClick={() => setWeekOffset((o) => o - 1)}
+                aria-label="Previous week"
+                title="Previous week"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <button
+                className="week-nav-chevron"
+                type="button"
+                disabled={isCurrentWeek}
+                onClick={() => setWeekOffset((o) => o + 1)}
+                aria-label="Next week"
+                title="Next week"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
           </div>
+          <h1>{viewedWeekRangeLabel}: {pct(snapshot.reliable_new_work_capacity_pct)} reliable capacity for new planned work.</h1>
         </div>
         <div className="header-actions">
           <div className="summary-score">
