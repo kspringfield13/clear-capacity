@@ -5951,9 +5951,14 @@ html[data-theme="dark"] .bar-track .purple { background: #a78bfa; }
   .screen-header .primary-action,
   .screen-header .secondary-action,
   .header-actions,
+  .review-header-actions,
   .summary-score,
   .search-box {
     width: 100%;
+  }
+
+  .review-header-actions {
+    flex-direction: column;
   }
 
   .headline-with-score {
