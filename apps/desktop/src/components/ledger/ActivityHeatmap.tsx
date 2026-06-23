@@ -27,11 +27,26 @@ function getDayLabel(diffDays: number): string {
   return d.toLocaleDateString("en-US", { weekday: "short" });
 }
 
+function getDayFullLabel(diffDays: number): string {
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  const d = new Date();
+  d.setDate(d.getDate() - diffDays);
+  return d.toLocaleDateString("en-US", { weekday: "long" });
+}
+
 function formatHour(h: number): string {
   const h24 = h % 24;
   if (h24 === 0) return "12a";
   if (h24 === 12) return "12p";
   return h24 < 12 ? `${h24}a` : `${h24 - 12}p`;
+}
+
+function formatHourA11y(h: number): string {
+  const h24 = h % 24;
+  if (h24 === 0) return "12 am";
+  if (h24 === 12) return "12 pm";
+  return h24 < 12 ? `${h24} am` : `${h24 - 12} pm`;
 }
 
 export function ActivityHeatmap({ sessions }: { sessions: ActivitySession[] }) {
@@ -41,11 +56,17 @@ export function ActivityHeatmap({ sessions }: { sessions: ActivitySession[] }) {
   let max = 0;
   for (const row of grid) for (const v of row) if (v > max) max = v;
 
+  const peakMin = Math.round(max);
+
   return (
     <section className="activity-heatmap">
       <p className="eyebrow">7-day activity pattern</p>
-      <div className="heatmap-grid">
-        <div className="heatmap-hour-axis">
+      <div
+        className="heatmap-grid"
+        role="group"
+        aria-label={`7-day activity heatmap, peak ${peakMin} min`}
+      >
+        <div className="heatmap-hour-axis" aria-hidden="true">
           <div className="heatmap-day-label" />
           {HOURS.map(h => (
             <div key={h} className="heatmap-hour-label">
@@ -55,12 +76,15 @@ export function ActivityHeatmap({ sessions }: { sessions: ActivitySession[] }) {
         </div>
         {[6, 5, 4, 3, 2, 1, 0].map(diffDays => (
           <div key={diffDays} className="heatmap-day-col">
-            <div className="heatmap-day-label">{getDayLabel(diffDays)}</div>
+            <div className="heatmap-day-label" aria-hidden="true">{getDayLabel(diffDays)}</div>
             {HOURS.map(h => {
               const minutes = grid[diffDays][h];
               const level = max > 0 ? Math.ceil((minutes / max) * 5) : 0;
               const tip = minutes > 0
                 ? `${getDayLabel(diffDays)} ${formatHour(h)}–${formatHour(h + 1)} · ${Math.round(minutes)} min`
+                : undefined;
+              const cellLabel = minutes > 0
+                ? `${getDayFullLabel(diffDays)} ${formatHourA11y(h)}–${formatHourA11y((h + 1) % 24)}, ${Math.round(minutes)} min`
                 : undefined;
               return (
                 <div
@@ -68,13 +92,16 @@ export function ActivityHeatmap({ sessions }: { sessions: ActivitySession[] }) {
                   className="heatmap-cell"
                   data-level={level}
                   title={tip}
+                  role={minutes > 0 ? "img" : undefined}
+                  aria-label={cellLabel}
+                  aria-hidden={minutes === 0 ? true : undefined}
                 />
               );
             })}
           </div>
         ))}
       </div>
-      <div className="heatmap-legend" aria-label="Intensity scale">
+      <div className="heatmap-legend" aria-hidden="true">
         <span className="heatmap-legend-label">Less</span>
         {[1, 2, 3, 4, 5].map(level => (
           <div key={level} className="heatmap-cell" data-level={level} />

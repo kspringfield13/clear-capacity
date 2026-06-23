@@ -47,6 +47,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **Capacity & risk bars are invisible to screen readers** — added `role="meter"` + `aria-label`/`aria-valuenow`/`aria-valuemin`/`aria-valuemax`/`aria-valuetext` to `.risk-track` div in `RiskRow.tsx` (index rows: "33 of 100"; blocker row: "Active blockers: N"); added `role="img"` + `aria-label` to each segment span and the remainder span in `StackedBar.tsx`; self-review passed. (2026-06-23)
 - [x] **Corrections list shows raw enum / ISO values** — added `humanizeCorrectionValue(field, value)` to `lib/format.ts` that routes `planned_status` through `plannedStatusLabel()` and `start_time`/`end_time` through `formatTime()` (NaN-guarded); applied to display text and `title` tooltip in `CorrectionsScreen.tsx`; all other fields pass through unchanged; self-review passed. (2026-06-23)
 - [x] **Completed onboarding steps are struck through** — removed `text-decoration: line-through` from `.onboarding-step.is-done > span:last-child` in `styles.css`; completed steps now read as settled (muted color + green check) rather than deleted; self-review passed. (2026-06-23)
+- [x] **Heatmap cells are invisible to screen readers** — added `role="group"` + `aria-label` summary to `.heatmap-grid`; each populated cell gets `role="img"` + `aria-label` ("Today 6 am–7 am, 45 min") via new `getDayFullLabel()`/`formatHourA11y()` helpers; empty cells and axis labels get `aria-hidden="true"`; legend changed from `aria-label` to `aria-hidden` (decorative); self-review passed. (2026-06-23)
 
 ## In Progress
 _(none)_
@@ -54,7 +55,6 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
-- [ ] **Heatmap cells are invisible to screen readers** — `ActivityHeatmap.tsx` exposes each cell's value only via `data-level` color + hover `title` (not reachable by keyboard/SR), and `.heatmap-grid` has no accessible summary. Following the established `StackedBar`/`RiskRow` a11y pattern, add `role="img"` + a descriptive `aria-label` to each populated cell (e.g. "Today 6–7pm, 45 min") and an `aria-label` summary on the grid (e.g. "7-day activity heatmap, peak 45 min").
 - [ ] **7-day heatmap looks broken when only a day or two has data** — `ActivityHeatmap.tsx` renders the full 7×24 grid whenever `sessions.length > 0`; with sparse data (only "Today" lit, verified on Ledger light + dark) it reads as a rendering bug. When fewer than ~2 days have any activity, render a muted caption (reusing `--text-subtle`) such as "Limited activity so far — the pattern fills in as you keep tracking" so the low-data state is explained rather than looking empty.
 
 ### New Features
