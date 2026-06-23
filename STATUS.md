@@ -34,6 +34,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **Week-nav chevrons are split across the wide headline** — moved both chevrons into `.week-nav-controls` beside the eyebrow label (above the `<h1>`); disabled next-week chevron now has `opacity: 0.35` + `cursor: not-allowed` in `styles.css`. (2026-06-23)
 - [x] **Activity heatmap has no intensity legend** — added "Less ▢▢▢▢▢ More" legend row beneath the heatmap grid in `ActivityHeatmap.tsx` reusing `.heatmap-cell[data-level]` styles; added `.heatmap-legend` / `.heatmap-legend-label` CSS (flex, right-aligned, token-based) in `styles.css`; also removed spurious `corrections` / `onResetLocalData` props passed to `DailyReviewScreen` in `App.tsx` (pre-existing TS error). (2026-06-23)
 - [x] **Audit privacy pill shows raw snake_case** — added `privacyLevelLabel()` + `privacyLevelTooltip()` helpers in `lib/format.ts`; `AuditEventRow.tsx` now shows "Local only" / "Derived only" / "Excluded" with a hover tooltip; color-coded `.audit-privacy--*` pill styles added in `styles.css` (light + dark). (2026-06-23)
+- [x] **Summary-confidence chip floats disconnected on Weekly** — moved `summary-score` from `header-actions` into a new `.headline-with-score` flex row alongside the `h1` in `WeeklyCapacityScreen.tsx`; chip now top-aligns next to the headline as a related stat; added `.headline-with-score` styles + mobile `flex-direction: column` stacking in `styles.css`. Self-review passed. (2026-06-23)
 
 ## In Progress
 _(none)_
@@ -41,7 +42,6 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
-- [ ] **Summary-confidence chip floats disconnected on Weekly** — In `WeeklyCapacityScreen.tsx` the `.header-actions .summary-score` box sits orphaned at the far top-right, vertically misaligned against the two-line hero headline (both themes). Tighten alignment with the headline (align to top, match card styling) so it reads as a related stat, not a stray box. (`styles.css` `.summary-score` / `.header-actions`.)
 
 ### New Features
 

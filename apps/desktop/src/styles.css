@@ -639,6 +639,21 @@ input {
   cursor: not-allowed;
 }
 
+.headline-with-score {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.headline-with-score h1 {
+  flex: 1;
+  min-width: 0;
+}
+
+.headline-with-score .summary-score {
+  flex-shrink: 0;
+}
+
 .eyebrow {
   margin: 0 0 9px;
   color: var(--text-subtle);
@@ -5925,6 +5940,10 @@ html[data-theme="dark"] .bar-track .purple { background: #a78bfa; }
   .summary-score,
   .search-box {
     width: 100%;
+  }
+
+  .headline-with-score {
+    flex-direction: column;
   }
 
   .hero-metrics,

@@ -60,11 +60,13 @@ export function WeeklyCapacityScreen({
         <div className="screen-header">
           <div>
             <p className="eyebrow">Weekly capacity view</p>
-            <h1>{weekRangeLabel}: waiting for real workload signal.</h1>
-          </div>
-          <div className="summary-score">
-            <span>Summary confidence</span>
-            <strong>--</strong>
+            <div className="headline-with-score">
+              <h1>{weekRangeLabel}: waiting for real workload signal.</h1>
+              <div className="summary-score">
+                <span>Summary confidence</span>
+                <strong>--</strong>
+              </div>
+            </div>
           </div>
         </div>
         <EmptyState
@@ -104,12 +106,12 @@ export function WeeklyCapacityScreen({
               </button>
             </div>
           </div>
-          <h1>{viewedWeekRangeLabel}: {pct(snapshot.reliable_new_work_capacity_pct)} reliable capacity for new planned work.</h1>
-        </div>
-        <div className="header-actions">
-          <div className="summary-score">
-            <span>Summary confidence</span>
-            <strong>{Math.round(snapshot.summary_confidence * 100)}%</strong>
+          <div className="headline-with-score">
+            <h1>{viewedWeekRangeLabel}: {pct(snapshot.reliable_new_work_capacity_pct)} reliable capacity for new planned work.</h1>
+            <div className="summary-score">
+              <span>Summary confidence</span>
+              <strong>{Math.round(snapshot.summary_confidence * 100)}%</strong>
+            </div>
           </div>
         </div>
       </div>
