@@ -41,6 +41,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **"politics-to-math translator" section eyebrow is cryptic jargon** — replaced with "where your hours actually went" in `WeeklyCapacityScreen.tsx`; self-review passed. (2026-06-23)
 - [x] **Lone Review-Copilot suggestion looks marooned in a wide empty band** — switched `.copilot-inline .copilot-list` from `auto-fill, minmax(280px, 1fr)` to `auto-fit, minmax(280px, 360px)` in `styles.css`; phantom columns no longer appear with a single suggestion; self-review passed. (2026-06-23)
 - [x] **App.tsx is still the largest file (984 lines)** — extracted `toolbarActions` IIFE to `lib/toolbarActions.ts` (`buildToolbarActions` pure function) and screen-routing JSX to `components/shell/ScreenRouter.tsx`; App.tsx reduced from 984 → 828 lines; removed 27 dead imports; pure refactor, no behavior change; self-review passed. (2026-06-23)
+- [x] **BlockCard display polish** — added `plannedStatusLabel()` to `format.ts` so planned-status selects show "Planned"/"Unplanned"/"Fixed"/"Blocked" instead of raw lowercase enums; added `title` tooltips to project name and stakeholder group `h3`/`p`; added `overflow: hidden; text-overflow: ellipsis; white-space: nowrap` to `.ledger-screen .block-main h3` and `.ledger-screen .block-card p` in `styles.css`; explicit `value={status}` on each `<option>` preserves raw domain value in onChange; self-review passed. (2026-06-23)
 
 ## In Progress
 _(none)_

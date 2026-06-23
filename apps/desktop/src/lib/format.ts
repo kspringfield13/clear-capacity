@@ -55,6 +55,17 @@ export function fieldLabel(field: UserCorrection["field"]) {
   return labels[field];
 }
 
+const PLANNED_STATUS_LABELS: Record<string, string> = {
+  planned: "Planned",
+  unplanned: "Unplanned",
+  fixed: "Fixed",
+  blocked: "Blocked",
+};
+
+export function plannedStatusLabel(status: string): string {
+  return PLANNED_STATUS_LABELS[status] ?? status;
+}
+
 const PRIVACY_LABELS: Record<string, string> = {
   local_only: "Local only",
   derived_only: "Derived only",

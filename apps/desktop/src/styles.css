@@ -5489,11 +5489,17 @@ html[data-theme="dark"] .bar-track .purple { background: #a78bfa; }
 .ledger-screen .block-main h3 {
   font-size: 13px;
   line-height: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ledger-screen .block-card p {
   font-size: 11px;
   line-height: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ledger-screen .block-main strong {

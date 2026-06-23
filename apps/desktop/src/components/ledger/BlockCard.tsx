@@ -2,8 +2,7 @@ import { useState } from "react";
 import { Check, Clock, X } from "lucide-react";
 import type { WorkBlock, WorkCategory, PlannedStatus, WorkMode } from "../../../../../packages/domain/src/models";
 import { workCategories, plannedStatuses, workModes } from "../../../../../packages/domain/src/taxonomy";
-import { formatRange } from "../../lib/format";
-import { pct } from "../../lib/format";
+import { formatRange, pct, plannedStatusLabel } from "../../lib/format";
 import { ConfidenceChip } from "../common/ConfidenceChip";
 
 function toLocalTimeInput(isoString: string): string {
@@ -117,8 +116,8 @@ export function BlockCard({
       </div>
       <div className="block-main">
         <div>
-          <h3>{block.project_name}</h3>
-          <p>{block.stakeholder_group}</p>
+          <h3 title={block.project_name}>{block.project_name}</h3>
+          <p title={block.stakeholder_group}>{block.stakeholder_group}</p>
         </div>
         <div className="block-capacity">
           <strong>{pct(block.estimated_capacity_pct)}</strong>
@@ -131,9 +130,9 @@ export function BlockCard({
             <option key={category}>{category}</option>
           ))}
         </select>
-        <select title={block.planned_status} value={block.planned_status} onChange={(event) => onRelabel(block.work_block_id, "planned_status", event.target.value as PlannedStatus)}>
+        <select title={plannedStatusLabel(block.planned_status)} value={block.planned_status} onChange={(event) => onRelabel(block.work_block_id, "planned_status", event.target.value as PlannedStatus)}>
           {plannedStatuses.map((status) => (
-            <option key={status}>{status}</option>
+            <option key={status} value={status}>{plannedStatusLabel(status)}</option>
           ))}
         </select>
         <select title={block.mode} value={block.mode} onChange={(event) => onRelabel(block.work_block_id, "mode", event.target.value as WorkMode)}>
