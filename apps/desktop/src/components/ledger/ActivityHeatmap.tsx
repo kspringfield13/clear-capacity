@@ -53,6 +53,17 @@ export function ActivityHeatmap({ sessions }: { sessions: ActivitySession[] }) {
   if (sessions.length === 0) return null;
 
   const grid = buildGrid(sessions);
+  const daysWithActivity = grid.reduce((acc, row) => acc + (row.some(v => v > 0) ? 1 : 0), 0);
+
+  if (daysWithActivity < 2) {
+    return (
+      <section className="activity-heatmap">
+        <p className="eyebrow">7-day activity pattern</p>
+        <p className="heatmap-sparse-caption">Limited activity so far — the pattern fills in as you keep tracking.</p>
+      </section>
+    );
+  }
+
   let max = 0;
   for (const row of grid) for (const v of row) if (v > max) max = v;
 

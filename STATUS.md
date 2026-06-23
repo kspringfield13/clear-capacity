@@ -48,6 +48,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **Corrections list shows raw enum / ISO values** — added `humanizeCorrectionValue(field, value)` to `lib/format.ts` that routes `planned_status` through `plannedStatusLabel()` and `start_time`/`end_time` through `formatTime()` (NaN-guarded); applied to display text and `title` tooltip in `CorrectionsScreen.tsx`; all other fields pass through unchanged; self-review passed. (2026-06-23)
 - [x] **Completed onboarding steps are struck through** — removed `text-decoration: line-through` from `.onboarding-step.is-done > span:last-child` in `styles.css`; completed steps now read as settled (muted color + green check) rather than deleted; self-review passed. (2026-06-23)
 - [x] **Heatmap cells are invisible to screen readers** — added `role="group"` + `aria-label` summary to `.heatmap-grid`; each populated cell gets `role="img"` + `aria-label` ("Today 6 am–7 am, 45 min") via new `getDayFullLabel()`/`formatHourA11y()` helpers; empty cells and axis labels get `aria-hidden="true"`; legend changed from `aria-label` to `aria-hidden` (decorative); self-review passed. (2026-06-23)
+- [x] **7-day heatmap looks broken when only a day or two has data** — count active days after `buildGrid`; if `daysWithActivity < 2` render eyebrow + `.heatmap-sparse-caption` ("Limited activity so far — the pattern fills in as you keep tracking") instead of the broken-looking sparse grid; added `.heatmap-sparse-caption` (`--text-subtle`, 12px) in `styles.css`; self-review passed. (2026-06-23)
 
 ## In Progress
 _(none)_
@@ -55,7 +56,6 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
-- [ ] **7-day heatmap looks broken when only a day or two has data** — `ActivityHeatmap.tsx` renders the full 7×24 grid whenever `sessions.length > 0`; with sparse data (only "Today" lit, verified on Ledger light + dark) it reads as a rendering bug. When fewer than ~2 days have any activity, render a muted caption (reusing `--text-subtle`) such as "Limited activity so far — the pattern fills in as you keep tracking" so the low-data state is explained rather than looking empty.
 
 ### New Features
 
