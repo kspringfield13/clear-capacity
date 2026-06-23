@@ -48,11 +48,13 @@ struct NarrativeGenerationRequest {
 }
 
 #[derive(Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 struct AIConfigRequest {
     provider: Option<String>,
     api_key: Option<String>,
     base_url: Option<String>,
     model: Option<String>,
+    vision_model: Option<String>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -483,18 +485,40 @@ fn set_activity_capture_paused(activity_state: State<'_, ActivityCaptureState>, 
 }
 
 fn get_ai_credentials(config: Option<&AIConfigRequest>) -> Result<(String, String), String> {
-    let provider = config.and_then(|c| c.provider.as_deref()).unwrap_or("openai");
+    let provider = config
+        .and_then(|c| c.provider.as_deref())
+        .unwrap_or("openai");
+    let provider_key_name = match provider {
+        "grok" => "XAI_API_KEY",
+        "claude" => "ANTHROPIC_API_KEY",
+        "deepseek" => "DEEPSEEK_API_KEY",
+        _ => "OPENAI_API_KEY",
+    };
     let api_key = config
         .and_then(|c| c.api_key.as_deref())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
         .map(|s| s.to_string())
-        .or_else(|| env::var("OPENAI_API_KEY").ok().filter(|v| !v.trim().is_empty()))
-        .or_else(|| env::var(match provider {
-            "grok" => "GROK_API_KEY",
-            "claude" => "ANTHROPIC_API_KEY",
-            "deepseek" => "DEEPSEEK_API_KEY",
-            _ => "OPENAI_API_KEY",
-        }).ok().filter(|v| !v.trim().is_empty()))
-        .ok_or_else(|| format!("No API key for provider {}. Set in settings or env.", provider))?;
+        .or_else(|| {
+            env::var(provider_key_name)
+                .ok()
+                .filter(|v| !v.trim().is_empty())
+        })
+        .or_else(|| {
+            if provider == "grok" {
+                env::var("GROK_API_KEY")
+                    .ok()
+                    .filter(|v| !v.trim().is_empty())
+            } else {
+                None
+            }
+        })
+        .ok_or_else(|| {
+            format!(
+                "No API key for provider {}. Set in settings or env.",
+                provider
+            )
+        })?;
 
     let base_url = config
         .and_then(|c| c.base_url.as_deref())
@@ -508,6 +532,100 @@ fn get_ai_credentials(config: Option<&AIConfigRequest>) -> Result<(String, Strin
         });
 
     Ok((api_key, base_url))
+}
+
+fn extract_provider_error(value: &Value) -> Option<&str> {
+    value
+        .get("error")
+        .and_then(|error| {
+            error
+                .get("message")
+                .and_then(Value::as_str)
+                .or_else(|| error.as_str())
+        })
+        .or_else(|| value.get("message").and_then(Value::as_str))
+        .or_else(|| value.get("detail").and_then(Value::as_str))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct TestAIConnectionRequest {
+    ai_config: AIConfigRequest,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct TestAIConnectionResponse {
+    provider: String,
+    model: String,
+    message: String,
+}
+
+#[tauri::command]
+async fn test_ai_connection(
+    request: TestAIConnectionRequest,
+) -> Result<TestAIConnectionResponse, String> {
+    let config = &request.ai_config;
+    let provider = config.provider.as_deref().unwrap_or("openai");
+    let model = config
+        .model
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| "Enter a model before testing the connection.".to_string())?;
+    let (api_key, base_url) = get_ai_credentials(Some(config))?;
+    let client = reqwest::Client::new();
+    let url = format!("{}/models", base_url.trim_end_matches('/'));
+    let mut request_builder = client.get(url);
+
+    request_builder = if provider == "claude" {
+        request_builder
+            .header("x-api-key", api_key)
+            .header("anthropic-version", "2023-06-01")
+    } else {
+        request_builder.bearer_auth(api_key)
+    };
+
+    let response = request_builder
+        .send()
+        .await
+        .map_err(|error| format!("Could not reach the provider: {error}"))?;
+    let status = response.status();
+    let response_text = response
+        .text()
+        .await
+        .map_err(|error| format!("Provider response could not be read: {error}"))?;
+    let value = serde_json::from_str::<Value>(&response_text).unwrap_or(Value::Null);
+
+    if !status.is_success() {
+        let message =
+            extract_provider_error(&value).unwrap_or("The provider rejected the connection.");
+        return Err(format!("{message} ({status})"));
+    }
+
+    let models = value
+        .get("data")
+        .and_then(Value::as_array)
+        .or_else(|| value.get("models").and_then(Value::as_array));
+    if let Some(models) = models {
+        let model_available = models.iter().any(|item| {
+            item.get("id")
+                .or_else(|| item.get("name"))
+                .and_then(Value::as_str)
+                .is_some_and(|id| id == model)
+        });
+        if !model_available {
+            return Err(format!(
+                "Connected to the provider, but model “{model}” is not available to this API key."
+            ));
+        }
+    }
+
+    Ok(TestAIConnectionResponse {
+        provider: provider.to_string(),
+        model: model.to_string(),
+        message: format!("Connected to {provider}. Model “{model}” is available."),
+    })
 }
 
 #[tauri::command]
@@ -984,6 +1102,12 @@ async fn capture_visual_context_with_openai(
     let (api_key, base_url) = get_ai_credentials(request.ai_config.as_ref())?;
     let model = request
         .model
+        .or_else(|| {
+            request
+                .ai_config
+                .as_ref()
+                .and_then(|c| c.vision_model.clone())
+        })
         .or_else(|| request.ai_config.as_ref().and_then(|c| c.model.clone()))
         .or_else(|| env::var("OPENAI_VISION_MODEL").ok())
         .or_else(|| env::var("OPENAI_MODEL").ok())
@@ -1119,12 +1243,12 @@ async fn capture_visual_context_with_openai(
 }
 
 #[tauri::command]
-async fn chat_with_agent(
-    request: AgentChatRequest,
-) -> Result<AgentChatResponse, String> {
+async fn chat_with_agent(request: AgentChatRequest) -> Result<AgentChatResponse, String> {
     let (api_key, base_url) = get_ai_credentials(request.ai_config.as_ref())?;
     let model = request
-        .ai_config.as_ref().and_then(|c| c.model.clone())
+        .ai_config
+        .as_ref()
+        .and_then(|c| c.model.clone())
         .or_else(|| env::var("OPENAI_MODEL").ok())
         .unwrap_or_else(|| "gpt-4o".to_string());
 
@@ -1165,7 +1289,10 @@ async fn chat_with_agent(
     let output_text = extract_response_text(&value)
         .ok_or_else(|| "AI response did not include generated text.".to_string())?;
 
-    Ok(AgentChatResponse { response: output_text, model })
+    Ok(AgentChatResponse {
+        response: output_text,
+        model,
+    })
 }
 
 /// Generic transport for every AI operation. Replaces the per-operation
@@ -1411,7 +1538,8 @@ pub fn run() {
             capture_visual_context_with_openai,
             set_clear_capacity_window_mode,
             chat_with_agent,
-            ai_complete
+            ai_complete,
+            test_ai_connection
         ])
         .setup(move |app| {
             #[cfg(target_os = "macos")]

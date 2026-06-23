@@ -55,6 +55,17 @@ export function ActivityCapturePanel({
           <ConfidenceChip value={captureError ? 0.4 : paused ? 0.72 : 0.9} />
         </div>
       </div>
+      {classificationStatus === "classifying" && (
+        <p className="capture-note">
+          Sending {unclassifiedSessionCount} ready session{unclassifiedSessionCount === 1 ? "" : "s"} to your AI provider…
+        </p>
+      )}
+      {classificationError && (
+        <div className="error-row">
+          <p className="capture-error">{classificationError}</p>
+          <button type="button" className="error-retry" onClick={onClassifySessions}>Try again</button>
+        </div>
+      )}
       <div className="capture-grid">
         <div className="capture-stat">
           <span>Current app</span>
@@ -78,12 +89,6 @@ export function ActivityCapturePanel({
         </div>
       </div>
       {captureError && <p className="capture-error">{captureError}</p>}
-      {classificationError && (
-        <div className="error-row">
-          <p className="capture-error">{classificationError}</p>
-          <button type="button" className="error-retry" onClick={onClassifySessions}>Try again</button>
-        </div>
-      )}
       {visualContextStatus === "capturing" && <p className="capture-note">Visual context capture is deriving a local insight.</p>}
       {visualContextError && <p className="capture-error">{visualContextError}</p>}
       {latestSessionSummaries.length > 0 && (

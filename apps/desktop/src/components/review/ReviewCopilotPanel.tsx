@@ -1,9 +1,7 @@
-import { RefreshCw, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import type { ReviewCopilotSuggestion } from "../../../../../packages/domain/src/models";
-import { EmptyState } from "../common/EmptyState";
 
 export function ReviewCopilotPanel({
-  reviewQueueCount,
   suggestions,
   status,
   error,
@@ -11,7 +9,6 @@ export function ReviewCopilotPanel({
   onApply,
   onDismiss
 }: {
-  reviewQueueCount: number;
   suggestions: ReviewCopilotSuggestion[];
   status: "idle" | "generating" | "error";
   error: string | null;
@@ -19,32 +16,28 @@ export function ReviewCopilotPanel({
   onApply: (suggestion: ReviewCopilotSuggestion) => void;
   onDismiss: (suggestionId: string) => void;
 }) {
+  const isGenerating = status === "generating";
+
+  // The trigger lives in the screen header — this panel only renders results,
+  // and stays out of the way entirely until there's something to show.
+  if (!isGenerating && suggestions.length === 0 && !error) {
+    return null;
+  }
+
   return (
-    <section className="copilot-panel">
-      <div className="history-title">
-        <span>
-          <RefreshCw size={16} />
-          <strong>Review Copilot</strong>
-        </span>
-        <button
-          className="copilot-generate"
-          type="button"
-          disabled={status === "generating" || reviewQueueCount === 0}
-          onClick={onGenerate}
-          title="Generate review suggestions"
-        >
-          <RefreshCw size={15} />
-          <span>{status === "generating" ? "Generating…" : "Generate Suggestions"}</span>
-        </button>
+    <section className="copilot-inline">
+      <div className="copilot-inline-head">
+        <Sparkles size={15} />
+        <strong>Suggested cleanup</strong>
+        <span className="copilot-inline-sub">AI-proposed — you approve every change.</span>
       </div>
-      <p>Suggests cleanup actions for unverified blocks. You approve every change.</p>
       {error && (
         <div className="error-row">
           <p className="copilot-error">{error}</p>
           <button type="button" className="error-retry" onClick={onGenerate}>Try again</button>
         </div>
       )}
-      {status === "generating" && suggestions.length === 0 ? (
+      {isGenerating && suggestions.length === 0 ? (
         <div className="copilot-skeleton">
           {[0, 1, 2].map((i) => (
             <div className="copilot-skeleton-item" key={i}>
@@ -55,19 +48,6 @@ export function ReviewCopilotPanel({
             </div>
           ))}
         </div>
-      ) : suggestions.length === 0 ? (
-        <EmptyState
-          icon={Sparkles}
-          title="No suggestions yet."
-          description={reviewQueueCount === 0 ? "Add unconfirmed blocks to the review queue, then generate suggestions." : "Click Generate Suggestions to get AI cleanup recommendations for your unconfirmed blocks."}
-        >
-          {reviewQueueCount > 0 && (
-            <button className="secondary-action" type="button" onClick={onGenerate}>
-              <RefreshCw size={14} />
-              <span>Generate Suggestions</span>
-            </button>
-          )}
-        </EmptyState>
       ) : (
         <ol className="copilot-list">
           {suggestions.map((suggestion) => (

@@ -9,9 +9,9 @@ import type { AIConfig } from "../../../../packages/domain/src/models";
  * Rust keeps only the native concerns (credentials, HTTP, optional screenshot
  * capture). This keeps prompt and schema tuning entirely in TypeScript.
  *
- * Note: `aiConfig` is passed through verbatim to preserve existing credential
- * behavior — the Rust `AIConfigRequest` reads snake_case `provider`/`model`,
- * and resolves api key / base url from env when not supplied.
+ * Note: `aiConfig` is passed through verbatim. Rust accepts its camelCase
+ * fields and resolves the provider-specific API key / base URL from env when
+ * they are not supplied.
  */
 export interface AiCompleteRequest {
   prompt: string;

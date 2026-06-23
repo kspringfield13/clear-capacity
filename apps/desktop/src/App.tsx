@@ -916,6 +916,64 @@ export function App() {
         .map((block) => classifiedBlockToWorkBlock(block, sessionMap))
         .filter((block): block is WorkBlock => Boolean(block));
 
+      if (data.work_blocks.length === 0) {
+        const message =
+          `The ${aiConfig?.provider ?? "AI"} provider completed the request but returned no work blocks. ` +
+          "Try again; ready sessions should now be grouped conservatively when their context is ambiguous.";
+        classificationAsync.fail(message);
+        setAuditEvents((current) => [
+          ...current,
+          createAuditEvent({
+            type: "work_block_classification",
+            source: "openai_responses_api",
+            title: "Classification returned no work blocks",
+            summary: message,
+            privacy_level: "derived_only",
+            timestamp: startedAt,
+            details: {
+              week_id: currentWeekId,
+              week_range: currentWeekRangeLabel,
+              model,
+              prompt_version: WORK_BLOCK_CLASSIFIER_PROMPT_VERSION,
+              input_session_count: candidateSessions.length,
+              output_work_block_count: 0,
+              sent_to_openai: true,
+              store: false
+            }
+          })
+        ].slice(-1000));
+        return;
+      }
+
+      if (draftBlocks.length === 0) {
+        const message =
+          `The ${aiConfig?.provider ?? "AI"} provider returned work blocks, but none referenced valid session IDs. Please try again.`;
+        classificationAsync.fail(message);
+        setAuditEvents((current) => [
+          ...current,
+          createAuditEvent({
+            type: "work_block_classification",
+            source: "openai_responses_api",
+            title: "Classification returned invalid session references",
+            summary: message,
+            privacy_level: "derived_only",
+            timestamp: startedAt,
+            details: {
+              week_id: currentWeekId,
+              week_range: currentWeekRangeLabel,
+              model,
+              prompt_version: WORK_BLOCK_CLASSIFIER_PROMPT_VERSION,
+              input_session_count: candidateSessions.length,
+              provider_work_block_count: data.work_blocks.length,
+              output_work_block_count: 0,
+              sent_to_openai: true,
+              store: false
+            }
+          })
+        ].slice(-1000));
+        return;
+      }
+
       setBlocks((current) => {
         const existingIds = new Set(current.map((block) => block.work_block_id));
         return [
@@ -1378,7 +1436,13 @@ export function App() {
     if (isDemoMode) return [];
     switch (active) {
       case "ledger":
-        return [{ label: "Classify", icon: Tag, onClick: () => void classifyActiveWindowSessions(), disabled: classificationStatus === "classifying", tone: "primary" as const }];
+        return [{
+          label: classificationStatus === "classifying" ? "Classifying…" : "Classify",
+          icon: Tag,
+          onClick: () => void classifyActiveWindowSessions(),
+          disabled: classificationStatus === "classifying",
+          tone: "primary" as const
+        }];
       case "daily":
         return [{ label: "Review Copilot", icon: ShieldCheck, onClick: () => void generateReviewCopilotSuggestions(), disabled: reviewCopilotStatus === "generating" || reviewQueue.length === 0, tone: "primary" as const }];
       case "weekly":
