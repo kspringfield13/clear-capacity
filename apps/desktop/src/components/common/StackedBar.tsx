@@ -16,6 +16,8 @@ export function StackedBar({ snapshot, hoveredCategory, onHoverCategory }: Stack
       {snapshot.category_allocation.map((item) => (
         <span
           key={item.label}
+          role="img"
+          aria-label={`${item.label}: ${item.value}%`}
           style={{
             width: `${item.value}%`,
             background: categoryColors[item.label],
@@ -29,6 +31,8 @@ export function StackedBar({ snapshot, hoveredCategory, onHoverCategory }: Stack
       ))}
       {remainder > 0 && (
         <span
+          role="img"
+          aria-label={`Unallocated / buffer: ${Math.round(remainder)}%`}
           style={{
             width: `${remainder}%`,
             background: "var(--surface-muted)",

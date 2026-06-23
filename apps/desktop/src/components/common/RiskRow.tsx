@@ -18,7 +18,15 @@ export function RiskRow({
   return (
     <div className="risk-row">
       <span title={tooltip}>{label}</span>
-      <div className="risk-track">
+      <div
+        className="risk-track"
+        role="meter"
+        aria-label={label}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={shown}
+        aria-valuetext={dangerActive ? `${label}: ${shown}` : `${shown} of 100`}
+      >
         <span
           style={{
             width: `${bounded * 100}%`,

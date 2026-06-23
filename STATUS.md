@@ -44,6 +44,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **BlockCard display polish** — added `plannedStatusLabel()` to `format.ts` so planned-status selects show "Planned"/"Unplanned"/"Fixed"/"Blocked" instead of raw lowercase enums; added `title` tooltips to project name and stakeholder group `h3`/`p`; added `overflow: hidden; text-overflow: ellipsis; white-space: nowrap` to `.ledger-screen .block-main h3` and `.ledger-screen .block-card p` in `styles.css`; explicit `value={status}` on each `<option>` preserves raw domain value in onChange; self-review passed. (2026-06-23)
 - [x] **Daily-review header buttons overflow on the narrow layout** — added `.review-header-actions` to the `width: 100%` selector list in the `@media (max-width: 600px)` block and added `flex-direction: column` so "Suggest cleanup" / "Confirm all N" stack full-width on narrow screens; `styles.css` only; self-review passed. (2026-06-23)
 - [x] **"100% weekly capacity model" bar has an unlabeled gray remainder** — appended remainder `<span>` (100 − sum) in `StackedBar.tsx` using `--surface-muted` + `title="Unallocated / buffer: N%"`; added matching "Unallocated / buffer" legend row with muted dot + border in `WeeklyCapacityScreen.tsx`; `unallocatedPct` derived via `useMemo`; self-review passed. (2026-06-23)
+- [x] **Capacity & risk bars are invisible to screen readers** — added `role="meter"` + `aria-label`/`aria-valuenow`/`aria-valuemin`/`aria-valuemax`/`aria-valuetext` to `.risk-track` div in `RiskRow.tsx` (index rows: "33 of 100"; blocker row: "Active blockers: N"); added `role="img"` + `aria-label` to each segment span and the remainder span in `StackedBar.tsx`; self-review passed. (2026-06-23)
 
 ## In Progress
 _(none)_
@@ -51,7 +52,6 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
-- [ ] **Capacity & risk bars are invisible to screen readers** — the `.risk-track` fill in `RiskRow.tsx` and the `.stacked-bar` segments in `StackedBar.tsx` convey magnitude purely visually. Add `role="meter"` with `aria-valuenow`/`aria-valuemin`/`aria-valuemax` (and `aria-valuetext` like "33 of 100" / "Active blockers: 1") to `RiskRow`, and give each `StackedBar` segment an `aria-label` (e.g. "Meetings / stakeholder syncs: 16%") so the allocation is announced, not just titled on hover.
 
 ### New Features
 
