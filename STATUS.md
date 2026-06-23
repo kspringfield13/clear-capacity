@@ -7,6 +7,7 @@ Verification gate: `npm run build` must pass before marking done.
 ---
 
 ## Done
+- [x] **ConfidenceChip medium style + block-exclude button style** — added `.confidence.medium` yellow rules in all three style blocks (base, Geist-light section, `html[data-theme="dark"]` override); added `.block-actions button.block-exclude` muted-text base + destructive-red hover rules for both light and dark modes; `styles.css` only; self-review passed. (2026-06-23)
 - [x] **Toolbar actions slot** — replaced empty `toolbarActions: []` with screen-aware IIFE in `App.tsx`; Classify/Review Copilot/Forecast/Regenerate now appear in the toolbar as primary actions with correct disabled states. [PR #2](https://github.com/kspringfield13/clear-capacity/pull/2) (2026-06-21)
 - [x] **Async status hook** — extracted `useAsyncStatus` hook, removed 10 duplicate state declarations from App.tsx. [PR #4](https://github.com/kspringfield13/clear-capacity/pull/4) (2026-06-21)
 - [x] **Retry buttons on error states** — added inline "Try again" buttons to all AI error states (classify, review copilot, forecast, narrative, visual context). [PR #5](https://github.com/kspringfield13/clear-capacity/pull/5) (2026-06-21)
