@@ -1,8 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useAsyncStatus } from "./hooks/useAsyncStatus";
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   Activity,
   AlignLeft,
@@ -41,19 +38,11 @@ import { outlookEventsToWorkBlocks, parseOutlookIcs } from "../../../packages/in
 import { categoryColors, plannedStatuses, workCategories, workModes } from "../../../packages/domain/src/taxonomy";
 import type {
   ActiveWindowSample,
-  ActivitySession,
   AuditEvent,
-  AuditEventType,
-  ForecastAgentResult,
-  OutlookCalendarEvent,
-  PlannedStatus,
-  ReviewCopilotAction,
   ReviewCopilotSuggestion,
   UserCorrection,
   VisualContextInsight,
   WorkBlock,
-  WorkCategory,
-  WorkMode,
   AIConfig
 } from "../../../packages/domain/src/models";
 import {
@@ -65,29 +54,11 @@ import {
 } from "./services/localStore";
 import type { AppTheme, PersistedForecastRecord, PersistedNarrativeRecord } from "./services/localStore";
 import { createDemoState } from "./services/demoData";
-import { buildForecastAgentPrompt, FORECAST_AGENT_PROMPT_VERSION } from "./services/forecastAgentPrompt";
-import { buildWeeklyNarrativePrompt, NARRATIVE_PROMPT_VERSION } from "./services/narrativePrompt";
-import { buildReviewCopilotPrompt, REVIEW_COPILOT_PROMPT_VERSION } from "./services/reviewCopilotPrompt";
-import { buildVisualContextPrompt, VISUAL_CONTEXT_PROMPT_VERSION } from "./services/visualContextPrompt";
-import {
-  buildWorkBlockClassifierPrompt,
-  WORK_BLOCK_CLASSIFIER_PROMPT_VERSION
-} from "./services/workBlockClassifierPrompt";
-import { aiCompleteJson, jsonSchemaFormat } from "./services/aiComplete";
-import {
-  WORK_BLOCK_CLASSIFIER_INSTRUCTIONS,
-  workBlockClassifierSchema
-} from "./services/workBlockClassifierSchema";
 
 import {
   addDays,
-  displaySafeNarrative,
-  formatWeekdayMonthDay,
   getBusinessWeekRangeLabel,
   getCurrentIsoWeekId,
-  getLocalDateKey,
-  ordinalDay,
-  replaceIsoWeekIds
 } from "./lib/date";
 import {
   auditTypeLabel,
@@ -100,16 +71,18 @@ import {
 } from "./lib/format";
 import { createAuditEvent } from "./lib/audit";
 import {
-  capacityPctFromMinutes,
   removeSeededCorrections,
   removeSeededWorkBlocks,
-  stableHash,
-  summarizeRecentSessions
 } from "./lib/blocks";
 import { useDerived } from "./hooks/useDerived";
 import { usePersistence } from "./hooks/usePersistence";
 import { useBlocksLedger } from "./hooks/useBlocksLedger";
 import { useActiveWindow } from "./hooks/useActiveWindow";
+import { useClassification } from "./hooks/useClassification";
+import { useReviewCopilot } from "./hooks/useReviewCopilot";
+import { useForecastAgent } from "./hooks/useForecastAgent";
+import { useNarrativeGeneration } from "./hooks/useNarrativeGeneration";
+import { useVisualContext } from "./hooks/useVisualContext";
 
 import { ConfidenceChip } from "./components/common/ConfidenceChip";
 import { EmptyState } from "./components/common/EmptyState";
@@ -120,11 +93,6 @@ import { RiskRow } from "./components/common/RiskRow";
 import { ForecastList } from "./components/common/ForecastList";
 import { BlockCard } from "./components/ledger/BlockCard";
 import { screenLabels, primarySectionForScreen, sectionViews } from "./lib/ui";
-import {
-  MAX_VISUAL_CONTEXT_CAPTURES_PER_DAY,
-  MIN_VISUAL_CONTEXT_SESSION_MINUTES,
-  MIN_VISUAL_CONTEXT_GAP_MS
-} from "./lib/constants";
 
 import { AppShell } from "./components/shell/AppShell";
 import { ContextNavigation } from "./components/shell/ContextNavigation";
@@ -141,109 +109,6 @@ import { CorrectionsScreen } from "./components/review/CorrectionsScreen";
 import { AgentScreen } from "./components/agent/AgentScreen";
 
 import type { Screen, WindowMode, PrimarySection, AppToolbarAction } from "./lib/types";
-
-interface NativeActiveWindowPayload {
-  timestamp_ms: number;
-  app_name: string | null;
-  window_title: string | null;
-  capture_error: string | null;
-}
-
-interface NativeNarrativeGenerationResponse {
-  narrative: ReturnType<typeof generateWeeklyNarrative>;
-  model: string;
-}
-
-interface NativeClassifiedWorkBlock {
-  session_ids: string[];
-  start_time: string;
-  end_time: string;
-  category: WorkCategory;
-  mode: WorkMode;
-  planned_status: PlannedStatus;
-  project_name: string;
-  stakeholder_group: string;
-  evidence: string[];
-  confidence: number;
-  blocker_flag: boolean;
-  notes: string | null;
-}
-
-interface NativeWorkBlockClassificationResponse {
-  result: {
-    work_blocks: NativeClassifiedWorkBlock[];
-  };
-  model: string;
-}
-
-interface NativeReviewCopilotSuggestion {
-  action: ReviewCopilotAction;
-  work_block_ids: string[];
-  title: string;
-  rationale: string;
-  confidence: number;
-  proposed_category: WorkCategory | null;
-  proposed_mode: WorkMode | null;
-  proposed_planned_status: PlannedStatus | null;
-  proposed_project_name: string | null;
-  proposed_stakeholder_group: string | null;
-  proposed_blocker_flag: boolean | null;
-  proposed_notes: string | null;
-}
-
-interface NativeReviewCopilotResponse {
-  result: {
-    suggestions: NativeReviewCopilotSuggestion[];
-  };
-  model: string;
-}
-
-interface NativeForecastAgentResponse {
-  forecast: ForecastAgentResult;
-  model: string;
-}
-
-interface NativeVisualContextResponse {
-  insight: Omit<
-    VisualContextInsight,
-    | "insight_id"
-    | "captured_at"
-    | "session_id"
-    | "app_name"
-    | "window_title"
-    | "privacy_level"
-    | "model"
-    | "raw_screenshot_retained"
-  >;
-  model: string;
-  captured_at_ms: number;
-  app_name: string;
-  window_title: string | null;
-  session_id: string | null;
-  raw_screenshot_retained: boolean;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 export function App() {
   const [isDemoMode] = useState(() => new URLSearchParams(window.location.search).get("demo") === "1");
@@ -313,12 +178,6 @@ export function App() {
   const [lastNarrativeAutoRunDate, setLastNarrativeAutoRunDate] = useState<string | null>(
     () => persistedSnapshot?.lastNarrativeAutoRunDate ?? null
   );
-  const [narrativeGenerationStatus, narrativeGenerationError, narrativeAsync] = useAsyncStatus<"idle" | "generating">("idle");
-  const [classificationStatus, classificationError, classificationAsync] = useAsyncStatus<"idle" | "classifying">("idle");
-  const [reviewCopilotStatus, reviewCopilotError, reviewCopilotAsync] = useAsyncStatus<"idle" | "generating">("idle");
-  const [forecastStatus, forecastError, forecastAsync] = useAsyncStatus<"idle" | "generating">("idle");
-  const [visualContextStatus, visualContextError, visualContextAsync] = useAsyncStatus<"idle" | "capturing">("idle");
-  const [visualContextAttemptedSessionIds, setVisualContextAttemptedSessionIds] = useState<string[]>([]);
   const [importError, setImportError] = useState<string | null>(null);
   const [captureError, setCaptureError] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -408,6 +267,87 @@ export function App() {
   } = derived;
 
   const narrative = narrativeFromHook; // keep name for compatibility with existing screens for now
+
+  const { classificationStatus, classificationError, classifyActiveWindowSessions, resetClassification } =
+    useClassification({
+      isDemoMode,
+      blocks,
+      activeWindowSessions,
+      visualContextInsights,
+      calendarEvents,
+      corrections,
+      currentWeekId,
+      currentWeekRangeLabel,
+      aiConfig,
+      setBlocks,
+      setAuditEvents,
+    });
+
+  const { reviewCopilotStatus, reviewCopilotError, generateReviewCopilotSuggestions, resetReviewCopilot } =
+    useReviewCopilot({
+      isDemoMode,
+      blocks,
+      snapshot,
+      activeWindowSessions,
+      calendarEvents,
+      corrections,
+      currentWeekId,
+      currentWeekRangeLabel,
+      aiConfig,
+      setReviewSuggestions,
+      setAuditEvents,
+    });
+
+  const { forecastStatus, forecastError, generateForecastAgent, resetForecast } =
+    useForecastAgent({
+      isDemoMode,
+      blocks,
+      snapshot,
+      activeWindowSessions,
+      calendarEvents,
+      corrections,
+      currentWeekId,
+      currentWeekRangeLabel,
+      nextWeekId,
+      nextWeekRangeLabel,
+      aiConfig,
+      setGeneratedForecast,
+      setAuditEvents,
+    });
+
+  const { narrativeGenerationStatus, narrativeGenerationError, regenerateNarrative, resetNarrative } =
+    useNarrativeGeneration({
+      isDemoMode,
+      blocks,
+      snapshot,
+      activeWindowSessions,
+      calendarEvents,
+      visualContextInsights,
+      corrections,
+      currentWeekId,
+      currentWeekRangeLabel,
+      aiConfig,
+      hasNarrativeEvidence,
+      lastNarrativeAutoRunDate,
+      todayKey,
+      setGeneratedNarrative,
+      setManagerSummaryText,
+      setLastNarrativeAutoRunDate,
+      setAuditEvents,
+    });
+
+  const { visualContextStatus, visualContextError, resetVisualContext } =
+    useVisualContext({
+      isDemoMode,
+      paused,
+      activeWindowSessions,
+      visualContextEnabled,
+      visualContextInsights,
+      todayKey,
+      aiConfig,
+      setVisualContextInsights,
+      setAuditEvents,
+    });
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -567,60 +507,6 @@ export function App() {
     });
   }, [activeWindowSessions, isDemoMode]);
 
-  useEffect(() => {
-    if (!hasNarrativeEvidence || lastNarrativeAutoRunDate === todayKey || narrativeGenerationStatus !== "idle") {
-      return;
-    }
-
-    setLastNarrativeAutoRunDate(todayKey);
-    void regenerateNarrative("auto");
-  }, [hasNarrativeEvidence, lastNarrativeAutoRunDate, narrativeGenerationStatus, todayKey]);
-
-  useEffect(() => {
-    const latestSession = activeWindowSessions[0];
-    if (
-      !visualContextEnabled ||
-      paused ||
-      !latestSession ||
-      latestSession.duration_minutes < MIN_VISUAL_CONTEXT_SESSION_MINUTES ||
-      latestSession.sample_count < 3 ||
-      visualContextStatus === "capturing"
-    ) {
-      return;
-    }
-
-    const capturedToday = visualContextInsights.filter(
-      (insight) => getLocalDateKey(new Date(insight.captured_at)) === todayKey
-    );
-    if (capturedToday.length >= MAX_VISUAL_CONTEXT_CAPTURES_PER_DAY) {
-      return;
-    }
-
-    const alreadyCaptured = visualContextInsights.some((insight) => insight.session_id === latestSession.session_id);
-    const alreadyAttempted = visualContextAttemptedSessionIds.includes(latestSession.session_id);
-    if (alreadyCaptured || alreadyAttempted) {
-      return;
-    }
-
-    const lastCapture = [...visualContextInsights].sort(
-      (left, right) => new Date(right.captured_at).getTime() - new Date(left.captured_at).getTime()
-    )[0];
-    if (lastCapture && Date.now() - new Date(lastCapture.captured_at).getTime() < MIN_VISUAL_CONTEXT_GAP_MS) {
-      return;
-    }
-
-    setVisualContextAttemptedSessionIds((current) => [...current, latestSession.session_id]);
-    void captureVisualContext(latestSession, capturedToday.length);
-  }, [
-    activeWindowSessions,
-    paused,
-    todayKey,
-    visualContextAttemptedSessionIds,
-    visualContextEnabled,
-    visualContextInsights,
-    visualContextStatus
-  ]);
-
   function addCorrection(correction: Omit<UserCorrection, "correction_id" | "timestamp">) {
     const timestamp = new Date().toISOString();
     const fullCorrection = {
@@ -646,574 +532,6 @@ export function App() {
         }
       })
     ].slice(-1000));
-  }
-
-  async function regenerateNarrative(trigger: "auto" | "manual") {
-    if (isDemoMode) return;
-    if (!hasNarrativeEvidence || narrativeGenerationStatus === "generating") {
-      return;
-    }
-
-    const generatedAt = new Date().toISOString();
-    const prompt = buildWeeklyNarrativePrompt({
-      weekId: currentWeekId,
-      weekRangeLabel: currentWeekRangeLabel,
-      snapshot,
-      blocks,
-      activeWindowSessions,
-      calendarEvents,
-      visualContextInsights,
-      corrections
-    });
-
-    narrativeAsync.start("generating");
-
-    try {
-      const response = await invoke<NativeNarrativeGenerationResponse>("generate_weekly_narrative_with_openai", {
-        request: {
-          prompt,
-          ai_config: aiConfig
-        }
-      });
-      const sanitizedNarrative = displaySafeNarrative(response.narrative, currentWeekRangeLabel);
-      const record: PersistedNarrativeRecord = {
-        narrative: sanitizedNarrative,
-        generated_at: generatedAt,
-        generated_for_date: getLocalDateKey(new Date(generatedAt)),
-        trigger,
-        model: response.model,
-        prompt_version: NARRATIVE_PROMPT_VERSION
-      };
-
-      setGeneratedNarrative(record);
-      setManagerSummaryText(null);
-      narrativeAsync.setStatus("idle");
-      setAuditEvents((current) => [
-        ...current,
-        createAuditEvent({
-          type: "narrative_generation",
-          source: "openai_responses_api",
-          title: trigger === "auto" ? "Daily narrative generated" : "Narrative regenerated manually",
-          summary: `${response.model} generated a weekly narrative for ${currentWeekRangeLabel}`,
-          privacy_level: "derived_only",
-          timestamp: generatedAt,
-          details: {
-            week_id: currentWeekId,
-            week_range: currentWeekRangeLabel,
-            model: response.model,
-            trigger,
-            prompt_version: NARRATIVE_PROMPT_VERSION,
-            work_block_count: blocks.length,
-            active_window_session_count: activeWindowSessions.length,
-            calendar_event_count: calendarEvents.length,
-            correction_count: corrections.length,
-            sent_to_openai: true,
-            store: false
-          }
-        })
-      ].slice(-1000));
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      narrativeAsync.fail(message);
-      setAuditEvents((current) => [
-        ...current,
-        createAuditEvent({
-          type: "narrative_generation",
-          source: "openai_responses_api",
-          title: "Narrative generation failed",
-          summary: message,
-          privacy_level: "derived_only",
-          timestamp: generatedAt,
-          details: {
-            week_id: currentWeekId,
-            week_range: currentWeekRangeLabel,
-            trigger,
-            prompt_version: NARRATIVE_PROMPT_VERSION,
-            sent_to_openai: true
-          }
-        })
-      ].slice(-1000));
-    }
-  }
-
-  async function captureVisualContext(session: ActivitySession, captureCountToday: number) {
-    if (isDemoMode) return;
-    const startedAt = new Date().toISOString();
-    const prompt = buildVisualContextPrompt({
-      session,
-      captureCountToday,
-      maxDailyCaptures: MAX_VISUAL_CONTEXT_CAPTURES_PER_DAY
-    });
-
-    visualContextAsync.start("capturing");
-
-    try {
-      const response = await invoke<NativeVisualContextResponse>("capture_visual_context_with_openai", {
-        request: {
-          prompt,
-          appName: session.app_name,
-          windowTitle: session.window_title,
-          sessionId: session.session_id,
-          ai_config: aiConfig
-        }
-      });
-      const insight: VisualContextInsight = {
-        insight_id: `visual-${stableHash(`${response.captured_at_ms}-${session.session_id}`)}`,
-        captured_at: new Date(response.captured_at_ms).toISOString(),
-        session_id: response.session_id,
-        app_name: response.app_name,
-        window_title: response.window_title,
-        activity_summary: response.insight.activity_summary,
-        visible_tool: response.insight.visible_tool,
-        likely_work_category: response.insight.likely_work_category,
-        likely_mode: response.insight.likely_mode,
-        project_hint: response.insight.project_hint,
-        sensitive_content_detected: response.insight.sensitive_content_detected,
-        confidence: response.insight.confidence,
-        evidence: response.insight.evidence,
-        privacy_level: "derived_only",
-        model: response.model,
-        raw_screenshot_retained: response.raw_screenshot_retained
-      };
-
-      setVisualContextInsights((current) => [...current, insight].slice(-200));
-      visualContextAsync.setStatus("idle");
-      setAuditEvents((current) => [
-        ...current,
-        createAuditEvent({
-          type: "visual_context",
-          source: "openai_vision",
-          title: "Visual context captured",
-          summary: insight.activity_summary,
-          privacy_level: "derived_only",
-          timestamp: insight.captured_at,
-          details: {
-            insight,
-            prompt_version: VISUAL_CONTEXT_PROMPT_VERSION,
-            capture_mode: "smart_occasional",
-            capture_count_today: captureCountToday + 1,
-            max_daily_captures: MAX_VISUAL_CONTEXT_CAPTURES_PER_DAY,
-            sent_to_openai: true,
-            raw_screenshot_retained: response.raw_screenshot_retained,
-            store: false
-          }
-        })
-      ].slice(-1000));
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      visualContextAsync.fail(message);
-      setAuditEvents((current) => [
-        ...current,
-        createAuditEvent({
-          type: "visual_context",
-          source: "openai_vision",
-          title: "Visual context capture failed",
-          summary: message,
-          privacy_level: "derived_only",
-          timestamp: startedAt,
-          details: {
-            session_id: session.session_id,
-            app_name: session.app_name,
-            window_title: session.window_title,
-            prompt_version: VISUAL_CONTEXT_PROMPT_VERSION,
-            capture_mode: "smart_occasional",
-            sent_to_openai: false,
-            raw_screenshot_retained: false
-          }
-        })
-      ].slice(-1000));
-    }
-  }
-
-  function classifiedBlockToWorkBlock(
-    block: NativeClassifiedWorkBlock,
-    sourceSessions: Map<string, ActivitySession>
-  ): WorkBlock | null {
-    const sessions = block.session_ids
-      .map((sessionId) => sourceSessions.get(sessionId))
-      .filter((session): session is ActivitySession => Boolean(session));
-
-    if (sessions.length === 0) {
-      return null;
-    }
-
-    const parsedStart = new Date(block.start_time).getTime();
-    const parsedEnd = new Date(block.end_time).getTime();
-    const startCandidates = sessions.map((session) => new Date(session.start_time).getTime());
-    const endCandidates = sessions.map((session) => new Date(session.end_time).getTime());
-    if (!Number.isNaN(parsedStart)) {
-      startCandidates.push(parsedStart);
-    }
-    if (!Number.isNaN(parsedEnd)) {
-      endCandidates.push(parsedEnd);
-    }
-    const startMs = Math.min(...startCandidates);
-    const endMs = Math.max(...endCandidates);
-    const durationMinutes = sessions.reduce((total, session) => total + session.duration_minutes, 0);
-    const sessionIds = sessions.map((session) => session.session_id);
-    const id = `ai-session-${stableHash(sessionIds.sort().join("|"))}`;
-
-    return {
-      work_block_id: id,
-      week_id: currentWeekId,
-      start_time: new Date(startMs).toISOString(),
-      end_time: new Date(endMs).toISOString(),
-      estimated_capacity_pct: capacityPctFromMinutes(durationMinutes),
-      category: block.category,
-      mode: block.mode,
-      planned_status: block.planned_status,
-      project_name: block.project_name.trim() || "Local activity",
-      stakeholder_group: block.stakeholder_group.trim() || "Unknown stakeholder",
-      derived_from: sessionIds,
-      evidence: [
-        "Drafted by OpenAI from local active-window sessions",
-        ...block.evidence
-      ],
-      confidence: Math.max(0.45, Math.min(0.9, block.confidence)),
-      user_verified: false,
-      blocker_flag: block.blocker_flag,
-      notes: block.notes
-    };
-  }
-
-  async function classifyActiveWindowSessions() {
-    if (isDemoMode) return;
-    if (classificationStatus === "classifying") {
-      return;
-    }
-
-    const alreadyClassified = new Set(blocks.flatMap((block) => block.derived_from));
-    const candidateSessions = activeWindowSessions
-      .filter((session) => !alreadyClassified.has(session.session_id) && session.sample_count >= 2)
-      .sort((left, right) => new Date(left.start_time).getTime() - new Date(right.start_time).getTime());
-
-    if (candidateSessions.length === 0) {
-      classificationAsync.fail("No unclassified active-window sessions are ready yet.");
-      return;
-    }
-
-    const startedAt = new Date().toISOString();
-    const prompt = buildWorkBlockClassifierPrompt({
-      weekId: currentWeekId,
-      weekRangeLabel: currentWeekRangeLabel,
-      sessions: candidateSessions,
-      visualContextInsights,
-      existingBlocks: blocks,
-      calendarEvents,
-      corrections
-    });
-
-    classificationAsync.start("classifying");
-
-    try {
-      const { data, model } = await aiCompleteJson<{ work_blocks: NativeClassifiedWorkBlock[] }>({
-        prompt,
-        instructions: WORK_BLOCK_CLASSIFIER_INSTRUCTIONS,
-        responseFormat: jsonSchemaFormat(
-          "clear_capacity_work_block_classification",
-          workBlockClassifierSchema
-        ),
-        aiConfig
-      });
-      const sessionMap = new Map(candidateSessions.map((session) => [session.session_id, session]));
-      const draftBlocks = data.work_blocks
-        .map((block) => classifiedBlockToWorkBlock(block, sessionMap))
-        .filter((block): block is WorkBlock => Boolean(block));
-
-      if (data.work_blocks.length === 0) {
-        const message =
-          `The ${aiConfig?.provider ?? "AI"} provider completed the request but returned no work blocks. ` +
-          "Try again; ready sessions should now be grouped conservatively when their context is ambiguous.";
-        classificationAsync.fail(message);
-        setAuditEvents((current) => [
-          ...current,
-          createAuditEvent({
-            type: "work_block_classification",
-            source: "openai_responses_api",
-            title: "Classification returned no work blocks",
-            summary: message,
-            privacy_level: "derived_only",
-            timestamp: startedAt,
-            details: {
-              week_id: currentWeekId,
-              week_range: currentWeekRangeLabel,
-              model,
-              prompt_version: WORK_BLOCK_CLASSIFIER_PROMPT_VERSION,
-              input_session_count: candidateSessions.length,
-              output_work_block_count: 0,
-              sent_to_openai: true,
-              store: false
-            }
-          })
-        ].slice(-1000));
-        return;
-      }
-
-      if (draftBlocks.length === 0) {
-        const message =
-          `The ${aiConfig?.provider ?? "AI"} provider returned work blocks, but none referenced valid session IDs. Please try again.`;
-        classificationAsync.fail(message);
-        setAuditEvents((current) => [
-          ...current,
-          createAuditEvent({
-            type: "work_block_classification",
-            source: "openai_responses_api",
-            title: "Classification returned invalid session references",
-            summary: message,
-            privacy_level: "derived_only",
-            timestamp: startedAt,
-            details: {
-              week_id: currentWeekId,
-              week_range: currentWeekRangeLabel,
-              model,
-              prompt_version: WORK_BLOCK_CLASSIFIER_PROMPT_VERSION,
-              input_session_count: candidateSessions.length,
-              provider_work_block_count: data.work_blocks.length,
-              output_work_block_count: 0,
-              sent_to_openai: true,
-              store: false
-            }
-          })
-        ].slice(-1000));
-        return;
-      }
-
-      setBlocks((current) => {
-        const existingIds = new Set(current.map((block) => block.work_block_id));
-        return [
-          ...current,
-          ...draftBlocks.filter((block) => !existingIds.has(block.work_block_id))
-        ].sort((left, right) => new Date(left.start_time).getTime() - new Date(right.start_time).getTime());
-      });
-      classificationAsync.setStatus("idle");
-      setAuditEvents((current) => [
-        ...current,
-        createAuditEvent({
-          type: "work_block_classification",
-          source: "openai_responses_api",
-          title: "Active-window sessions classified",
-          summary: `${draftBlocks.length} draft work blocks created from ${candidateSessions.length} sessions`,
-          privacy_level: "derived_only",
-          timestamp: startedAt,
-          details: {
-            week_id: currentWeekId,
-            week_range: currentWeekRangeLabel,
-            model,
-            prompt_version: WORK_BLOCK_CLASSIFIER_PROMPT_VERSION,
-            input_session_count: candidateSessions.length,
-            output_work_block_count: draftBlocks.length,
-            work_block_ids: draftBlocks.map((block) => block.work_block_id),
-            sent_to_openai: true,
-            store: false
-          }
-        })
-      ].slice(-1000));
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      classificationAsync.fail(message);
-      setAuditEvents((current) => [
-        ...current,
-        createAuditEvent({
-          type: "work_block_classification",
-          source: "openai_responses_api",
-          title: "Active-window classification failed",
-          summary: message,
-          privacy_level: "derived_only",
-          timestamp: startedAt,
-          details: {
-            week_id: currentWeekId,
-            week_range: currentWeekRangeLabel,
-            prompt_version: WORK_BLOCK_CLASSIFIER_PROMPT_VERSION,
-            input_session_count: candidateSessions.length,
-            sent_to_openai: true
-          }
-        })
-      ].slice(-1000));
-    }
-  }
-
-  async function generateReviewCopilotSuggestions() {
-    if (isDemoMode) return;
-    if (reviewCopilotStatus === "generating") {
-      return;
-    }
-
-    const reviewQueue = blocks.filter((block) => !block.user_verified);
-    if (reviewQueue.length === 0) {
-      reviewCopilotAsync.fail("There are no unverified blocks for the Review Copilot to inspect.");
-      return;
-    }
-
-    const startedAt = new Date().toISOString();
-    const prompt = buildReviewCopilotPrompt({
-      weekId: currentWeekId,
-      weekRangeLabel: currentWeekRangeLabel,
-      snapshot,
-      reviewQueue,
-      allBlocks: blocks,
-      activeWindowSessions,
-      calendarEvents,
-      corrections
-    });
-
-    reviewCopilotAsync.start("generating");
-
-    try {
-      const response = await invoke<NativeReviewCopilotResponse>("generate_review_copilot_suggestions_with_openai", {
-        request: {
-          prompt,
-          ai_config: aiConfig
-        }
-      });
-      const blockIds = new Set(blocks.map((block) => block.work_block_id));
-      const suggestions = response.result.suggestions
-        .map<ReviewCopilotSuggestion>((suggestion) => ({
-          ...suggestion,
-          work_block_ids: suggestion.work_block_ids.filter((blockId) => blockIds.has(blockId)),
-          suggestion_id: `review-${stableHash(`${startedAt}-${suggestion.action}-${suggestion.work_block_ids.join("|")}-${suggestion.title}`)}`
-        }))
-        .filter((suggestion) => suggestion.work_block_ids.length > 0);
-
-      setReviewSuggestions(suggestions);
-      reviewCopilotAsync.setStatus("idle");
-      setAuditEvents((current) => [
-        ...current,
-        createAuditEvent({
-          type: "review_copilot",
-          source: "openai_responses_api",
-          title: "Review Copilot suggestions generated",
-          summary: `${suggestions.length} suggestions generated for ${reviewQueue.length} unverified blocks`,
-          privacy_level: "derived_only",
-          timestamp: startedAt,
-          details: {
-            week_id: currentWeekId,
-            week_range: currentWeekRangeLabel,
-            model: response.model,
-            prompt_version: REVIEW_COPILOT_PROMPT_VERSION,
-            review_queue_count: reviewQueue.length,
-            suggestion_count: suggestions.length,
-            sent_to_openai: true,
-            store: false
-          }
-        })
-      ].slice(-1000));
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      reviewCopilotAsync.fail(message);
-      setAuditEvents((current) => [
-        ...current,
-        createAuditEvent({
-          type: "review_copilot",
-          source: "openai_responses_api",
-          title: "Review Copilot failed",
-          summary: message,
-          privacy_level: "derived_only",
-          timestamp: startedAt,
-          details: {
-            week_id: currentWeekId,
-            week_range: currentWeekRangeLabel,
-            prompt_version: REVIEW_COPILOT_PROMPT_VERSION,
-            review_queue_count: reviewQueue.length,
-            sent_to_openai: true
-          }
-        })
-      ].slice(-1000));
-    }
-  }
-
-  async function generateForecastAgent() {
-    if (isDemoMode) return;
-    if (forecastStatus === "generating") {
-      return;
-    }
-
-    if (blocks.length === 0) {
-      forecastAsync.fail("The Forecast Agent needs at least one work block before it can estimate next-week capacity.");
-      return;
-    }
-
-    const startedAt = new Date().toISOString();
-    const prompt = buildForecastAgentPrompt({
-      currentWeekId,
-      currentWeekRangeLabel,
-      nextWeekId,
-      nextWeekRangeLabel,
-      snapshot,
-      blocks,
-      activeWindowSessions,
-      calendarEvents,
-      corrections
-    });
-
-    forecastAsync.start("generating");
-
-    try {
-      const response = await invoke<NativeForecastAgentResponse>("generate_forecast_agent_with_openai", {
-        request: {
-          prompt,
-          ai_config: aiConfig
-        }
-      });
-      const record: PersistedForecastRecord = {
-        forecast: response.forecast,
-        generated_at: startedAt,
-        generated_for_week: nextWeekId,
-        trigger: "manual",
-        model: response.model,
-        prompt_version: FORECAST_AGENT_PROMPT_VERSION
-      };
-
-      setGeneratedForecast(record);
-      forecastAsync.setStatus("idle");
-      setAuditEvents((current) => [
-        ...current,
-        createAuditEvent({
-          type: "forecast_agent",
-          source: "openai_responses_api",
-          title: "Next-week forecast generated",
-          summary: `${pct(response.forecast.reliable_new_work_capacity_pct)} reliable new-work capacity forecast for ${nextWeekRangeLabel}`,
-          privacy_level: "derived_only",
-          timestamp: startedAt,
-          details: {
-            current_week_id: currentWeekId,
-            current_week_range: currentWeekRangeLabel,
-            forecast_week_id: nextWeekId,
-            forecast_week_range: nextWeekRangeLabel,
-            model: response.model,
-            prompt_version: FORECAST_AGENT_PROMPT_VERSION,
-            work_block_count: blocks.length,
-            active_window_session_count: activeWindowSessions.length,
-            calendar_event_count: calendarEvents.length,
-            correction_count: corrections.length,
-            reliable_new_work_capacity_pct: response.forecast.reliable_new_work_capacity_pct,
-            confidence: response.forecast.confidence,
-            sent_to_openai: true,
-            store: false
-          }
-        })
-      ].slice(-1000));
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      forecastAsync.fail(message);
-      setAuditEvents((current) => [
-        ...current,
-        createAuditEvent({
-          type: "forecast_agent",
-          source: "openai_responses_api",
-          title: "Forecast Agent failed",
-          summary: message,
-          privacy_level: "derived_only",
-          timestamp: startedAt,
-          details: {
-            current_week_id: currentWeekId,
-            forecast_week_id: nextWeekId,
-            prompt_version: FORECAST_AGENT_PROMPT_VERSION,
-            work_block_count: blocks.length,
-            sent_to_openai: true
-          }
-        })
-      ].slice(-1000));
-    }
   }
 
   function dismissReviewSuggestion(suggestionId: string) {
@@ -1347,15 +665,14 @@ export function App() {
     setGeneratedForecast(null);
     setVisualContextEnabled(true);
     setVisualContextInsights([]);
-    setVisualContextAttemptedSessionIds([]);
     setManagerSummaryText(null);
     setGeneratedNarrative(null);
     setLastNarrativeAutoRunDate(null);
-    narrativeAsync.reset();
-    classificationAsync.reset();
-    reviewCopilotAsync.reset();
-    forecastAsync.reset();
-    visualContextAsync.reset();
+    resetNarrative();
+    resetClassification();
+    resetReviewCopilot();
+    resetForecast();
+    resetVisualContext();
     setImportError(null);
     setCaptureError(null);
     setPaused(true);

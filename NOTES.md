@@ -39,7 +39,9 @@ Cloud sessions are stateless — without this file, every run relearns the codeb
 - **Intensity-coded grids need a legend**: `data-level` heatmap cells (`ActivityHeatmap`) are meaningless without a "Less → More" key.
 
 ## Open architectural notes
-- `App.tsx` is a large orchestrator (~1.5k lines) being incrementally decomposed into `components/`, `hooks/`, and `lib/`. New async operations should land as dedicated hooks, not inline in `App.tsx`.
+- `App.tsx` is now a thin orchestrator (~780 lines). All 5 AI async operations live in dedicated hooks under `hooks/`: `useClassification`, `useReviewCopilot`, `useForecastAgent`, `useNarrativeGeneration`, `useVisualContext`. New async operations should follow the same pattern.
+- **Async op hook pattern**: each hook takes a params object (data + setter callbacks), calls `useAsyncStatus`, defines the async function + any internal `useEffect` triggers, and returns `{status, error, run, reset}`. The auto-trigger effects (`useNarrativeGeneration`, `useVisualContext`) live inside the hook — their dep arrays match the original App.tsx dep arrays (pre-existing stale-closure patterns preserved intentionally for behavioral parity). `resetLocalData` in App.tsx calls each hook's `reset` function.
+- **Hook ordering in App.tsx**: `useClassification` and the other 4 AI hooks are called AFTER `useDerived` because they need `snapshot`, `activeWindowSessions`, `todayKey`, `hasNarrativeEvidence` from `useDerived`. This ordering does not violate Rules of Hooks (all calls are unconditional).
 
 ---
 _Entries below are appended by autonomous runs. Keep the file curated — prune stale notes as you add new ones._

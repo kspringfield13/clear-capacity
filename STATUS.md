@@ -35,6 +35,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **Activity heatmap has no intensity legend** — added "Less ▢▢▢▢▢ More" legend row beneath the heatmap grid in `ActivityHeatmap.tsx` reusing `.heatmap-cell[data-level]` styles; added `.heatmap-legend` / `.heatmap-legend-label` CSS (flex, right-aligned, token-based) in `styles.css`; also removed spurious `corrections` / `onResetLocalData` props passed to `DailyReviewScreen` in `App.tsx` (pre-existing TS error). (2026-06-23)
 - [x] **Audit privacy pill shows raw snake_case** — added `privacyLevelLabel()` + `privacyLevelTooltip()` helpers in `lib/format.ts`; `AuditEventRow.tsx` now shows "Local only" / "Derived only" / "Excluded" with a hover tooltip; color-coded `.audit-privacy--*` pill styles added in `styles.css` (light + dark). (2026-06-23)
 - [x] **Summary-confidence chip floats disconnected on Weekly** — moved `summary-score` from `header-actions` into a new `.headline-with-score` flex row alongside the `h1` in `WeeklyCapacityScreen.tsx`; chip now top-aligns next to the headline as a related stat; added `.headline-with-score` styles + mobile `flex-direction: column` stacking in `styles.css`. Self-review passed. (2026-06-23)
+- [x] **Split App.tsx** — extracted all 5 async operations into dedicated hooks: `useClassification`, `useReviewCopilot`, `useForecastAgent`, `useNarrativeGeneration`, `useVisualContext`; each hook owns its async status + audit event wiring + auto-trigger effects; App.tsx reduced from ~1510 to ~780 lines. Self-review confirmed all changes are behavior-preserving (pre-existing patterns faithfully carried forward, no regressions). (2026-06-23)
 
 ## In Progress
 _(none)_
@@ -46,7 +47,6 @@ _(none)_
 ### New Features
 
 ### Code Quality
-- [ ] **Split App.tsx** — At 1510 lines, App.tsx is a god component. Move each async operation (classifyActiveWindowSessions, generateReviewCopilotSuggestions, generateForecastAgent, regenerateNarrative, captureVisualContext) into a dedicated custom hook (following the `useAsyncStatus` pattern). Keep App.tsx as a thin orchestrator.
 
 ---
 
