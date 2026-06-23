@@ -49,6 +49,9 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
+- [ ] **Daily-review header buttons overflow on the narrow layout** — at ≤420px on the Today screen the "Confirm all N" primary button is pushed off the right edge (only a black sliver is visible). Cause: the `@media (max-width: 600px)` block in `styles.css` (~line 5946) full-widths `.primary-action`/`.secondary-action`/`.header-actions` but NOT `.review-header-actions` (line 2027), so its two buttons both get `width: 100%` inside a non-wrapping flex row. Fix: add `.review-header-actions` to that media-query rule and give it `flex-direction: column` (or `flex-wrap: wrap`) so "Suggest cleanup" and "Confirm all N" stack full-width like the other screens' actions. Verify against `DailyReviewScreen.tsx` markup.
+- [ ] **"100% weekly capacity model" bar has an unlabeled gray remainder** — on WeeklyCapacityScreen the stacked bar's eight colored segments sum to ~92%, leaving a mystery gray tail with no legend entry while the heading claims "100%". In `StackedBar.tsx` append a final remainder `<span>` (`100 - sum(values)`) using `--surface-muted` with a `title="Unallocated / buffer: N%"`, and add a matching muted "Unallocated / buffer" row to the legend in `WeeklyCapacityScreen.tsx` so the empty tail is explained.
+- [ ] **Capacity & risk bars are invisible to screen readers** — the `.risk-track` fill in `RiskRow.tsx` and the `.stacked-bar` segments in `StackedBar.tsx` convey magnitude purely visually. Add `role="meter"` with `aria-valuenow`/`aria-valuemin`/`aria-valuemax` (and `aria-valuetext` like "33 of 100" / "Active blockers: 1") to `RiskRow`, and give each `StackedBar` segment an `aria-label` (e.g. "Meetings / stakeholder syncs: 16%") so the allocation is announced, not just titled on hover.
 
 ### New Features
 
