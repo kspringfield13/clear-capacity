@@ -33,6 +33,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **Activity heatmap** — added `ActivityHeatmap` component to LedgerScreen showing a 7-day × 24-hour grid of session density; cells use 5-level `color-mix` intensity from `--info` token; hover tooltips show day/hour/minutes; renders `null` when no sessions. (2026-06-23)
 - [x] **Week-nav chevrons are split across the wide headline** — moved both chevrons into `.week-nav-controls` beside the eyebrow label (above the `<h1>`); disabled next-week chevron now has `opacity: 0.35` + `cursor: not-allowed` in `styles.css`. (2026-06-23)
 - [x] **Activity heatmap has no intensity legend** — added "Less ▢▢▢▢▢ More" legend row beneath the heatmap grid in `ActivityHeatmap.tsx` reusing `.heatmap-cell[data-level]` styles; added `.heatmap-legend` / `.heatmap-legend-label` CSS (flex, right-aligned, token-based) in `styles.css`; also removed spurious `corrections` / `onResetLocalData` props passed to `DailyReviewScreen` in `App.tsx` (pre-existing TS error). (2026-06-23)
+- [x] **Audit privacy pill shows raw snake_case** — added `privacyLevelLabel()` + `privacyLevelTooltip()` helpers in `lib/format.ts`; `AuditEventRow.tsx` now shows "Local only" / "Derived only" / "Excluded" with a hover tooltip; color-coded `.audit-privacy--*` pill styles added in `styles.css` (light + dark). (2026-06-23)
 
 ## In Progress
 _(none)_
@@ -40,7 +41,6 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
-- [ ] **Audit privacy pill shows raw snake_case** — `AuditEventRow.tsx` renders `event.privacy_level` verbatim, so users see "local_only" / "derived_only" / "excluded". Add a `privacyLevelLabel()` helper in `lib/format.ts` (→ "Local only" / "Derived only" / "Excluded") and a `title` tooltip explaining each scope; optionally color-code the `.audit-privacy` pill per level via tokens in `styles.css`.
 - [ ] **Summary-confidence chip floats disconnected on Weekly** — In `WeeklyCapacityScreen.tsx` the `.header-actions .summary-score` box sits orphaned at the far top-right, vertically misaligned against the two-line hero headline (both themes). Tighten alignment with the headline (align to top, match card styling) so it reads as a related stat, not a stray box. (`styles.css` `.summary-score` / `.header-actions`.)
 
 ### New Features

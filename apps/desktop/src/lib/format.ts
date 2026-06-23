@@ -55,6 +55,26 @@ export function fieldLabel(field: UserCorrection["field"]) {
   return labels[field];
 }
 
+const PRIVACY_LABELS: Record<string, string> = {
+  local_only: "Local only",
+  derived_only: "Derived only",
+  excluded: "Excluded",
+};
+
+const PRIVACY_TOOLTIPS: Record<string, string> = {
+  local_only: "Raw data stays on this device and is never shared",
+  derived_only: "Only anonymised summaries leave this device",
+  excluded: "This event was excluded from all reports",
+};
+
+export function privacyLevelLabel(level: string): string {
+  return PRIVACY_LABELS[level] ?? level;
+}
+
+export function privacyLevelTooltip(level: string): string {
+  return PRIVACY_TOOLTIPS[level] ?? "";
+}
+
 export function auditTypeLabel(type: AuditEventType) {
   const labels: Record<AuditEventType, string> = {
     active_window_sample: "Capture",

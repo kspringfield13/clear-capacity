@@ -4966,6 +4966,24 @@ input:focus {
   color: #d8001b;
 }
 
+.audit-privacy--local_only {
+  border-color: #b9f5bc;
+  background: var(--green-soft);
+  color: #107d32;
+}
+
+.audit-privacy--derived_only {
+  border-color: #cae7ff;
+  background: var(--blue-soft);
+  color: #0059ec;
+}
+
+.audit-privacy--excluded {
+  border-color: var(--border);
+  background: var(--background-subtle);
+  color: var(--text-muted);
+}
+
 .audit-detail pre {
   border-color: var(--border);
   background: var(--background-subtle);
@@ -5286,6 +5304,24 @@ html[data-theme="dark"] .audit-badge.privacy_resume {
   border-color: #5b2529;
   background: var(--red-soft);
   color: #ff8d91;
+}
+
+html[data-theme="dark"] .audit-privacy--local_only {
+  border-color: #285f37;
+  background: var(--green-soft);
+  color: #79d894;
+}
+
+html[data-theme="dark"] .audit-privacy--derived_only {
+  border-color: #214f78;
+  background: var(--blue-soft);
+  color: #8cc8ff;
+}
+
+html[data-theme="dark"] .audit-privacy--excluded {
+  border-color: var(--border);
+  background: var(--surface-elevated);
+  color: var(--text-muted);
 }
 
 html[data-theme="dark"] .live-dot {
