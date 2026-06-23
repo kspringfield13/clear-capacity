@@ -86,6 +86,15 @@ export function privacyLevelTooltip(level: string): string {
   return PRIVACY_TOOLTIPS[level] ?? "";
 }
 
+export function humanizeCorrectionValue(field: UserCorrection["field"], value: string): string {
+  if (field === "planned_status") return plannedStatusLabel(value);
+  if (field === "start_time" || field === "end_time") {
+    const date = new Date(value);
+    if (!isNaN(date.getTime())) return formatTime(value);
+  }
+  return value;
+}
+
 export function auditTypeLabel(type: AuditEventType) {
   const labels: Record<AuditEventType, string> = {
     active_window_sample: "Capture",

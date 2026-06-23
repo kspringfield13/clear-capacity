@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Search, History, RotateCcw, ArrowRight } from "lucide-react";
 import type { WorkBlock, UserCorrection } from "../../../../../packages/domain/src/models";
-import { fieldLabel, formatAuditTime } from "../../lib/format";
+import { fieldLabel, formatAuditTime, humanizeCorrectionValue } from "../../lib/format";
 import { EmptyState } from "../common/EmptyState";
 
 export function CorrectionsScreen({
@@ -94,11 +94,11 @@ export function CorrectionsScreen({
               <span className="correction-project" title={project}>{project}</span>
               <span
                 className="correction-change"
-                title={`${correction.old_value} → ${correction.new_value}`}
+                title={`${humanizeCorrectionValue(correction.field, correction.old_value)} → ${humanizeCorrectionValue(correction.field, correction.new_value)}`}
               >
-                <span className="correction-old">{correction.old_value}</span>
+                <span className="correction-old">{humanizeCorrectionValue(correction.field, correction.old_value)}</span>
                 <ArrowRight size={12} />
-                <span className="correction-new">{correction.new_value}</span>
+                <span className="correction-new">{humanizeCorrectionValue(correction.field, correction.new_value)}</span>
               </span>
               <time>{formatAuditTime(correction.timestamp)}</time>
             </li>
