@@ -43,6 +43,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **App.tsx is still the largest file (984 lines)** — extracted `toolbarActions` IIFE to `lib/toolbarActions.ts` (`buildToolbarActions` pure function) and screen-routing JSX to `components/shell/ScreenRouter.tsx`; App.tsx reduced from 984 → 828 lines; removed 27 dead imports; pure refactor, no behavior change; self-review passed. (2026-06-23)
 - [x] **BlockCard display polish** — added `plannedStatusLabel()` to `format.ts` so planned-status selects show "Planned"/"Unplanned"/"Fixed"/"Blocked" instead of raw lowercase enums; added `title` tooltips to project name and stakeholder group `h3`/`p`; added `overflow: hidden; text-overflow: ellipsis; white-space: nowrap` to `.ledger-screen .block-main h3` and `.ledger-screen .block-card p` in `styles.css`; explicit `value={status}` on each `<option>` preserves raw domain value in onChange; self-review passed. (2026-06-23)
 - [x] **Daily-review header buttons overflow on the narrow layout** — added `.review-header-actions` to the `width: 100%` selector list in the `@media (max-width: 600px)` block and added `flex-direction: column` so "Suggest cleanup" / "Confirm all N" stack full-width on narrow screens; `styles.css` only; self-review passed. (2026-06-23)
+- [x] **"100% weekly capacity model" bar has an unlabeled gray remainder** — appended remainder `<span>` (100 − sum) in `StackedBar.tsx` using `--surface-muted` + `title="Unallocated / buffer: N%"`; added matching "Unallocated / buffer" legend row with muted dot + border in `WeeklyCapacityScreen.tsx`; `unallocatedPct` derived via `useMemo`; self-review passed. (2026-06-23)
 
 ## In Progress
 _(none)_
@@ -50,7 +51,6 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
-- [ ] **"100% weekly capacity model" bar has an unlabeled gray remainder** — on WeeklyCapacityScreen the stacked bar's eight colored segments sum to ~92%, leaving a mystery gray tail with no legend entry while the heading claims "100%". In `StackedBar.tsx` append a final remainder `<span>` (`100 - sum(values)`) using `--surface-muted` with a `title="Unallocated / buffer: N%"`, and add a matching muted "Unallocated / buffer" row to the legend in `WeeklyCapacityScreen.tsx` so the empty tail is explained.
 - [ ] **Capacity & risk bars are invisible to screen readers** — the `.risk-track` fill in `RiskRow.tsx` and the `.stacked-bar` segments in `StackedBar.tsx` convey magnitude purely visually. Add `role="meter"` with `aria-valuenow`/`aria-valuemin`/`aria-valuemax` (and `aria-valuetext` like "33 of 100" / "Active blockers: 1") to `RiskRow`, and give each `StackedBar` segment an `aria-label` (e.g. "Meetings / stakeholder syncs: 16%") so the allocation is announced, not just titled on hover.
 
 ### New Features

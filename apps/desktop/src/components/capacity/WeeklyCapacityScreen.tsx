@@ -54,6 +54,10 @@ export function WeeklyCapacityScreen({
 
   const isCurrentWeek = weekOffset === 0;
   const blockerCount = useMemo(() => viewedBlocks.filter((b) => b.blocker_flag).length, [viewedBlocks]);
+  const unallocatedPct = useMemo(() => {
+    const total = snapshot.category_allocation.reduce((acc, item) => acc + item.value, 0);
+    return Math.max(0, 100 - total);
+  }, [snapshot]);
 
   if (!hasWorkBlocks) {
     return (
@@ -153,6 +157,17 @@ export function WeeklyCapacityScreen({
               <strong>{pct(item.value)}</strong>
             </div>
           ))}
+          {unallocatedPct > 0 && (
+            <div
+              className="allocation-row"
+              title="Hours not yet assigned to a category"
+              style={{ opacity: hoveredCategory ? 0.35 : 1, transition: "opacity 0.12s" }}
+            >
+              <span className="dot" style={{ background: "var(--surface-muted)", border: "1px solid var(--border-strong)" }} />
+              <span>Unallocated / buffer</span>
+              <strong>{pct(unallocatedPct)}</strong>
+            </div>
+          )}
         </div>
       </section>
 
