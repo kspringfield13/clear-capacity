@@ -137,6 +137,7 @@ import { WeeklyCapacityScreen } from "./components/capacity/WeeklyCapacityScreen
 import { ForecastScreen } from "./components/capacity/ForecastScreen";
 import { NarrativeScreen } from "./components/narrative/NarrativeScreen";
 import { AuditLogScreen } from "./components/audit/AuditLogScreen";
+import { CorrectionsScreen } from "./components/review/CorrectionsScreen";
 import { AgentScreen } from "./components/agent/AgentScreen";
 
 import type { Screen, WindowMode, PrimarySection, AppToolbarAction } from "./lib/types";
@@ -478,8 +479,9 @@ export function App() {
       "3": "forecast",
       "4": "narrative",
       "5": "ledger",
-      "6": "audit",
-      "7": "setup",
+      "6": "corrections",
+      "7": "audit",
+      "8": "setup",
     };
     function handleKeyDown(event: KeyboardEvent) {
       if (!event.metaKey || !(event.key in SCREEN_KEYS)) return;
@@ -1519,11 +1521,16 @@ export function App() {
           visualContextStatus={visualContextStatus}
           visualContextError={visualContextError}
           paused={paused}
-          corrections={corrections}
           onClassifySessions={() => void classifyActiveWindowSessions()}
           onConfirm={confirmBlock}
           onExclude={excludeBlock}
           onRelabel={updateBlock}
+        />
+      )}
+      {active === "corrections" && (
+        <CorrectionsScreen
+          blocks={blocks}
+          corrections={corrections}
           onResetLocalData={resetLocalData}
         />
       )}

@@ -3,8 +3,7 @@ import type {
   WorkBlock,
   ActiveWindowSample,
   ActivitySession,
-  VisualContextInsight,
-  UserCorrection
+  VisualContextInsight
 } from "../../../../../packages/domain/src/models";
 import { compactCategory } from "../../lib/format";
 import { pct } from "../../lib/format";
@@ -12,7 +11,6 @@ import { BlockCard } from "./BlockCard";
 import { EmptyState } from "../common/EmptyState";
 import { ActivityCapturePanel } from "./ActivityCapturePanel";
 import { ActivityHeatmap } from "./ActivityHeatmap";
-import { CorrectionHistory } from "../review/CorrectionHistory";
 
 export function LedgerScreen({
   blocks,
@@ -25,12 +23,10 @@ export function LedgerScreen({
   visualContextStatus,
   visualContextError,
   paused,
-  corrections,
   onClassifySessions,
   onConfirm,
   onExclude,
-  onRelabel,
-  onResetLocalData
+  onRelabel
 }: {
   blocks: WorkBlock[];
   activeWindowSamples: ActiveWindowSample[];
@@ -42,12 +38,10 @@ export function LedgerScreen({
   visualContextStatus: "idle" | "capturing" | "error";
   visualContextError: string | null;
   paused: boolean;
-  corrections: UserCorrection[];
   onClassifySessions: () => void;
   onConfirm: (blockId: string) => void;
   onExclude: (blockId: string) => void;
   onRelabel: (blockId: string, field: keyof WorkBlock, value: WorkBlock[keyof WorkBlock]) => void;
-  onResetLocalData: () => void;
 }) {
   const classifiedSessionIds = new Set(blocks.flatMap((block) => block.derived_from));
   const unclassifiedSessionCount = activeWindowSessions.filter(
@@ -96,7 +90,6 @@ export function LedgerScreen({
         onClassifySessions={onClassifySessions}
       />
       <ActivityHeatmap sessions={activeWindowSessions} />
-      <CorrectionHistory blocks={blocks} corrections={corrections} onResetLocalData={onResetLocalData} />
       {blocks.length === 0 ? (
         <EmptyState
           icon={Monitor}
