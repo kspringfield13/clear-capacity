@@ -45,6 +45,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **Daily-review header buttons overflow on the narrow layout** — added `.review-header-actions` to the `width: 100%` selector list in the `@media (max-width: 600px)` block and added `flex-direction: column` so "Suggest cleanup" / "Confirm all N" stack full-width on narrow screens; `styles.css` only; self-review passed. (2026-06-23)
 - [x] **"100% weekly capacity model" bar has an unlabeled gray remainder** — appended remainder `<span>` (100 − sum) in `StackedBar.tsx` using `--surface-muted` + `title="Unallocated / buffer: N%"`; added matching "Unallocated / buffer" legend row with muted dot + border in `WeeklyCapacityScreen.tsx`; `unallocatedPct` derived via `useMemo`; self-review passed. (2026-06-23)
 - [x] **Capacity & risk bars are invisible to screen readers** — added `role="meter"` + `aria-label`/`aria-valuenow`/`aria-valuemin`/`aria-valuemax`/`aria-valuetext` to `.risk-track` div in `RiskRow.tsx` (index rows: "33 of 100"; blocker row: "Active blockers: N"); added `role="img"` + `aria-label` to each segment span and the remainder span in `StackedBar.tsx`; self-review passed. (2026-06-23)
+- [x] **LedgerScreen search is non-functional** — wired `useState` + filter in `LedgerScreen.tsx`; filters across `project_name`, `stakeholder_group`, `category`, `mode` with `trim().toLowerCase()`; "No blocks match" EmptyState + "Clear search" CTA shown when filtered to zero; self-review caught and fixed `q = searchQuery.toLowerCase()` → `searchQuery.trim().toLowerCase()`. (2026-06-23)
 
 ## In Progress
 _(none)_
@@ -52,8 +53,12 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
+- [ ] **Add Focus Management to BlockCard Time Editor** — time range editor pops up without focusing the first input or providing Escape-key dismiss; add `autoFocus` to first time input, `onKeyDown` Escape handler, and `aria-label="Time range editor"` to the container.
+- [ ] **ConfidenceChip level casing is inconsistent** — level comparison uses mixed case (`"Needs review"` vs lowercase logic); normalize to consistent lowercase throughout.
 
-### New Features
+### Accessibility
+- [ ] **Heatmap legend cells lack aria-labels** — `ActivityHeatmap` legend cells use `data-level` but have no `aria-label`; add `aria-label="Intensity level N of 5"` to each.
+- [ ] **EmptyState sections lack descriptive aria-labels** — `<section className="empty-state">` has no `aria-label`; add optional `ariaLabel` prop defaulting to `title`, and pass meaningful labels at each call site.
 
 ### Code Quality
 

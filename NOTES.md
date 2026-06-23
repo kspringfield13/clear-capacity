@@ -32,6 +32,8 @@ Cloud sessions are stateless — without this file, every run relearns the codeb
 - **Icon-only button a11y convention**: chrome/icon buttons should carry both `title` and `aria-label` (plus `aria-pressed` for toggles). The theme toggle in `AppToolbar.tsx` is the reference; match it when adding icon controls.
 - **Verification gate**: `npm run build` (`tsc -b && vite build`) must pass before committing. There is no automated test suite.
 - **Out of loop scope**: `apps/desktop/src-tauri/` (Rust), `.env`, and the 5173 port config are off-limits to the frontend loop. Anything needing Rust (model params, request bodies, JSON schemas, per-command model routing) is a manual follow-up — leave a clear note in STATUS.md.
+- **Branch protection on main**: direct `git push origin main` returns HTTP 403. All loop commits must go via an `improve/<slug>` branch + PR (GitHub MCP `create_pull_request`). The STATUS.md "Never" section already requires this pattern.
+- **npm install required in fresh containers**: `node_modules` is absent in new cloud sessions; run `npm install` before `npm run build` or the tsc step fails with "Cannot find module 'react'" errors on every file.
 
 ## Recurring UX rough edges (watch for these)
 - **Don't render raw enum/snake_case values in the UI**: domain enums like `PrivacyLevel` (`local_only`/`derived_only`/`excluded`) must pass through a humanizing helper in `lib/format.ts` (the `auditTypeLabel` pattern) before display — never `{event.privacy_level}` directly.
