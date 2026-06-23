@@ -167,17 +167,37 @@ export function WeeklyCapacityScreen({
             <span>forecast inputs</span>
           </div>
           <div className="risk-list">
-            <RiskRow label="Context switch burden" value={snapshot.context_switch_score} />
-            <RiskRow label="WIP overload" value={snapshot.wip_load_score} />
-            <RiskRow label="Carryover risk" value={snapshot.carryover_risk_pct / 40} />
-            <RiskRow label="Meeting density" value={snapshot.meeting_pct / 35} />
-            <div className="risk-row">
-              <span>Active blockers</span>
-              <div className="risk-track">
-                <span style={{ width: `${Math.min(blockerCount / 5, 1) * 100}%`, background: blockerCount > 0 ? "var(--danger)" : undefined }} />
-              </div>
-              <strong className={blockerCount > 0 ? "risk-blocker-count" : ""}>{blockerCount}</strong>
-            </div>
+            <RiskRow
+              label="Context switch burden"
+              value={snapshot.context_switch_score}
+              tooltip="Task-switching cost index: 0 = minimal, 100 = very high burden"
+              hint="/100"
+            />
+            <RiskRow
+              label="WIP overload"
+              value={snapshot.wip_load_score}
+              tooltip="Parallel work-in-progress pressure: 0 = manageable, 100 = critical"
+              hint="/100"
+            />
+            <RiskRow
+              label="Carryover risk"
+              value={snapshot.carryover_risk_pct / 40}
+              tooltip="Likelihood of blocks spilling into next week: 0 = low, 100 = high"
+              hint="/100"
+            />
+            <RiskRow
+              label="Meeting density"
+              value={snapshot.meeting_pct / 35}
+              tooltip="Meeting load relative to capacity: 0 = light, 100 = saturated"
+              hint="/100"
+            />
+            <RiskRow
+              label="Active blockers"
+              value={Math.min(blockerCount / 5, 1)}
+              displayValue={blockerCount}
+              tooltip="Number of work blocks flagged as a blocker this week"
+              dangerActive={blockerCount > 0}
+            />
           </div>
         </section>
       </div>

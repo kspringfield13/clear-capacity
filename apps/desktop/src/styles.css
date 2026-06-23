@@ -1876,6 +1876,13 @@ h3 {
   color: var(--danger);
 }
 
+.risk-hint {
+  font-size: 10px;
+  font-weight: 400;
+  opacity: 0.45;
+  margin-left: 1px;
+}
+
 .tag-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.8fr) minmax(0, 0.75fr) minmax(0, 0.75fr);
@@ -2895,7 +2902,7 @@ select {
 
 .risk-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(90px, 1fr) 36px;
+  grid-template-columns: minmax(0, 1.25fr) minmax(90px, 1fr) auto;
 }
 
 .risk-track {
