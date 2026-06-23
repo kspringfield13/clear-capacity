@@ -90,22 +90,6 @@ npm run dev
 
 Open `http://127.0.0.1:5173`. Native activity capture, menu-bar behavior, and OpenAI commands require the Tauri desktop app.
 
-## Product Demo
-
-Launch a polished, fully populated demo without an API key or real activity data:
-
-[![Watch the ClearCapacity product demo](docs/assets/clear-capacity-demo-poster.png)](docs/assets/clear-capacity-demo.mp4?raw=1)
-
-**[Watch the 16-second product demo (MP4)](docs/assets/clear-capacity-demo.mp4?raw=1)**
-
-```bash
-npm run demo
-```
-
-Demo mode includes realistic work blocks, active-window sessions, Outlook events, review corrections, an AI forecast, an editable weekly narrative, visual-context metadata, and a complete audit trail. It is clearly labeled, does not persist changes, and never overwrites normal local data.
-
-See [Product Demo](docs/DEMO.md) for the three-minute presenter script and direct links to each feature view.
-
 ## Run the Desktop App
 
 Install Rust if needed:
