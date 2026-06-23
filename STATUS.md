@@ -39,6 +39,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **Delivery risk modifiers show unlabeled magnitudes with mixed units** — added `tooltip`/`hint`/`displayValue`/`dangerActive` props to `RiskRow.tsx`; four index rows now show "/100" scale hint with hover tooltip; Active-blockers row converted from inline JSX to `RiskRow` with raw count display (no "/100"); grid column widened to `auto` to avoid overflow; self-review passed. (2026-06-23)
 - [x] **Capacity-model legend is color-only-keyed and two purples collide** — changed "Blocked / waiting / dependency delay" color from `#9333ea` (purple) to `#be185d` (rose) in `taxonomy.ts`; added `hoveredCategory`/`onHoverCategory` crosslink props to `StackedBar.tsx`; wired hover state in `WeeklyCapacityScreen.tsx` (allocation rows dim to 0.35 opacity, bar segments dim to 0.3); added `title` tooltip to each legend row; added `cursor: pointer` to `.allocation-row` in `styles.css`; self-review passed. (2026-06-23)
 - [x] **"politics-to-math translator" section eyebrow is cryptic jargon** — replaced with "where your hours actually went" in `WeeklyCapacityScreen.tsx`; self-review passed. (2026-06-23)
+- [x] **Lone Review-Copilot suggestion looks marooned in a wide empty band** — switched `.copilot-inline .copilot-list` from `auto-fill, minmax(280px, 1fr)` to `auto-fit, minmax(280px, 360px)` in `styles.css`; phantom columns no longer appear with a single suggestion; self-review passed. (2026-06-23)
 
 ## In Progress
 _(none)_
@@ -46,7 +47,6 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
-- [ ] **Lone Review-Copilot suggestion looks marooned in a wide empty band** — On DailyReviewScreen a single "Suggested cleanup" card occupies only the left ~280px of a full-width section, reading as cut off. Constrain or center `.copilot-inline .copilot-list` in `apps/desktop/src/styles.css` (~line 2091) — e.g. cap the grid width or center a single card — so one suggestion doesn't look broken (`ReviewCopilotPanel.tsx`).
 
 ### New Features
 
