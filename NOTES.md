@@ -33,6 +33,11 @@ Cloud sessions are stateless — without this file, every run relearns the codeb
 - **Verification gate**: `npm run build` (`tsc -b && vite build`) must pass before committing. There is no automated test suite.
 - **Out of loop scope**: `apps/desktop/src-tauri/` (Rust), `.env`, and the 5173 port config are off-limits to the frontend loop. Anything needing Rust (model params, request bodies, JSON schemas, per-command model routing) is a manual follow-up — leave a clear note in STATUS.md.
 
+## Recurring UX rough edges (watch for these)
+- **Don't render raw enum/snake_case values in the UI**: domain enums like `PrivacyLevel` (`local_only`/`derived_only`/`excluded`) must pass through a humanizing helper in `lib/format.ts` (the `auditTypeLabel` pattern) before display — never `{event.privacy_level}` directly.
+- **Group paired nav controls**: when chevrons/prev-next controls straddle a long headline (e.g. `.week-nav` in `WeeklyCapacityScreen`), they drift apart and the disabled one becomes invisible. Keep paired controls adjacent and give `:disabled` a visible low-opacity + `cursor: not-allowed` state.
+- **Intensity-coded grids need a legend**: `data-level` heatmap cells (`ActivityHeatmap`) are meaningless without a "Less → More" key.
+
 ## Open architectural notes
 - `App.tsx` is a large orchestrator (~1.5k lines) being incrementally decomposed into `components/`, `hooks/`, and `lib/`. New async operations should land as dedicated hooks, not inline in `App.tsx`.
 

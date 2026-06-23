@@ -20,3 +20,4 @@
 ## 2026-06-23
 
 - 00:05 UTC — **improve**: Activity heatmap — added `ActivityHeatmap.tsx` to LedgerScreen showing 7-day × 24-hour session density grid; 5-level `color-mix(--info)` intensity cells with hover tooltips; renders null when no sessions; CSS in `styles.css`; passed self-review
+- 00:37 UTC — **curator**: visual pass ran (Playwright, 6 screens × light/dark + compact); ## Next was depleted, replenished UI & UX Polish with 4 grounded items (split week-nav chevrons, heatmap intensity legend, raw snake_case audit privacy pill, orphaned summary-confidence chip); reconciled Code Quality Split-App.tsx item (still valid, App.tsx 1522 lines); added recurring-UX-rough-edges notes to NOTES.md

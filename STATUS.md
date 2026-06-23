@@ -38,6 +38,10 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
+- [ ] **Week-nav chevrons are split across the wide headline** — In `WeeklyCapacityScreen.tsx` the `.week-nav` wraps the prev `ChevronLeft` + a ~700px-wide `<h1>` + the next `ChevronRight`, so the "Next week" chevron floats orphaned at the far-right edge and its disabled state (current week) is nearly invisible. Group both chevrons into one paired control (e.g. render them together beside the "Weekly capacity view" eyebrow, before the headline) so week navigation is discoverable; give `.week-nav-chevron:disabled` a clear low-opacity + `cursor: not-allowed` treatment in `styles.css`.
+- [ ] **Activity heatmap has no intensity legend** — `ActivityHeatmap.tsx` renders 5-level `data-level` cells but no key, so users can't tell that more-saturated = more activity (the grid reads as a faint gray block in light mode). Add a small "Less ▢▢▢▢▢ More" legend row reusing the same `data-level` cell styles beneath the grid, plus `.heatmap-legend` styles (light + dark) in `styles.css`.
+- [ ] **Audit privacy pill shows raw snake_case** — `AuditEventRow.tsx` renders `event.privacy_level` verbatim, so users see "local_only" / "derived_only" / "excluded". Add a `privacyLevelLabel()` helper in `lib/format.ts` (→ "Local only" / "Derived only" / "Excluded") and a `title` tooltip explaining each scope; optionally color-code the `.audit-privacy` pill per level via tokens in `styles.css`.
+- [ ] **Summary-confidence chip floats disconnected on Weekly** — In `WeeklyCapacityScreen.tsx` the `.header-actions .summary-score` box sits orphaned at the far top-right, vertically misaligned against the two-line hero headline (both themes). Tighten alignment with the headline (align to top, match card styling) so it reads as a related stat, not a stray box. (`styles.css` `.summary-score` / `.header-actions`.)
 
 ### New Features
 
