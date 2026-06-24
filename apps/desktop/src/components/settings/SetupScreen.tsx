@@ -381,16 +381,23 @@ export function SetupScreen({
               </div>
             </div>
 
-            {providerStatus && (
-              <div className={`ai-provider-status is-${providerStatus.tone}`} role="status">
-                {providerStatus.tone === "success"
-                  ? <CheckCircle2 size={15} />
-                  : providerStatus.tone === "error"
-                    ? <AlertCircle size={15} />
-                    : <Settings size={15} />}
-                <span>{providerStatus.message}</span>
-              </div>
-            )}
+            <div
+              className={providerStatus ? `ai-provider-status is-${providerStatus.tone}` : undefined}
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {providerStatus && (
+                <>
+                  {providerStatus.tone === "success"
+                    ? <CheckCircle2 size={15} />
+                    : providerStatus.tone === "error"
+                      ? <AlertCircle size={15} />
+                      : <Settings size={15} />}
+                  <span>{providerStatus.message}</span>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </details>
