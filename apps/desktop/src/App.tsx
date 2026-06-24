@@ -17,7 +17,7 @@ import {
   writePersistedState,
   writeThemePreference
 } from "./services/localStore";
-import type { AppTheme, PersistedForecastRecord, PersistedNarrativeRecord } from "./services/localStore";
+import type { AppTheme, PersistedAppState, PersistedForecastRecord, PersistedNarrativeRecord } from "./services/localStore";
 import { createDemoState } from "./services/demoData";
 import {
   addDays,
@@ -50,7 +50,7 @@ import type { Screen, WindowMode } from "./lib/types";
 
 export function App() {
   const [isDemoMode] = useState(() => new URLSearchParams(window.location.search).get("demo") === "1");
-  const [persistedSnapshot, setPersistedSnapshot] = useState<any>(() => isDemoMode ? createDemoState() : null);
+  const [persistedSnapshot, setPersistedSnapshot] = useState<PersistedAppState | null>(() => isDemoMode ? createDemoState() : null);
   const currentWeekId = useMemo(() => getCurrentIsoWeekId(), []);
   const currentWeekRangeLabel = useMemo(() => getBusinessWeekRangeLabel(), []);
   const nextWeekId = useMemo(() => getCurrentIsoWeekId(addDays(new Date(), 7)), []);

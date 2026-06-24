@@ -55,6 +55,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **WeeklyCapacityScreen "Next week" button title doesn't reflect disabled state** — changed `aria-label` and `title` on the next-week chevron to `"Cannot navigate past current week"` when `isCurrentWeek` is true in `WeeklyCapacityScreen.tsx`; self-review passed. (2026-06-24)
 - [x] **AuditLogScreen Escape key clears filter** — added `onKeyDown` to the search `<input>` in `AuditLogScreen.tsx`; Escape resets both `query` and `filter` to defaults, matching the "Clear filters" button and the LedgerScreen Escape-clears-search pattern; self-review passed. (2026-06-24)
 - [x] **BlockCard time error has no live region** — added a visually-hidden `role="alert"` span ("End time must be after start time") inside `.time-range-editor` in `BlockCard.tsx`; added reusable `.sr-only` utility class to `styles.css`; self-review passed. (2026-06-24)
+- [x] **Type-safety cleanup** — fixed `persistedSnapshot: any` → `PersistedAppState | null` in `App.tsx` (+ imported type); fixed `addAuditEvent` param from `any` to `Omit<AuditEvent,"event_id"|"timestamp"> & {timestamp?:string}` in `useBlocksLedger`; removed dead `importOutlookIcs` stub (console.warn + dead imports of `outlookEventsToWorkBlocks`, `parseOutlookIcs`, `createAuditEvent`, `removeSeeded*`) from same hook; self-review passed. (2026-06-24)
 
 ## In Progress
 _(none)_
@@ -62,10 +63,14 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
+- [ ] **CorrectionsScreen: Escape key clears search** — add `onKeyDown` to the search `<input>` so Escape clears `query`, matching AuditLogScreen and LedgerScreen behavior.
+- [ ] **DailyReviewScreen: add week-range eyebrow** — the screen header has no week label; add the current week range string (same `currentWeekRangeLabel` used on WeeklyCapacityScreen) as an eyebrow above the `<h1>` for orientation.
+- [ ] **ForecastScreen: verify/add empty state** — check `ForecastAgentPanel` and `ForecastScreen` when no forecast has been generated; if there is no explicit `EmptyState` component call, add one with a "Generate forecast" CTA.
 
 ### New Features
 
 ### Code Quality
+- [ ] **AgentScreen `any` typed tool params** — `createTool: any` and `input: any, _options?: any` in `AgentScreen.tsx`; replace with proper `ToolDefinition` / `ToolInput` types or at minimum narrow to `Record<string, unknown>`.
 
 ---
 
