@@ -1,12 +1,12 @@
 import { useMemo } from "react";
-import { computeWeeklyCapacitySnapshot, generateWeeklyNarrative } from "../../../../packages/inference/src/capacity";
+import { computeWeeklyCapacitySnapshot, generateWeeklyNarrative, scoreForecastAccuracy } from "../../../../packages/inference/src/capacity";
 import { sessionizeActiveWindowSamples } from "../../../../packages/inference/src/sessionizer/activeWindow";
 import type {
   WorkBlock,
   ActiveWindowSample,
   OutlookCalendarEvent,
 } from "../../../../packages/domain/src/models";
-import type { PersistedNarrativeRecord, PersistedForecastRecord } from "../services/localStore";
+import type { PersistedNarrativeRecord, PersistedForecastRecord, ForecastAccuracyReview } from "../services/localStore";
 import { getLocalDateKey, replaceIsoWeekIds } from "../lib/date";
 import { pct } from "../lib/format";
 
@@ -15,6 +15,7 @@ interface UseDerivedParams {
   activeWindowSamples: ActiveWindowSample[];
   calendarEvents: OutlookCalendarEvent[];
   generatedNarrative: PersistedNarrativeRecord | null;
+  forecastHistory: PersistedForecastRecord[];
   managerSummaryText: string | null;
   currentWeekId: string;
   currentWeekRangeLabel: string;
@@ -27,6 +28,7 @@ export function useDerived(params: UseDerivedParams) {
     activeWindowSamples,
     calendarEvents,
     generatedNarrative,
+    forecastHistory,
     managerSummaryText,
     currentWeekId,
     currentWeekRangeLabel,
@@ -37,6 +39,22 @@ export function useDerived(params: UseDerivedParams) {
     () => computeWeeklyCapacitySnapshot(currentWeekId, blocks),
     [blocks, currentWeekId]
   );
+
+  // If a forecast made in a prior week targeted the now-current week, score its
+  // predicted reliable capacity against what the model actually computed.
+  const forecastAccuracy = useMemo<ForecastAccuracyReview | null>(() => {
+    const matching = forecastHistory
+      .filter((entry) => entry.generated_for_week === currentWeekId)
+      .sort((a, b) => b.generated_at.localeCompare(a.generated_at))[0];
+    if (!matching) return null;
+    return {
+      record: matching,
+      ...scoreForecastAccuracy(
+        matching.forecast.reliable_new_work_capacity_pct,
+        snapshot.reliable_new_work_capacity_pct
+      ),
+    };
+  }, [forecastHistory, currentWeekId, snapshot.reliable_new_work_capacity_pct]);
 
   const narrative = useMemo(
     () => generateWeeklyNarrative(snapshot),
@@ -80,5 +98,6 @@ export function useDerived(params: UseDerivedParams) {
     todayKey,
     reviewQueue,
     toolbarStatus,
+    forecastAccuracy,
   };
 }

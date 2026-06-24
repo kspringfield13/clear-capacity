@@ -1,5 +1,5 @@
 import { TrendingUp } from "lucide-react";
-import type { PersistedForecastRecord } from "../../services/localStore";
+import type { PersistedForecastRecord, ForecastAccuracyReview } from "../../services/localStore";
 import type { computeWeeklyCapacitySnapshot } from "../../../../../packages/inference/src/capacity";
 import { pct } from "../../lib/format";
 import { EmptyState } from "../common/EmptyState";
@@ -9,6 +9,7 @@ export function ForecastScreen({
   snapshot,
   nextWeekRangeLabel,
   generatedForecast,
+  forecastAccuracy,
   forecastStatus,
   forecastError,
   onGenerateForecast,
@@ -17,6 +18,7 @@ export function ForecastScreen({
   snapshot: ReturnType<typeof computeWeeklyCapacitySnapshot>;
   nextWeekRangeLabel: string;
   generatedForecast: PersistedForecastRecord | null;
+  forecastAccuracy: ForecastAccuracyReview | null;
   forecastStatus: "idle" | "generating" | "error";
   forecastError: string | null;
   onGenerateForecast: () => void;
@@ -54,6 +56,7 @@ export function ForecastScreen({
       </div>
       <ForecastAgentPanel
         generatedForecast={generatedForecast}
+        forecastAccuracy={forecastAccuracy}
         nextWeekRangeLabel={nextWeekRangeLabel}
         status={forecastStatus}
         error={forecastError}

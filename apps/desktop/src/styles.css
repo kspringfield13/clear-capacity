@@ -2725,6 +2725,73 @@ select {
   gap: 10px;
 }
 
+.forecast-accuracy {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+}
+
+.forecast-accuracy--on_target {
+  border-color: var(--success);
+  background: var(--green-soft);
+}
+
+.forecast-accuracy--close {
+  border-color: var(--warning);
+  background: var(--amber-soft);
+}
+
+.forecast-accuracy--off {
+  border-color: var(--danger);
+  background: var(--red-soft);
+}
+
+.forecast-accuracy-icon {
+  display: inline-flex;
+  margin-top: 1px;
+  flex: none;
+  color: var(--text-subtle);
+}
+
+.forecast-accuracy--on_target .forecast-accuracy-icon {
+  color: var(--success);
+}
+
+.forecast-accuracy--close .forecast-accuracy-icon {
+  color: var(--warning);
+}
+
+.forecast-accuracy--off .forecast-accuracy-icon {
+  color: var(--danger);
+}
+
+.forecast-accuracy-body {
+  display: grid;
+  gap: 2px;
+}
+
+.forecast-accuracy-headline {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.forecast-accuracy-rating {
+  font-weight: 600;
+}
+
+.forecast-accuracy-detail {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-subtle);
+}
+
 .forecast-list strong {
   color: var(--text);
   font-size: 13px;

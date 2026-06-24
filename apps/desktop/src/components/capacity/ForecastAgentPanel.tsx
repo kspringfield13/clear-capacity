@@ -1,12 +1,19 @@
-import { RefreshCw, TrendingUp } from "lucide-react";
-import type { PersistedForecastRecord } from "../../services/localStore"; // note: may adjust
+import { RefreshCw, Target, TrendingUp } from "lucide-react";
+import type { ForecastAccuracyReview, PersistedForecastRecord } from "../../services/localStore"; // note: may adjust
 import { pct } from "../../lib/format";
 import { formatAuditTime } from "../../lib/format";
 import { ForecastList } from "../common/ForecastList";
 import { EmptyState } from "../common/EmptyState";
 
+const ACCURACY_RATING_LABEL: Record<ForecastAccuracyReview["rating"], string> = {
+  on_target: "On target",
+  close: "Close",
+  off: "Off",
+};
+
 export function ForecastAgentPanel({
   generatedForecast,
+  forecastAccuracy,
   nextWeekRangeLabel,
   status,
   error,
@@ -14,6 +21,7 @@ export function ForecastAgentPanel({
   onGenerate
 }: {
   generatedForecast: PersistedForecastRecord | null;
+  forecastAccuracy: ForecastAccuracyReview | null;
   nextWeekRangeLabel: string;
   status: "idle" | "generating" | "error";
   error: string | null;
@@ -39,6 +47,29 @@ export function ForecastAgentPanel({
           <span>{status === "generating" ? "Forecasting…" : forecast ? "Regenerate Forecast" : "Generate Forecast"}</span>
         </button>
       </div>
+      {forecastAccuracy && (
+        <div className={`forecast-accuracy forecast-accuracy--${forecastAccuracy.rating}`} role="status">
+          <span className="forecast-accuracy-icon" aria-hidden="true">
+            <Target size={16} />
+          </span>
+          <div className="forecast-accuracy-body">
+            <p className="forecast-accuracy-headline">
+              <span className="forecast-accuracy-rating">{ACCURACY_RATING_LABEL[forecastAccuracy.rating]}</span>
+              {" — last week's forecast for this week predicted "}
+              <strong>{pct(forecastAccuracy.predicted_pct)}</strong>
+              {" reliable capacity; the model now computes "}
+              <strong>{pct(forecastAccuracy.actual_pct)}</strong>.
+            </p>
+            <p className="forecast-accuracy-detail">
+              {forecastAccuracy.error_pts === 0
+                ? "Exactly on the mark."
+                : `${forecastAccuracy.signed_error_pts > 0 ? "Over" : "Under"}-predicted by ${forecastAccuracy.error_pts} ${forecastAccuracy.error_pts === 1 ? "point" : "points"}.`}
+              {" Forecast made "}
+              {formatAuditTime(forecastAccuracy.record.generated_at)}.
+            </p>
+          </div>
+        </div>
+      )}
       {error && (
         <div className="error-row">
           <p className="forecast-error">{error}</p>
