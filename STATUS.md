@@ -62,6 +62,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **CorrectionsScreen: Escape key clears search** — added `onKeyDown` to the search `<input>` in `CorrectionsScreen.tsx`; Escape clears `query`, matching AuditLogScreen and LedgerScreen behavior; self-review passed. (2026-06-24)
 - [x] **AgentScreen `any` typed tool params** — `createTool: any` → `typeof AiToolFn` (type-only import from `ai`); `input: any, _options?: any` → `input: Record<string, unknown>` (unused `_options` dropped); `t` remains `any` with explanatory comment (Eve ctx types structurally incompatible with shared interface); build passes; self-review passed. (2026-06-24)
 - [x] **AgentScreen & ContextNavigation accessibility** — added `aria-label` to icon-only copy/send/analysis buttons in `AgentScreen.tsx`; added `aria-pressed` to ContextNavigation nav buttons; self-review passed. (2026-06-24)
+- [x] **SetupScreen AI form labels not associated with inputs** — added `htmlFor` to all five `<label>` elements and matching `id` to each input/select (`ai-provider`, `ai-api-key`, `ai-base-url`, `ai-model`, `ai-vision-model`) in `SetupScreen.tsx`; clicking a label now focuses its field; self-review passed. (2026-06-24)
 
 ## In Progress
 _(none)_
@@ -69,6 +70,9 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
+- [ ] **SetupScreen provider status not announced to screen readers** — `ai-provider-status` is conditionally rendered with `role="status"`, but ARIA live regions must be in the DOM before content arrives to announce. Render the container persistently (empty when no status) with `aria-live="polite"` and `aria-atomic="true"` so the connection test result is reliably announced.
+- [ ] **ForecastList uses item text as React key** — `key={item}` in `ForecastList.tsx` (line 7) causes React key warnings and DOM thrashing when the AI returns duplicate bullet items. Change to `key={`${index}-${item.slice(0,20)}`}` using the map index.
+- [ ] **ActivityCapturePanel uses app_name as React key** — `key={session.app_name}` (~line 97) duplicates when the same app appears more than once in `latestSessionSummaries`. Change to `key={`${session.app_name}-${index}`}`.
 
 ### New Features
 

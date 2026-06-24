@@ -305,8 +305,9 @@ export function SetupScreen({
 
             <div className="ai-form">
               <div className="ai-field">
-                <label>Provider</label>
+                <label htmlFor="ai-provider">Provider</label>
                 <select
+                  id="ai-provider"
                   value={draftConfig.provider}
                   onChange={(e) => updateDraftConfig({ provider: e.target.value as AIProvider })}
                 >
@@ -317,8 +318,9 @@ export function SetupScreen({
               </div>
 
               <div className="ai-field">
-                <label>API Key</label>
+                <label htmlFor="ai-api-key">API Key</label>
                 <input
+                  id="ai-api-key"
                   type="password"
                   autoComplete="off"
                   placeholder={selectedPreset.keyPlaceholder}
@@ -328,8 +330,9 @@ export function SetupScreen({
               </div>
 
               <div className="ai-field">
-                <label>Base URL</label>
+                <label htmlFor="ai-base-url">Base URL</label>
                 <input
+                  id="ai-base-url"
                   type="text"
                   placeholder="https://api.example.com/v1"
                   value={draftConfig.baseUrl || ""}
@@ -338,8 +341,9 @@ export function SetupScreen({
               </div>
 
               <div className="ai-field">
-                <label>Model</label>
+                <label htmlFor="ai-model">Model</label>
                 <input
+                  id="ai-model"
                   type="text"
                   placeholder={selectedPreset.model || "provider-model-id"}
                   value={draftConfig.model}
@@ -349,8 +353,9 @@ export function SetupScreen({
               </div>
 
               <div className="ai-field">
-                <label>Vision Model <span>Optional</span></label>
+                <label htmlFor="ai-vision-model">Vision Model <span>Optional</span></label>
                 <input
+                  id="ai-vision-model"
                   type="text"
                   placeholder={selectedPreset.visionModel || "No recommended vision model"}
                   value={draftConfig.visionModel || ""}
