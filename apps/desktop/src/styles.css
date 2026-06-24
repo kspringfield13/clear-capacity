@@ -1863,6 +1863,12 @@ h3 {
   color: #fecaca;
 }
 
+.confidence.medium {
+  border-color: rgba(234, 179, 8, 0.35);
+  background: rgba(234, 179, 8, 0.12);
+  color: #fef08a;
+}
+
 .block-chips {
   display: flex;
   align-items: center;
@@ -1955,6 +1961,16 @@ select {
 .block-actions button.block-confirm:hover {
   background: var(--accent-muted);
   color: var(--background);
+}
+
+.block-actions button.block-exclude {
+  color: var(--text-muted);
+}
+
+.block-actions button.block-exclude:hover {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.07);
+  color: var(--danger);
 }
 
 /* Daily review — denser, better-organized block cards.
@@ -4626,6 +4642,12 @@ h3 {
   font-weight: 500;
 }
 
+.confidence.medium {
+  border-color: #fce566;
+  background: #fefce8;
+  color: #713f12;
+}
+
 .blocker-badge {
   border-color: rgba(239, 68, 68, 0.4);
   background: var(--red-soft);
@@ -5259,6 +5281,16 @@ html[data-theme="dark"] .audit-filters button:hover {
   background: var(--surface-elevated);
 }
 
+html[data-theme="dark"] .block-actions button.block-exclude {
+  color: var(--text-muted);
+}
+
+html[data-theme="dark"] .block-actions button.block-exclude:hover {
+  border-color: rgba(255, 97, 102, 0.4);
+  background: rgba(255, 97, 102, 0.08);
+  color: var(--danger);
+}
+
 html[data-theme="dark"] .search-box:focus-within {
   box-shadow: 0 0 0 2px var(--focus-gap), 0 0 0 4px #006bff;
 }
@@ -5290,6 +5322,12 @@ html[data-theme="dark"] .confidence.unscored {
   border-color: var(--border);
   background: var(--surface-muted);
   color: var(--text-subtle);
+}
+
+html[data-theme="dark"] .confidence.medium {
+  border-color: #4a3800;
+  background: #1e1500;
+  color: #fde047;
 }
 
 html[data-theme="dark"] .blocker-badge {
