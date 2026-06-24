@@ -29,11 +29,7 @@ _(none)_
 ### Code Quality
 - [ ] **AppShell / CompactWidget `snapshot: any` type fix** — replace `snapshot: any` with the proper `WeeklyCapacitySnapshot` type (from `packages/domain/src/models.ts`) in `AppShell.tsx` (line 32) and `CompactWidget.tsx` (line 22).
 
----
-
-## Strategic enhancements
-
-> Larger, multi-step bets (vs. the tactical polish above). Each bullet is sized to land in one loop pass; sequence within a track top-to-bottom (later items depend on earlier ones). Items tagged **[manual / Rust]** need `src-tauri/` or network/OAuth work that is out of loop scope — build the loop-safe slice noted in the bullet and leave the native half as a flagged follow-up. The forecast-accuracy feature (persisted `forecastHistory` + `scoreForecastAccuracy`) shipped in PR #19 and is the reference pattern for retained-history work.
+> **Strategic enhancements (intelligence engine · integrations · trust & verification UX)** — the three tracks below are larger, multi-step bets than the tactical polish above, but they live under `## Next` on purpose so the improvement routine picks them up in order once the polish items clear. Each bullet is sized to land in one loop pass; sequence within a track top-to-bottom (later items depend on earlier ones). Items tagged **[manual / Rust]** need `src-tauri/` or network/OAuth work that is out of loop scope — build the loop-safe slice noted in the bullet and leave the native half as a flagged follow-up. The forecast-accuracy feature (persisted `forecastHistory` + `scoreForecastAccuracy`) shipped in PR #19 and is the reference pattern for retained-history work.
 
 ### Intelligence Engine
 - [ ] **Multi-week snapshot history store** *(foundation — do first)* — today `computeWeeklyCapacitySnapshot` runs over all blocks for a single `week_id` and nothing is retained across weeks, so trends/baselines are impossible. Add a persisted `snapshotHistory: { week_id, snapshot, computed_at }[]` (cap ~24) written when the ISO week rolls over, mirroring the `forecastHistory` pattern from PR #19. Pure storage + wiring: `services/localStore.ts` (field + parse guard), `hooks/usePersistence.ts`, `hooks/useDerived.ts` / `App.tsx`. Unlocks every item below.
