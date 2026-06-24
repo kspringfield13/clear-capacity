@@ -61,6 +61,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **Audit filter chips don't expose active state to screen readers** — added `aria-pressed={filter === item.id}` to the filter `<button>`s in `AuditLogScreen.tsx` so screen-reader users know which filter is applied; self-review passed. (2026-06-24)
 - [x] **CorrectionsScreen: Escape key clears search** — added `onKeyDown` to the search `<input>` in `CorrectionsScreen.tsx`; Escape clears `query`, matching AuditLogScreen and LedgerScreen behavior; self-review passed. (2026-06-24)
 - [x] **AgentScreen `any` typed tool params** — `createTool: any` → `typeof AiToolFn` (type-only import from `ai`); `input: any, _options?: any` → `input: Record<string, unknown>` (unused `_options` dropped); `t` remains `any` with explanatory comment (Eve ctx types structurally incompatible with shared interface); build passes; self-review passed. (2026-06-24)
+- [x] **AgentScreen & ContextNavigation accessibility** — added `aria-label` to icon-only copy/send/analysis buttons in `AgentScreen.tsx`; added `aria-pressed` to ContextNavigation nav buttons; self-review passed. (2026-06-24)
 
 ## In Progress
 _(none)_
@@ -72,6 +73,8 @@ _(none)_
 ### New Features
 
 ### Code Quality
+- [ ] **AppShell `snapshot: any` type fix** — replace `snapshot: any` with the proper `WeeklyCapacitySnapshot` type in `AppShell.tsx` and `CompactWidget.tsx`.
+- [ ] **ReviewCopilotPanel contextual aria-labels** — add suggestion title to Apply/Dismiss button `aria-label`s so screen readers announce which suggestion is being acted on.
 
 ---
 
