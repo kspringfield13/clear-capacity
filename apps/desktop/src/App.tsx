@@ -73,6 +73,7 @@ export function App() {
         setActiveWindowSamples(data.activeWindowSamples ?? []);
         setAuditEvents(data.auditEvents ?? []);
         setGeneratedForecast(data.generatedForecast ?? null);
+        setForecastHistory(data.forecastHistory ?? []);
         setVisualContextEnabled(data.visualContextEnabled ?? false);
         setVisualContextInsights(data.visualContextInsights ?? []);
         setAiConfig(data.aiConfig ?? null);
@@ -97,6 +98,9 @@ export function App() {
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>(() => persistedSnapshot?.auditEvents ?? []);
   const [generatedForecast, setGeneratedForecast] = useState<PersistedForecastRecord | null>(
     () => persistedSnapshot?.generatedForecast ?? null
+  );
+  const [forecastHistory, setForecastHistory] = useState<PersistedForecastRecord[]>(
+    () => persistedSnapshot?.forecastHistory ?? []
   );
   const [visualContextEnabled, setVisualContextEnabled] = useState<boolean>(
     () => persistedSnapshot?.visualContextEnabled ?? false
@@ -167,6 +171,7 @@ export function App() {
     corrections,
     reviewSuggestions,
     generatedForecast,
+    forecastHistory,
     visualContextEnabled,
     visualContextInsights,
     aiConfig,
@@ -188,6 +193,7 @@ export function App() {
     activeWindowSamples,
     calendarEvents,
     generatedNarrative,
+    forecastHistory,
     managerSummaryText,
     currentWeekId,
     currentWeekRangeLabel,
@@ -203,6 +209,7 @@ export function App() {
     todayKey,
     reviewQueue,
     toolbarStatus,
+    forecastAccuracy,
   } = derived;
 
   const { classificationStatus, classificationError, classifyActiveWindowSessions, resetClassification } =
@@ -239,6 +246,7 @@ export function App() {
     isDemoMode,
     blocks,
     setGeneratedForecast,
+    setForecastHistory,
     snapshot,
     activeWindowSessions,
     currentWeekId,
@@ -644,6 +652,7 @@ export function App() {
     setCorrections([]);
     setReviewSuggestions([]);
     setGeneratedForecast(null);
+    setForecastHistory([]);
     setVisualContextEnabled(true);
     setVisualContextInsights([]);
     setVisualContextAttemptedSessionIds([]);
@@ -808,6 +817,7 @@ export function App() {
         weekRangeLabel={currentWeekRangeLabel}
         nextWeekRangeLabel={nextWeekRangeLabel}
         generatedForecast={generatedForecast}
+        forecastAccuracy={forecastAccuracy}
         forecastStatus={forecastStatus}
         forecastError={forecastError}
         onGenerateForecast={() => void generateForecastAgent()}

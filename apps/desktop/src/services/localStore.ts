@@ -38,6 +38,21 @@ export interface PersistedForecastRecord {
   prompt_version: string;
 }
 
+/**
+ * A past forecast paired with how it scored once its target week arrived. Assembled
+ * in `useDerived` from `forecastHistory` + the live snapshot; kept here next to
+ * `PersistedForecastRecord` so UI components type against it without importing
+ * inference internals.
+ */
+export interface ForecastAccuracyReview {
+  record: PersistedForecastRecord;
+  predicted_pct: number;
+  actual_pct: number;
+  error_pts: number;
+  signed_error_pts: number;
+  rating: "on_target" | "close" | "off";
+}
+
 export interface PersistedAppState {
   version: 1;
   blocks: WorkBlock[];
@@ -47,6 +62,7 @@ export interface PersistedAppState {
   corrections: UserCorrection[];
   reviewSuggestions: ReviewCopilotSuggestion[];
   generatedForecast: PersistedForecastRecord | null;
+  forecastHistory: PersistedForecastRecord[];
   visualContextEnabled: boolean;
   visualContextInsights: VisualContextInsight[];
   managerSummaryText: string | null;
@@ -58,6 +74,14 @@ export interface PersistedAppState {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function parseForecastHistory(value: unknown): PersistedForecastRecord[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (entry): entry is PersistedForecastRecord =>
+      isRecord(entry) && isRecord(entry.forecast) && typeof entry.generated_for_week === "string"
+  );
 }
 
 async function getStore(): Promise<Store | null> {
@@ -91,6 +115,7 @@ export async function readPersistedState(): Promise<PersistedAppState | null> {
         corrections: Array.isArray(parsed.corrections) ? (parsed.corrections as UserCorrection[]) : [],
         reviewSuggestions: Array.isArray(parsed.reviewSuggestions) ? (parsed.reviewSuggestions as ReviewCopilotSuggestion[]) : [],
         generatedForecast: isRecord(parsed.generatedForecast) && isRecord(parsed.generatedForecast.forecast) ? (parsed.generatedForecast as unknown as PersistedForecastRecord) : null,
+        forecastHistory: parseForecastHistory(parsed.forecastHistory),
         visualContextEnabled: typeof parsed.visualContextEnabled === "boolean" ? parsed.visualContextEnabled : false,
         visualContextInsights: Array.isArray(parsed.visualContextInsights) ? (parsed.visualContextInsights as VisualContextInsight[]) : [],
         managerSummaryText: typeof parsed.managerSummaryText === "string" ? parsed.managerSummaryText : null,
@@ -126,6 +151,7 @@ export async function readPersistedState(): Promise<PersistedAppState | null> {
         isRecord(parsed.generatedForecast) && isRecord(parsed.generatedForecast.forecast)
           ? (parsed.generatedForecast as unknown as PersistedForecastRecord)
           : null,
+      forecastHistory: parseForecastHistory(parsed.forecastHistory),
       visualContextEnabled:
         typeof parsed.visualContextEnabled === "boolean" ? parsed.visualContextEnabled : false,
       visualContextInsights: Array.isArray(parsed.visualContextInsights)

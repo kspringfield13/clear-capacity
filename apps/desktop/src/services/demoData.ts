@@ -234,6 +234,22 @@ export function createDemoState(reference = new Date()): PersistedAppState {
         optimistic_capacity_pct: 34, likely_capacity_pct: 24, conservative_capacity_pct: 14
       }
     },
+    forecastHistory: [
+      {
+        generated_at: addMinutes(now, -10_080 - 31).toISOString(), generated_for_week: currentWeek,
+        trigger: "manual", model: "OpenAI forecast agent", prompt_version: "clear-capacity-forecast-agent-v1",
+        forecast: {
+          forecast_week_label: "This week", reliable_new_work_capacity_pct: 31, confidence: 0.84,
+          headline: "One new analysis is realistic if reactive load stays contained.",
+          summary_text: "Last week's projection for the current week, retained so the forecast can be scored against what actually materialized.",
+          key_constraints: ["Recurring reporting baseline", "Standing meeting cadence"],
+          risk_flags: ["Reactive requests may displace planned analysis"],
+          recommended_actions: ["Reserve two focus blocks", "Batch ad hoc requests"],
+          assumptions: ["No new production incident", "Meeting cadence stays stable"],
+          optimistic_capacity_pct: 39, likely_capacity_pct: 31, conservative_capacity_pct: 21
+        }
+      }
+    ],
     generatedNarrative: {
       generated_at: generatedAt.toISOString(), generated_for_date: now.toISOString().slice(0, 10),
       trigger: "manual", model: "OpenAI narrative", prompt_version: "clear-capacity-weekly-narrative-v2",
