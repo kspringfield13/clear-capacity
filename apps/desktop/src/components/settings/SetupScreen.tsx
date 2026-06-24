@@ -385,7 +385,7 @@ export function SetupScreen({
             </div>
 
             <div
-              className={providerStatus ? `ai-provider-status is-${providerStatus.tone}` : undefined}
+              className={`ai-provider-status${providerStatus ? ` is-${providerStatus.tone}` : ''}`}
               role="status"
               aria-live="polite"
               aria-atomic="true"

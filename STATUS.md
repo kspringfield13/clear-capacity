@@ -7,6 +7,7 @@ Verification gate: `npm run build` must pass before marking done.
 ---
 
 ## Done
+- [x] **SetupScreen provider status not announced to screen readers** — always apply `ai-provider-status` base class; add CSS that collapses element (height:0/padding:0/border-width:0/overflow:hidden) when no modifier class is active, keeping it in the DOM + AT for live-region init without `display:none`. `SetupScreen.tsx` + `styles.css`. 2026-06-24
 - [x] **ConfidenceChip level casing** — verified already normalized in `ConfidenceChip.tsx` (className lowercases via `level.toLowerCase()`, "Needs review" → `low`; emitted classes are consistent — no action needed). 2026-06-24
 - [x] **Heatmap legend cells aria-labels** — verified handled in `ActivityHeatmap.tsx`: the `.heatmap-legend` is `aria-hidden="true"` (decorative, with visible "Less → More" text) and each populated data cell already carries `role="img"` + `aria-label`. 2026-06-24
 - [x] **ForecastList uses item text as React key** — changed `key={item}` to `key={`${index}-${item.slice(0,20)}`}` in `ForecastList.tsx` (line 6); eliminates duplicate-key React warnings when AI returns identical bullet items. 2026-06-24
@@ -19,7 +20,6 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
-- [ ] **SetupScreen provider status not announced to screen readers** — `.ai-provider-status` in `SetupScreen.tsx` (line 385) is conditionally rendered with `role="status"`, but an ARIA live region must already be in the DOM before its content arrives to reliably announce. Render the container persistently (empty when `providerStatus` is null) with `aria-live="polite"` and `aria-atomic="true"` so the Test Connection / Save result is announced.
 - [ ] **DailyReview progress track lacks progressbar semantics** — the `.review-progress-track` / `.review-progress-fill` bar in `DailyReviewScreen.tsx` (lines 97–99) is visual-only; only the wrapping `.review-progress` div carries `role="status"`. Add `role="progressbar"`, `aria-valuenow={progressPct}`, `aria-valuemin={0}`, `aria-valuemax={100}`, and `aria-label="Review progress"` to the `.review-progress-track` div so assistive tech exposes the completion percentage, not just the "N of M" string.
 - [ ] **ActivityCapturePanel uses app_name as React key** — `key={session.app_name}` in `ActivityCapturePanel.tsx` (line 97) duplicates when the same app appears more than once in `latestSessionSummaries`. Change to `key={`${session.app_name}-${index}`}` using the map index.
 
