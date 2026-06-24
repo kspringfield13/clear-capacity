@@ -64,6 +64,7 @@ export function AuditLogScreen({ auditEvents }: { auditEvents: AuditEvent[] }) {
               className={filter === item.id ? "is-active" : ""}
               key={item.id}
               type="button"
+              aria-pressed={filter === item.id}
               onClick={() => setFilter(item.id)}
             >
               {item.label}

@@ -58,6 +58,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **Type-safety cleanup** — fixed `persistedSnapshot: any` → `PersistedAppState | null` in `App.tsx` (+ imported type); fixed `addAuditEvent` param from `any` to `Omit<AuditEvent,"event_id"|"timestamp"> & {timestamp?:string}` in `useBlocksLedger`; removed dead `importOutlookIcs` stub (console.warn + dead imports of `outlookEventsToWorkBlocks`, `parseOutlookIcs`, `createAuditEvent`, `removeSeeded*`) from same hook; self-review passed. (2026-06-24)
 - [x] **ForecastScreen / ForecastAgentPanel empty state** — verified already present: `ForecastScreen.tsx` renders an `EmptyState` ("Nothing to forecast.") when there are no work blocks, and `ForecastAgentPanel.tsx` renders an `EmptyState` ("No AI forecast yet.") with a "Generate Forecast" CTA, skeleton loading, and an `.error-row` retry for the blocks-but-no-forecast case. No change needed. (2026-06-24)
 - [x] **Narrative audit-type pill renders as plain unstyled text** — replaced near-transparent base rule with indigo tint; added light-mode override (`#eef2ff`/`#c7d2fe`/`#3730a3`) and explicit dark-mode override (`#141438`/`#252570`/`#a5b4fc`) in `styles.css` following the three-rule per-type badge pattern; self-review passed. (2026-06-24)
+- [x] **Audit filter chips don't expose active state to screen readers** — added `aria-pressed={filter === item.id}` to the filter `<button>`s in `AuditLogScreen.tsx` so screen-reader users know which filter is applied; self-review passed. (2026-06-24)
 
 ## In Progress
 _(none)_
@@ -65,7 +66,6 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
-- [ ] **Audit filter chips don't expose active state to screen readers** — the filter `<button>`s in `AuditLogScreen.tsx` (~line 63) only mark the active filter via the `is-active` CSS class; add `aria-pressed={filter === item.id}` so screen-reader users know which filter is applied, matching the icon-button `aria-pressed` convention in `AppToolbar.tsx`.
 - [ ] **CorrectionsScreen: Escape key clears search** — add `onKeyDown` to the search `<input>` in `components/review/CorrectionsScreen.tsx` (~line 54) so Escape clears `query`, matching the AuditLogScreen and LedgerScreen behavior.
 
 ### New Features
