@@ -10,6 +10,8 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **ConfidenceChip level casing** — verified already normalized in `ConfidenceChip.tsx` (className lowercases via `level.toLowerCase()`, "Needs review" → `low`; emitted classes are consistent — no action needed). 2026-06-24
 - [x] **Heatmap legend cells aria-labels** — verified handled in `ActivityHeatmap.tsx`: the `.heatmap-legend` is `aria-hidden="true"` (decorative, with visible "Less → More" text) and each populated data cell already carries `role="img"` + `aria-label`. 2026-06-24
 - [x] **ForecastList uses item text as React key** — changed `key={item}` to `key={`${index}-${item.slice(0,20)}`}` in `ForecastList.tsx` (line 6); eliminates duplicate-key React warnings when AI returns identical bullet items. 2026-06-24
+- [x] **ActivityCapturePanel uses app_name as React key** — changed `key={session.app_name}` to `key={`${session.app_name}-${index}`}` in `ActivityCapturePanel.tsx` (line 97); fix in PR #24. 2026-06-24
+- [x] **SetupScreen provider status not announced to screen readers** — replaced conditional `{providerStatus && <div role="status">}` with a persistently-rendered wrapper carrying `role="status"`, `aria-live="polite"`, `aria-atomic="true"`; content still conditionally rendered inside so the live region is in the DOM before announcements arrive. `SetupScreen.tsx`. 2026-06-24
 
 ## In Progress
 _(none)_
@@ -17,8 +19,6 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
-- [ ] **ActivityCapturePanel uses app_name as React key** — `key={session.app_name}` in `ActivityCapturePanel.tsx` (line 97) duplicates when the same app appears more than once in `latestSessionSummaries`. Change to `key={`${session.app_name}-${index}`}` using the map index.
-- [ ] **SetupScreen provider status not announced to screen readers** — `.ai-provider-status` in `SetupScreen.tsx` (line 384) is conditionally rendered with `role="status"`, but an ARIA live region must already be in the DOM before its content arrives to reliably announce. Render the container persistently (empty when `providerStatus` is null) with `aria-live="polite"` and `aria-atomic="true"` so the Test Connection / Save result is announced.
 - [ ] **BlockCard category select clips its current label** — on the Daily review `.tag-grid` the category `<select>` truncates the longest `WorkCategory` (seen: "Documentation / requirement cla…"). It has a hover `title` but the visible truncation reads as unpolished and is invisible to keyboard/touch. In `styles.css`, give `.tag-grid` a `grid-template-columns` that lets the first (category) column flex wider than the planned-status/mode columns so the active value is readable at rest. `BlockCard.tsx` lines 135–151.
 - [ ] **DailyReview progress track lacks progressbar semantics** — the `.review-progress-track` / `.review-progress-fill` bar in `DailyReviewScreen.tsx` (lines 95–99) is visual-only; only the wrapping text carries `role="status"`. Add `role="progressbar"`, `aria-valuenow={progressPct}`, `aria-valuemin={0}`, `aria-valuemax={100}`, and `aria-label="Review progress"` to the `.review-progress-track` div so assistive tech exposes the completion percentage, not just the "N of M" string.
 
