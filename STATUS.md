@@ -15,7 +15,6 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
-- [ ] **Add Focus Management to BlockCard Time Editor** — time range editor pops up without focusing the first input or providing Escape-key dismiss; add `autoFocus` to first time input, `onKeyDown` Escape handler, and `aria-label="Time range editor"` to the container.
 - [ ] **ConfidenceChip level casing is inconsistent** — level comparison uses mixed case (`"Needs review"` vs lowercase logic); normalize to consistent lowercase throughout.
 - [ ] **SetupScreen provider status not announced to screen readers** — `ai-provider-status` is conditionally rendered with `role="status"`, but ARIA live regions must be in the DOM before content arrives to announce. Render the container persistently (empty when no status) with `aria-live="polite"` and `aria-atomic="true"` so the connection test result is reliably announced.
 - [ ] **ForecastList uses item text as React key** — `key={item}` in `ForecastList.tsx` (line 7) causes React key warnings and DOM thrashing when the AI returns duplicate bullet items. Change to `key={`${index}-${item.slice(0,20)}`}` using the map index.
