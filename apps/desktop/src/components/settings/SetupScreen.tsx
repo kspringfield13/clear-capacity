@@ -79,10 +79,10 @@ export function SetupScreen({
   hasClassification: boolean;
 }) {
   const steps = [
-    { label: "Tracking active", done: !paused && activeWindowSamples.length > 0 },
-    { label: "Calendar imported", done: calendarEvents.length > 0 },
-    { label: "AI provider configured", done: Boolean(aiConfig?.apiKey) },
-    { label: "First classification run", done: hasClassification },
+    { label: "Tracking active", done: !paused && activeWindowSamples.length > 0, hint: "Resume tracking above and wait for the first activity sample" },
+    { label: "Calendar imported", done: calendarEvents.length > 0, hint: "Import an .ics file in the Calendar section below" },
+    { label: "AI provider configured", done: Boolean(aiConfig?.apiKey), hint: "Set up in Advanced Settings below" },
+    { label: "First classification run", done: hasClassification, hint: "Run classification from the Weekly Capacity view" },
   ];
   const completedCount = steps.filter((s) => s.done).length;
   const allDone = completedCount === steps.length;
@@ -198,7 +198,10 @@ export function SetupScreen({
                 <span className="onboarding-step-icon">
                   {step.done ? <Check size={13} /> : null}
                 </span>
-                <span>{step.label}</span>
+                <span>
+                  {step.label}
+                  {!step.done && <span className="onboarding-step-hint">{step.hint}</span>}
+                </span>
               </li>
             ))}
           </ol>
