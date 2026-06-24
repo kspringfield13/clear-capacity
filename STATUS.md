@@ -13,6 +13,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **ForecastList uses item text as React key** — changed `key={item}` to `key={`${index}-${item.slice(0,20)}`}` in `ForecastList.tsx` (line 6); eliminates duplicate-key React warnings when AI returns identical bullet items. 2026-06-24
 - [x] **BlockCard category select clips its current label** — widened `.review-screen .tag-grid` first column from `minmax(0, 1.5fr)` to `minmax(0, 2.4fr)` in `styles.css` (line 2019); category column now ~55% of row width, enough to show "Documentation / Requirements" unclipped. Ledger and mobile rules untouched. 2026-06-24
 - [x] **Onboarding checklist incomplete steps are dead-ends** — added `hint` field to each step in `SetupScreen.tsx`; hints render as a `.onboarding-step-hint` block span below the label only for incomplete steps; `.onboarding-step` changed to `align-items: flex-start` and `.onboarding-step-hint` rule added to `styles.css` (`var(--text-subtle)`, 11px). 2026-06-24
+- [x] **DailyReview progress track lacks progressbar semantics** — added `role="progressbar"`, `aria-valuenow={progressPct}`, `aria-valuemin={0}`, `aria-valuemax={100}`, and `aria-label="Review progress"` to `.review-progress-track` in `DailyReviewScreen.tsx`. 2026-06-24
 
 ## In Progress
 _(none)_
@@ -20,7 +21,6 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
-- [ ] **DailyReview progress track lacks progressbar semantics** — the `.review-progress-track` / `.review-progress-fill` bar in `DailyReviewScreen.tsx` (lines 97–99) is visual-only; only the wrapping `.review-progress` div carries `role="status"`. Add `role="progressbar"`, `aria-valuenow={progressPct}`, `aria-valuemin={0}`, `aria-valuemax={100}`, and `aria-label="Review progress"` to the `.review-progress-track` div so assistive tech exposes the completion percentage, not just the "N of M" string.
 - [ ] **ActivityCapturePanel uses app_name as React key** — `key={session.app_name}` in `ActivityCapturePanel.tsx` (line 97) duplicates when the same app appears more than once in `latestSessionSummaries`. Change to `key={`${session.app_name}-${index}`}` using the map index.
 
 ### Accessibility
