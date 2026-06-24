@@ -31,6 +31,29 @@ _(none)_
 
 ---
 
+## Strategic enhancements
+
+> Larger, multi-step bets (vs. the tactical polish above). Each bullet is sized to land in one loop pass; sequence within a track top-to-bottom (later items depend on earlier ones). Items tagged **[manual / Rust]** need `src-tauri/` or network/OAuth work that is out of loop scope — build the loop-safe slice noted in the bullet and leave the native half as a flagged follow-up. The forecast-accuracy feature (persisted `forecastHistory` + `scoreForecastAccuracy`) shipped in PR #19 and is the reference pattern for retained-history work.
+
+### Intelligence Engine
+- [ ] **Multi-week snapshot history store** *(foundation — do first)* — today `computeWeeklyCapacitySnapshot` runs over all blocks for a single `week_id` and nothing is retained across weeks, so trends/baselines are impossible. Add a persisted `snapshotHistory: { week_id, snapshot, computed_at }[]` (cap ~24) written when the ISO week rolls over, mirroring the `forecastHistory` pattern from PR #19. Pure storage + wiring: `services/localStore.ts` (field + parse guard), `hooks/usePersistence.ts`, `hooks/useDerived.ts` / `App.tsx`. Unlocks every item below.
+- [ ] **Personal baselines + trend deltas** *(depends on snapshot history)* — add a pure `computeCapacityBaselines(history)` in `packages/inference/src/capacity.ts` returning rolling medians (4–6 wk) for `reactive_pct`, `meeting_pct`, `context_switch_score`, and `reliable_new_work_capacity_pct`; render small "vs your 6-wk median +N/−N" chips on `WeeklyCapacityScreen.tsx` metrics so a number reads against the user's own norm, not a static 100 baseline.
+- [ ] **Correction-driven bias signal** — `corrections` are collected but never fed back into the model. Add a pure `analyzeCorrections(corrections)` in inference that surfaces systematic mislabels (e.g. category X → Y corrected ≥3×, or planned→unplanned drift) and render an explainable "Model bias" note on the Forecast/Capacity screen. No retraining — just close the visible loop between review effort and model behavior.
+- [ ] **Evidence-based forecast confidence** *(builds on PR #19)* — aggregate past `forecastHistory` scores into a rolling mean-absolute-error and show "Forecasts have averaged ±N pts over the last K weeks" beneath the accuracy banner in `ForecastAgentPanel.tsx`, so displayed confidence is grounded in track record rather than the model's self-reported number. Pure helper alongside `scoreForecastAccuracy`.
+
+### Integrations
+- [ ] **Importable `RawEvent` schema (decouple sources — do first)** — `SourceType` already reserves `slack`/`git`/`browser`/`task` but only `window`+`calendar` are wired. Define a documented JSON import shape that maps onto `RawEvent`→`WorkBlock` and an `importRawEvents()` entry point in `packages/integrations/`, so new signal sources need data, not new code. Frontend + packages only; lays the groundwork for the two items below.
+- [ ] **Git activity as a planned-work signal** *(depends on import schema)* — parse a committed/exported git log (commits, PR metadata) into deep-work `WorkBlock`s keyed by repo→project. Build the **pure TS parser** in `packages/integrations/src/git/` against a fixture now (mirror `calendar/outlookIcs.ts`, fully loop-testable). The live fetch/watch is **[manual / Rust]** — flag the `src-tauri/` half as a follow-up.
+- [ ] **Automated calendar sync** **[manual / Rust]** — replace the manual `.ics` export (the biggest onboarding wall) with Google / Microsoft Graph sync. OAuth + network live in the Tauri layer and are out of loop scope. Loop-safe slice: a provider-agnostic `CalendarSource` interface in `packages/integrations/` plus a disabled "Connect calendar" stub in `SetupScreen.tsx` that the native layer can later fulfill; document the Rust follow-up here.
+
+### Trust & Verification UX
+- [ ] **"Why this block?" evidence drill-down** — `WorkBlock.evidence[]` and `derived_from[]` are captured but not fully surfaced. Add an expandable evidence trail to `BlockCard.tsx` (hover/expand) listing the raw signals and the inference path that produced the block, reinforcing the explainability differentiator. Frontend + `styles.css` only.
+- [ ] **Sensitive-content review queue** — `VisualContextInsight.sensitive_content_detected` is recorded but there is nowhere to review or purge flagged captures. Add a filtered view under History listing flagged insights with a per-item "Discard" action that writes a `visual_context` audit event. Frontend only; fits the privacy model.
+- [ ] **Data export & retention controls** — (a) export the work ledger + audit trail to JSON/CSV from `SetupScreen.tsx` (pure, frontend); (b) add a user-set retention window that auto-expires `activeWindowSamples` older than N days. Both loop-safe and reinforce the local-first / user-controlled-data positioning.
+- [ ] **Forecast track-record panel** *(builds on PR #19)* — add a "Forecast track record" list to `ForecastScreen.tsx` showing predicted-vs-actual per past week with the On target / Close / Off rating chips, so the model can be audited over time rather than only for the current week. Reads the existing `forecastHistory`.
+
+---
+
 ## Never
 - Do not touch `apps/desktop/src-tauri/` (Rust shell) — Tauri changes need manual testing outside the loop.
 - Do not modify `.env` or commit secrets.
