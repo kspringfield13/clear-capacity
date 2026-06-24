@@ -10,7 +10,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **ConfidenceChip level casing** — verified already normalized in `ConfidenceChip.tsx` (className lowercases via `level.toLowerCase()`, "Needs review" → `low`; emitted classes are consistent — no action needed). 2026-06-24
 - [x] **Heatmap legend cells aria-labels** — verified handled in `ActivityHeatmap.tsx`: the `.heatmap-legend` is `aria-hidden="true"` (decorative, with visible "Less → More" text) and each populated data cell already carries `role="img"` + `aria-label`. 2026-06-24
 - [x] **ForecastList uses item text as React key** — changed `key={item}` to `key={`${index}-${item.slice(0,20)}`}` in `ForecastList.tsx` (line 6); eliminates duplicate-key React warnings when AI returns identical bullet items. 2026-06-24
-- [x] **ActivityCapturePanel uses app_name as React key** — changed `key={session.app_name}` to `key={`${session.app_name}-${index}`}` in `ActivityCapturePanel.tsx` (line 96); eliminates duplicate-key React warnings if the same app ever appears multiple times. 2026-06-24
+- [x] **ActivityCapturePanel uses app_name as React key** — changed `key={session.app_name}` to `key={`${session.app_name}-${index}`}` in `ActivityCapturePanel.tsx` (line 97); eliminates duplicate-key React warnings when the same app appears more than once in `latestSessionSummaries`. 2026-06-24
 
 ## In Progress
 _(none)_
