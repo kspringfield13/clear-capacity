@@ -10,7 +10,7 @@ import type {
   WorkBlock,
   AIConfig,
 } from "../../../../../packages/domain/src/models";
-import type { PersistedForecastRecord, PersistedNarrativeRecord } from "../../services/localStore";
+import type { PersistedForecastRecord, PersistedNarrativeRecord, ForecastAccuracyReview } from "../../services/localStore";
 import type { computeWeeklyCapacitySnapshot, generateWeeklyNarrative } from "../../../../../packages/inference/src/capacity";
 
 import { CompactWidget } from "../compact/CompactWidget";
@@ -69,6 +69,7 @@ interface ScreenRouterProps {
   nextWeekRangeLabel: string;
   // forecast screen
   generatedForecast: PersistedForecastRecord | null;
+  forecastAccuracy: ForecastAccuracyReview | null;
   forecastStatus: "idle" | "generating" | "error";
   forecastError: string | null;
   onGenerateForecast: () => void;
@@ -126,6 +127,7 @@ export function ScreenRouter({
   weekRangeLabel,
   nextWeekRangeLabel,
   generatedForecast,
+  forecastAccuracy,
   forecastStatus,
   forecastError,
   onGenerateForecast,
@@ -229,6 +231,7 @@ export function ScreenRouter({
           snapshot={snapshot}
           nextWeekRangeLabel={nextWeekRangeLabel}
           generatedForecast={generatedForecast}
+          forecastAccuracy={forecastAccuracy}
           forecastStatus={forecastStatus}
           forecastError={forecastError}
           onGenerateForecast={onGenerateForecast}

@@ -24,6 +24,7 @@ interface UseForecastAgentParams {
   isDemoMode: boolean;
   blocks: WorkBlock[];
   setGeneratedForecast: React.Dispatch<React.SetStateAction<PersistedForecastRecord | null>>;
+  setForecastHistory: React.Dispatch<React.SetStateAction<PersistedForecastRecord[]>>;
   snapshot: WeeklyCapacitySnapshot;
   activeWindowSessions: ActivitySession[];
   currentWeekId: string;
@@ -40,6 +41,7 @@ export function useForecastAgent({
   isDemoMode,
   blocks,
   setGeneratedForecast,
+  setForecastHistory,
   snapshot,
   activeWindowSessions,
   currentWeekId,
@@ -93,6 +95,12 @@ export function useForecastAgent({
       };
 
       setGeneratedForecast(record);
+      // Append to history so the forecast can be scored against actuals once its
+      // target week arrives. Keep one record per target week (latest wins) and cap
+      // the trail to the most recent 24 weeks.
+      setForecastHistory((current) =>
+        [...current.filter((entry) => entry.generated_for_week !== nextWeekId), record].slice(-24)
+      );
       forecastAsync.setStatus("idle");
       setAuditEvents((current) => [
         ...current,
