@@ -51,6 +51,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **7-day heatmap looks broken when only a day or two has data** — count active days after `buildGrid`; if `daysWithActivity < 2` render eyebrow + `.heatmap-sparse-caption` ("Limited activity so far — the pattern fills in as you keep tracking") instead of the broken-looking sparse grid; added `.heatmap-sparse-caption` (`--text-subtle`, 12px) in `styles.css`; self-review passed. (2026-06-23)
 - [x] **LedgerScreen search is not wired** — wired `searchQuery` state to the existing search input; filters `visibleBlocks` by project_name/stakeholder_group/category/mode (case-insensitive); Escape clears search; "No blocks match" empty state with "Clear search" CTA when no results; self-review passed. (2026-06-24)
 - [x] **ConfidenceChip shows "Needs review 0%"** — when `value === 0` now renders "Unscored" (muted chip, no percentage) in `ConfidenceChip.tsx`; added `.confidence.unscored` light + dark CSS in `styles.css`; self-review passed. (2026-06-24)
+- [x] **ConfidenceChip percentage has no context** — added `title={`${pct}% classification confidence`}` to `.confidence` span in `ConfidenceChip.tsx`; extracted `pct` variable to avoid double computation; self-review passed. (2026-06-24)
 
 ## In Progress
 _(none)_
@@ -58,7 +59,6 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
-- [ ] **ConfidenceChip percentage has no context** — the bare "Medium 76%" / "High 95%" / "Needs review 72%" chip in `components/common/ConfidenceChip.tsx` appears on every BlockCard topline (daily + ledger) but never says the number is *classification confidence*; add `title={`${pct}% classification confidence`}` to the `.confidence` span so a hover explains what it measures.
 - [ ] **WeeklyCapacityScreen "Next week" button title doesn't reflect disabled state** — in `components/capacity/WeeklyCapacityScreen.tsx` (line ~108) `title="Next week"` stays static even when the button is disabled; change to `title="Cannot navigate past current week"` (and matching `aria-label`) when `isCurrentWeek` is true.
 - [ ] **AuditLogScreen Escape key clears filter** — in `components/audit/AuditLogScreen.tsx`, add an `onKeyDown` handler on the search input so pressing Escape resets both `query` and `filter` to defaults, matching the existing "Clear filters" button (and the Escape-clears-search pattern already used in LedgerScreen).
 - [ ] **BlockCard time error has no live region** — in `components/ledger/BlockCard.tsx`, the `timeError` state only toggles the `.time-range-editor--error` CSS class (invisible to screen readers); add a visually-hidden `role="alert"` message "End time must be after start time" rendered alongside the error state.
