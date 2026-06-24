@@ -93,8 +93,8 @@ export function ActivityCapturePanel({
       {visualContextError && <p className="capture-error">{visualContextError}</p>}
       {latestSessionSummaries.length > 0 && (
         <div className="session-list">
-          {latestSessionSummaries.map((session) => (
-            <div key={session.app_name}>
+          {latestSessionSummaries.map((session, index) => (
+            <div key={`${session.app_name}-${index}`}>
               <span>{session.app_name}</span>
               <strong>{session.duration_minutes} min</strong>
               <small>
