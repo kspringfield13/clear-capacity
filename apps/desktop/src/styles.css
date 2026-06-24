@@ -4608,6 +4608,13 @@ h3 {
   color: #aa4d00;
 }
 
+.confidence.unscored {
+  border-color: var(--border);
+  background: var(--surface-muted);
+  color: var(--text-subtle);
+  font-weight: 500;
+}
+
 .blocker-badge {
   border-color: rgba(239, 68, 68, 0.4);
   background: var(--red-soft);
@@ -5260,6 +5267,12 @@ html[data-theme="dark"] .confidence.low {
   border-color: #624b18;
   background: var(--amber-soft);
   color: #f6c65d;
+}
+
+html[data-theme="dark"] .confidence.unscored {
+  border-color: var(--border);
+  background: var(--surface-muted);
+  color: var(--text-subtle);
 }
 
 html[data-theme="dark"] .blocker-badge {
