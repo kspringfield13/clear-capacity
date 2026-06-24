@@ -49,6 +49,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **Completed onboarding steps are struck through** — removed `text-decoration: line-through` from `.onboarding-step.is-done > span:last-child` in `styles.css`; completed steps now read as settled (muted color + green check) rather than deleted; self-review passed. (2026-06-23)
 - [x] **Heatmap cells are invisible to screen readers** — added `role="group"` + `aria-label` summary to `.heatmap-grid`; each populated cell gets `role="img"` + `aria-label` ("Today 6 am–7 am, 45 min") via new `getDayFullLabel()`/`formatHourA11y()` helpers; empty cells and axis labels get `aria-hidden="true"`; legend changed from `aria-label` to `aria-hidden` (decorative); self-review passed. (2026-06-23)
 - [x] **7-day heatmap looks broken when only a day or two has data** — count active days after `buildGrid`; if `daysWithActivity < 2` render eyebrow + `.heatmap-sparse-caption` ("Limited activity so far — the pattern fills in as you keep tracking") instead of the broken-looking sparse grid; added `.heatmap-sparse-caption` (`--text-subtle`, 12px) in `styles.css`; self-review passed. (2026-06-23)
+- [x] **LedgerScreen search is not wired** — wired `searchQuery` state to the existing search input; filters `visibleBlocks` by project_name/stakeholder_group/category/mode (case-insensitive); Escape clears search; "No blocks match" empty state with "Clear search" CTA when no results; self-review passed. (2026-06-24)
 
 ## In Progress
 _(none)_
@@ -56,6 +57,10 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
+- [ ] **ConfidenceChip shows "Needs review 0%"** — when `value === 0` render "Unscored" (no percentage) so brand-new blocks don't claim "Needs review" with a meaningless 0%.
+- [ ] **BlockCard time error has no live region** — `timeError` CSS class on `.time-range-editor--error` is invisible to screen readers; add a visually-hidden `role="alert"` message "End time must be after start time" alongside the error state.
+- [ ] **WeeklyCapacityScreen "Next week" button title doesn't reflect disabled state** — `title="Next week"` stays static; change to `title="Cannot navigate past current week"` when `isCurrentWeek` is true.
+- [ ] **AuditLogScreen Escape key clears filter** — add `onKeyDown` handler on the search input so pressing Escape resets both `query` and `filter` to defaults, matching the existing "Clear filters" button behavior.
 
 ### New Features
 

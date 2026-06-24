@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Search, PieChart, Monitor } from "lucide-react";
 import type {
   WorkBlock,
@@ -43,10 +44,23 @@ export function LedgerScreen({
   onExclude: (blockId: string) => void;
   onRelabel: (blockId: string, field: keyof WorkBlock, value: WorkBlock[keyof WorkBlock]) => void;
 }) {
+  const [searchQuery, setSearchQuery] = useState("");
+
   const classifiedSessionIds = new Set(blocks.flatMap((block) => block.derived_from));
   const unclassifiedSessionCount = activeWindowSessions.filter(
     (session) => !classifiedSessionIds.has(session.session_id) && session.sample_count >= 2
   ).length;
+
+  const q = searchQuery.toLowerCase();
+  const visibleBlocks = q
+    ? blocks.filter((b) =>
+        b.project_name.toLowerCase().includes(q) ||
+        b.stakeholder_group.toLowerCase().includes(q) ||
+        b.category.toLowerCase().includes(q) ||
+        b.mode.toLowerCase().includes(q)
+      )
+    : blocks;
+
   const current = blocks[7] ?? blocks[0];
   return (
     <section className="screen ledger-screen">
@@ -57,7 +71,13 @@ export function LedgerScreen({
         </div>
         <div className="search-box">
           <Search size={17} />
-          <input aria-label="Search work blocks" placeholder="Search project, stakeholder, category" />
+          <input
+            aria-label="Search work blocks"
+            placeholder="Search project, stakeholder, category"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Escape") setSearchQuery(""); }}
+          />
         </div>
       </div>
       {current && (
@@ -111,9 +131,23 @@ export function LedgerScreen({
             </button>
           )}
         </EmptyState>
+      ) : visibleBlocks.length === 0 ? (
+        <EmptyState
+          icon={Monitor}
+          title="No blocks match."
+          description={`No work blocks match "${searchQuery}". Try a different project name, stakeholder, category, or mode.`}
+        >
+          <button
+            type="button"
+            className="secondary-action"
+            onClick={() => setSearchQuery("")}
+          >
+            Clear search
+          </button>
+        </EmptyState>
       ) : (
         <div className="ledger-list">
-          {blocks.map((block) => (
+          {visibleBlocks.map((block) => (
             <BlockCard
               block={block}
               key={block.work_block_id}

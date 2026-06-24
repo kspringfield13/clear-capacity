@@ -43,3 +43,7 @@
 - 19:30 UTC — **improve**: Completed onboarding steps no longer struck through — removed `text-decoration: line-through` from `.onboarding-step.is-done > span:last-child` in `styles.css`; steps read as settled (muted color + green check) rather than deleted; self-review passed
 - 20:05 UTC — **improve**: Heatmap a11y — added `role="group"` + `aria-label` summary ("7-day activity heatmap, peak N min") to `.heatmap-grid`; each populated cell gets `role="img"` + descriptive `aria-label` via `getDayFullLabel()`/`formatHourA11y()` helpers; empty cells and axis labels marked `aria-hidden="true"`; legend changed to `aria-hidden` (decorative); `ActivityHeatmap.tsx`; self-review passed
 - 21:00 UTC — **improve**: Heatmap sparse-data caption — when `daysWithActivity < 2`, render muted "Limited activity so far — the pattern fills in as you keep tracking" caption instead of the broken-looking sparse grid; added `.heatmap-sparse-caption` (`--text-subtle`) in `styles.css`; `ActivityHeatmap.tsx`; self-review passed
+
+## 2026-06-24
+
+- 00:00 UTC — **improve**: LedgerScreen search wired — added `searchQuery` state + case-insensitive filter across project_name/stakeholder_group/category/mode; Escape clears search; "No blocks match" `EmptyState` with "Clear search" CTA when no results; `LedgerScreen.tsx`; self-review passed
