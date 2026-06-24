@@ -20,6 +20,7 @@ interface PersistableState {
   corrections: UserCorrection[];
   reviewSuggestions: ReviewCopilotSuggestion[];
   generatedForecast: PersistedForecastRecord | null;
+  forecastHistory: PersistedForecastRecord[];
   visualContextEnabled: boolean;
   visualContextInsights: VisualContextInsight[];
   managerSummaryText: string | null;
@@ -47,6 +48,7 @@ export function usePersistence(state: PersistableState) {
     persistData.corrections,
     persistData.reviewSuggestions,
     persistData.generatedForecast,
+    persistData.forecastHistory,
     persistData.visualContextEnabled,
     persistData.visualContextInsights,
     persistData.managerSummaryText,

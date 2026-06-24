@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ClipboardCopy, Pencil, RefreshCw, FileText } from "lucide-react";
+import { ClipboardCopy, Download, Pencil, RefreshCw, FileText } from "lucide-react";
 import type { PersistedNarrativeRecord } from "../../services/localStore";
 import { generateWeeklyNarrative } from "../../../../../packages/inference/src/capacity";
 import { displaySafeNarrative, replaceIsoWeekIds } from "../../lib/date";
@@ -32,6 +32,23 @@ export function NarrativeScreen({
   const generatedManagerText = `${displayNarrative.headline}\n\n${displayNarrative.manager_ready_summary}`;
   const managerText = replaceIsoWeekIds(managerSummaryText ?? generatedManagerText, weekRangeLabel);
 
+  const firstBreak = managerText.indexOf('\n\n');
+  const markdownContent = firstBreak > -1
+    ? `# Capacity Narrative — ${weekRangeLabel}\n\n## ${managerText.slice(0, firstBreak).trim()}\n\n${managerText.slice(firstBreak + 2).trim()}`
+    : `# Capacity Narrative — ${weekRangeLabel}\n\n${managerText.trim()}`;
+
+  function handleDownload() {
+    const header = `Capacity Narrative — ${weekRangeLabel}\n${"─".repeat(48)}\n\n`;
+    const slug = weekRangeLabel.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+    const blob = new Blob([header + managerText], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `capacity-narrative-${slug}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   if (!hasNarrativeEvidence) {
     return (
       <section className="screen narrative-screen">
@@ -56,7 +73,7 @@ export function NarrativeScreen({
         <div className="screen-header">
           <div>
             <p className="eyebrow">Weekly narrative</p>
-            <h1>Generate an OpenAI-backed weekly narrative.</h1>
+            <h1>{generationStatus === "generating" ? "Generating your narrative…" : "Generate an OpenAI-backed weekly narrative."}</h1>
           </div>
           <button
             className="primary-action"
@@ -68,16 +85,51 @@ export function NarrativeScreen({
             <span>{generationStatus === "generating" ? "Generating…" : "Generate Narrative"}</span>
           </button>
         </div>
-        <EmptyState
-          icon={FileText}
-          title="Ready to generate."
-          description="The prompt will include the current ledger, daily review corrections, weekly capacity metrics, Outlook imports, and active-window session context. It is sent to OpenAI only when generation runs."
-        />
-        {generationError && (
-          <div className="error-row">
-            <p className="narrative-error">{generationError}</p>
-            <button type="button" className="error-retry" onClick={onRegenerate}>Try again</button>
+        {generationStatus === "generating" ? (
+          <div className="narrative-skeleton">
+            <div className="narrative-skeleton-panel">
+              <span className="skeleton-line" style={{ height: 11, width: "35%" }} />
+              <span className="skeleton-line" style={{ height: 20, width: "55%" }} />
+              <span className="skeleton-line" style={{ height: 12, width: "90%", marginTop: 8 }} />
+              <span className="skeleton-line" style={{ height: 12, width: "80%" }} />
+              <span className="skeleton-line" style={{ height: 12, width: "85%" }} />
+              <span className="skeleton-line" style={{ height: 12, width: "60%" }} />
+              <span className="skeleton-line" style={{ height: 11, width: "30%", marginTop: 12 }} />
+              {[0, 1, 2].map((i) => (
+                <span className="skeleton-line" key={i} style={{ height: 11, width: `${70 + i * 7}%` }} />
+              ))}
+            </div>
+            <div className="narrative-skeleton-panel">
+              <span className="skeleton-line" style={{ height: 11, width: "40%" }} />
+              <span className="skeleton-line" style={{ height: 20, width: "65%" }} />
+              <span className="skeleton-line" style={{ height: 80, width: "100%", marginTop: 8, borderRadius: 8 }} />
+              <span className="skeleton-line" style={{ height: 12, width: "75%", marginTop: 4 }} />
+              <span className="skeleton-line" style={{ height: 12, width: "55%" }} />
+            </div>
           </div>
+        ) : (
+          <>
+            <EmptyState
+              icon={FileText}
+              title="Ready to generate."
+              description="The prompt will include the current ledger, daily review corrections, weekly capacity metrics, Outlook imports, and active-window session context. It is sent to OpenAI only when generation runs."
+            >
+              <button
+                type="button"
+                className="primary-action"
+                onClick={onRegenerate}
+              >
+                <RefreshCw size={18} />
+                <span>Generate Narrative</span>
+              </button>
+            </EmptyState>
+            {generationError && (
+              <div className="error-row">
+                <p className="narrative-error">{generationError}</p>
+                <button type="button" className="error-retry" onClick={onRegenerate}>Try again</button>
+              </div>
+            )}
+          </>
         )}
       </section>
     );
@@ -106,16 +158,24 @@ export function NarrativeScreen({
             <span>{generationStatus === "generating" ? "Generating…" : "Regenerate Narrative"}</span>
           </button>
           <button
+            className="secondary-action"
+            type="button"
+            onClick={handleDownload}
+          >
+            <Download size={17} />
+            <span>Download .txt</span>
+          </button>
+          <button
             className="primary-action"
             type="button"
             onClick={() => {
-              void navigator.clipboard?.writeText(managerText);
+              void navigator.clipboard?.writeText(markdownContent);
               setCopied(true);
               window.setTimeout(() => setCopied(false), 1400);
             }}
           >
             <ClipboardCopy size={18} />
-            <span>{copied ? "Summary Copied" : "Copy Summary"}</span>
+            <span>{copied ? "Copied!" : "Copy as Markdown"}</span>
           </button>
         </div>
       </div>

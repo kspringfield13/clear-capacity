@@ -1,4 +1,5 @@
-import { Search, TimerReset, Monitor } from "lucide-react";
+import { useState } from "react";
+import { Search, PieChart, Monitor } from "lucide-react";
 import type {
   WorkBlock,
   ActiveWindowSample,
@@ -10,6 +11,7 @@ import { pct } from "../../lib/format";
 import { BlockCard } from "./BlockCard";
 import { EmptyState } from "../common/EmptyState";
 import { ActivityCapturePanel } from "./ActivityCapturePanel";
+import { ActivityHeatmap } from "./ActivityHeatmap";
 
 export function LedgerScreen({
   blocks,
@@ -42,10 +44,23 @@ export function LedgerScreen({
   onExclude: (blockId: string) => void;
   onRelabel: (blockId: string, field: keyof WorkBlock, value: WorkBlock[keyof WorkBlock]) => void;
 }) {
+  const [searchQuery, setSearchQuery] = useState("");
+
   const classifiedSessionIds = new Set(blocks.flatMap((block) => block.derived_from));
   const unclassifiedSessionCount = activeWindowSessions.filter(
     (session) => !classifiedSessionIds.has(session.session_id) && session.sample_count >= 2
   ).length;
+
+  const q = searchQuery.trim().toLowerCase();
+  const visibleBlocks = q
+    ? blocks.filter((b) =>
+        b.project_name.toLowerCase().includes(q) ||
+        (b.stakeholder_group ?? "").toLowerCase().includes(q) ||
+        b.category.toLowerCase().includes(q) ||
+        b.mode.toLowerCase().includes(q)
+      )
+    : blocks;
+
   const current = blocks[7] ?? blocks[0];
   return (
     <section className="screen ledger-screen">
@@ -56,7 +71,13 @@ export function LedgerScreen({
         </div>
         <div className="search-box">
           <Search size={17} />
-          <input aria-label="Search work blocks" placeholder="Search project, stakeholder, category" />
+          <input
+            aria-label="Search work blocks"
+            placeholder="Search project, stakeholder, category"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Escape") setSearchQuery(""); }}
+          />
         </div>
       </div>
       {current && (
@@ -67,8 +88,11 @@ export function LedgerScreen({
             <span>{compactCategory(current.category)} · {current.mode}</span>
           </div>
           <div className="pulse-meter">
-            <TimerReset size={20} />
-            <strong>{pct(current.estimated_capacity_pct)}</strong>
+            <PieChart size={20} />
+            <div className="pulse-meter-val">
+              <strong>{pct(current.estimated_capacity_pct)}</strong>
+              <span className="capacity-caption">of week</span>
+            </div>
           </div>
         </section>
       )}
@@ -85,15 +109,45 @@ export function LedgerScreen({
         paused={paused}
         onClassifySessions={onClassifySessions}
       />
+      <ActivityHeatmap sessions={activeWindowSessions} />
       {blocks.length === 0 ? (
         <EmptyState
           icon={Monitor}
           title="No work blocks yet."
           description="ClearCapacity now starts empty. Import an Outlook .ics export or let active-window capture build local sessions, then use Classify sessions to draft reviewable work blocks."
-        />
+        >
+          {unclassifiedSessionCount > 0 && (
+            <button
+              type="button"
+              className="primary-action"
+              disabled={classificationStatus === "classifying"}
+              onClick={onClassifySessions}
+            >
+              <span>
+                {classificationStatus === "classifying"
+                  ? "Classifying…"
+                  : `Classify ${unclassifiedSessionCount} session${unclassifiedSessionCount === 1 ? "" : "s"}`}
+              </span>
+            </button>
+          )}
+        </EmptyState>
+      ) : visibleBlocks.length === 0 ? (
+        <EmptyState
+          icon={Monitor}
+          title="No blocks match."
+          description={`No work blocks match "${searchQuery}". Try a different project name, stakeholder, category, or mode.`}
+        >
+          <button
+            type="button"
+            className="secondary-action"
+            onClick={() => setSearchQuery("")}
+          >
+            Clear search
+          </button>
+        </EmptyState>
       ) : (
         <div className="ledger-list">
-          {blocks.map((block) => (
+          {visibleBlocks.map((block) => (
             <BlockCard
               block={block}
               key={block.work_block_id}

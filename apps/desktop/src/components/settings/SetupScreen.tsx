@@ -1,12 +1,20 @@
+import { useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import {
+  AlertCircle,
   CalendarCheck,
   Check,
+  CheckCircle2,
   ChevronRight,
   Eye,
+  LoaderCircle,
   Lock,
   Monitor,
   Pause,
   Play,
+  PlugZap,
+  RotateCcw,
+  Save,
   Settings,
   ShieldCheck,
   Upload
@@ -22,6 +30,22 @@ import type {
 import { getLocalDateKey } from "../../lib/date";
 import { formatAuditTime } from "../../lib/format";
 import { MAX_VISUAL_CONTEXT_CAPTURES_PER_DAY } from "../../lib/constants";
+import {
+  AI_PROVIDER_PRESETS,
+  createDefaultAIConfig,
+  getAIProviderPreset,
+  upgradeRetiredAppDefault
+} from "../../services/aiProviders";
+
+interface TestConnectionResponse {
+  provider: string;
+  model: string;
+  message: string;
+}
+
+type ProviderStatus =
+  | { tone: "success" | "error" | "info"; message: string }
+  | null;
 
 export function SetupScreen({
   paused,
@@ -71,34 +95,81 @@ export function SetupScreen({
   }, null);
   const visualCapturesToday = visualContextInsights.filter((insight) => getLocalDateKey(new Date(insight.captured_at)) === getLocalDateKey()).length;
 
-  const providers: { value: AIProvider; label: string; defaultBase?: string; defaultModel?: string; defaultVision?: string }[] = [
-    { value: "openai", label: "OpenAI", defaultBase: "https://api.openai.com/v1", defaultModel: "gpt-4o", defaultVision: "gpt-4o" },
-    { value: "grok", label: "Grok (xAI)", defaultBase: "https://api.x.ai/v1", defaultModel: "grok-2-1212", defaultVision: "grok-2-1212" },
-    { value: "deepseek", label: "DeepSeek", defaultBase: "https://api.deepseek.com", defaultModel: "deepseek-chat", defaultVision: "deepseek-chat" },
-    { value: "claude", label: "Claude (Anthropic)", defaultBase: "https://api.anthropic.com/v1", defaultModel: "claude-3-5-sonnet-20241022", defaultVision: "claude-3-5-sonnet-20241022" },
-    { value: "custom", label: "Custom / OpenAI Compatible" },
-  ];
+  const [draftConfig, setDraftConfig] = useState<AIConfig>(() =>
+    upgradeRetiredAppDefault(aiConfig || createDefaultAIConfig())
+  );
+  const [providerStatus, setProviderStatus] = useState<ProviderStatus>(() =>
+    aiConfig && aiConfig.model !== upgradeRetiredAppDefault(aiConfig).model
+      ? { tone: "info", message: `Updated the retired ${aiConfig.model} default. Save to keep the new model.` }
+      : null
+  );
+  const [isTesting, setIsTesting] = useState(false);
+  const selectedPreset = getAIProviderPreset(draftConfig.provider);
+  const isDirty = !aiConfig || JSON.stringify(draftConfig) !== JSON.stringify(aiConfig);
 
-  const currentConfig: AIConfig = aiConfig || {
-    provider: "openai",
-    apiKey: "",
-    baseUrl: "https://api.openai.com/v1",
-    model: "gpt-4o",
-    visionModel: "gpt-4o",
+  const updateDraftConfig = (patch: Partial<AIConfig>) => {
+    const newConfig: AIConfig = { ...draftConfig, ...patch };
+    if (patch.provider) {
+      const preset = getAIProviderPreset(patch.provider);
+      newConfig.baseUrl = preset.baseUrl;
+      newConfig.model = preset.model;
+      newConfig.visionModel = preset.visionModel;
+    }
+    setDraftConfig(newConfig);
+    setProviderStatus(null);
   };
 
-  const updateAIConfig = (patch: Partial<AIConfig>) => {
-    const newConfig: AIConfig = { ...currentConfig, ...patch };
-    // auto fill defaults on provider change
-    if (patch.provider) {
-      const p = providers.find(pp => pp.value === patch.provider);
-      if (p) {
-        if (p.defaultBase) newConfig.baseUrl = p.defaultBase;
-        if (p.defaultModel) newConfig.model = p.defaultModel;
-        if (p.defaultVision) newConfig.visionModel = p.defaultVision;
-      }
+  const restoreDefaults = () => {
+    const defaults = createDefaultAIConfig(draftConfig.provider);
+    setDraftConfig({ ...defaults, apiKey: draftConfig.apiKey });
+    setProviderStatus({ tone: "info", message: `Restored the recommended ${selectedPreset.label} settings.` });
+  };
+
+  const saveAIConfig = () => {
+    const config = {
+      ...draftConfig,
+      apiKey: draftConfig.apiKey.trim(),
+      baseUrl: draftConfig.baseUrl?.trim().replace(/\/+$/, ""),
+      model: draftConfig.model.trim(),
+      visionModel: draftConfig.visionModel?.trim() || undefined
+    };
+    if (!config.apiKey || !config.baseUrl || !config.model) {
+      setProviderStatus({ tone: "error", message: "API key, base URL, and model are required." });
+      return;
     }
-    setAiConfig(newConfig);
+    setDraftConfig(config);
+    setAiConfig(config);
+    setProviderStatus({ tone: "success", message: "Provider settings saved locally." });
+  };
+
+  const testConnection = async () => {
+    if (!draftConfig.apiKey.trim() || !draftConfig.baseUrl?.trim() || !draftConfig.model.trim()) {
+      setProviderStatus({ tone: "error", message: "Enter an API key, base URL, and model before testing." });
+      return;
+    }
+
+    setIsTesting(true);
+    setProviderStatus(null);
+    try {
+      const result = await invoke<TestConnectionResponse>("test_ai_connection", {
+        request: {
+          aiConfig: {
+            ...draftConfig,
+            apiKey: draftConfig.apiKey.trim(),
+            baseUrl: draftConfig.baseUrl.trim().replace(/\/+$/, ""),
+            model: draftConfig.model.trim()
+          }
+        }
+      });
+      setProviderStatus({ tone: "success", message: result.message });
+    } catch (error) {
+      setProviderStatus({
+        tone: "error",
+        message: error instanceof Error ? error.message : String(error)
+      });
+    } finally {
+      setIsTesting(false);
+    }
   };
 
   return (
@@ -170,10 +241,10 @@ export function SetupScreen({
           <span>{activeWindowSamples.length} samples stored</span>
           {captureError && <small className="import-error">{captureError}</small>}
         </div>
-        <button className="settings-control" type="button" onClick={() => setPaused(!paused)}>
-          {paused ? <Play size={16} /> : <Pause size={16} />}
-          {paused ? "Resume Tracking" : "Pause Tracking"}
-        </button>
+        <span className={paused ? "source-status is-paused" : "source-status is-active"}>
+          {paused ? <Pause size={13} /> : <span className="source-status-dot" />}
+          {paused ? "Paused" : "Active"}
+        </span>
       </section>
 
       <section className="settings-row">
@@ -237,56 +308,98 @@ export function SetupScreen({
 
             <div className="ai-form">
               <div className="ai-field">
-                <label>Provider</label>
+                <label htmlFor="ai-provider">Provider</label>
                 <select
-                  value={currentConfig.provider}
-                  onChange={(e) => updateAIConfig({ provider: e.target.value as AIProvider })}
+                  id="ai-provider"
+                  value={draftConfig.provider}
+                  onChange={(e) => updateDraftConfig({ provider: e.target.value as AIProvider })}
                 >
-                  {providers.map(p => (
+                  {AI_PROVIDER_PRESETS.map(p => (
                     <option key={p.value} value={p.value}>{p.label}</option>
                   ))}
                 </select>
               </div>
 
               <div className="ai-field">
-                <label>API Key</label>
+                <label htmlFor="ai-api-key">API Key</label>
                 <input
+                  id="ai-api-key"
                   type="password"
-                  placeholder="sk-..."
-                  value={currentConfig.apiKey}
-                  onChange={(e) => updateAIConfig({ apiKey: e.target.value })}
+                  autoComplete="off"
+                  placeholder={selectedPreset.keyPlaceholder}
+                  value={draftConfig.apiKey}
+                  onChange={(e) => updateDraftConfig({ apiKey: e.target.value })}
                 />
               </div>
 
               <div className="ai-field">
-                <label>Base URL</label>
+                <label htmlFor="ai-base-url">Base URL</label>
                 <input
+                  id="ai-base-url"
                   type="text"
                   placeholder="https://api.example.com/v1"
-                  value={currentConfig.baseUrl || ''}
-                  onChange={(e) => updateAIConfig({ baseUrl: e.target.value || undefined })}
+                  value={draftConfig.baseUrl || ""}
+                  onChange={(e) => updateDraftConfig({ baseUrl: e.target.value || undefined })}
                 />
               </div>
 
               <div className="ai-field">
-                <label>Model</label>
+                <label htmlFor="ai-model">Model</label>
                 <input
+                  id="ai-model"
                   type="text"
-                  placeholder="gpt-4o"
-                  value={currentConfig.model}
-                  onChange={(e) => updateAIConfig({ model: e.target.value })}
+                  placeholder={selectedPreset.model || "provider-model-id"}
+                  value={draftConfig.model}
+                  onChange={(e) => updateDraftConfig({ model: e.target.value })}
                 />
+                <small>{selectedPreset.modelNote}</small>
               </div>
 
               <div className="ai-field">
-                <label>Vision Model</label>
+                <label htmlFor="ai-vision-model">Vision Model <span>Optional</span></label>
                 <input
+                  id="ai-vision-model"
                   type="text"
-                  placeholder="gpt-4o (optional)"
-                  value={currentConfig.visionModel || ''}
-                  onChange={(e) => updateAIConfig({ visionModel: e.target.value || undefined })}
+                  placeholder={selectedPreset.visionModel || "No recommended vision model"}
+                  value={draftConfig.visionModel || ""}
+                  onChange={(e) => updateDraftConfig({ visionModel: e.target.value || undefined })}
                 />
               </div>
+            </div>
+
+            <div className="ai-provider-footer">
+              <button className="ai-text-button" type="button" onClick={restoreDefaults}>
+                <RotateCcw size={14} />
+                Restore recommended defaults
+              </button>
+              <div className="ai-provider-actions">
+                <button className="settings-control" type="button" onClick={testConnection} disabled={isTesting}>
+                  {isTesting ? <LoaderCircle className="spin" size={15} /> : <PlugZap size={15} />}
+                  {isTesting ? "Testing…" : "Test Connection"}
+                </button>
+                <button className="primary-action" type="button" onClick={saveAIConfig} disabled={!isDirty}>
+                  <Save size={15} />
+                  {isDirty ? "Save Settings" : "Saved"}
+                </button>
+              </div>
+            </div>
+
+            <div
+              className={providerStatus ? `ai-provider-status is-${providerStatus.tone}` : undefined}
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {providerStatus && (
+                <>
+                  {providerStatus.tone === "success"
+                    ? <CheckCircle2 size={15} />
+                    : providerStatus.tone === "error"
+                      ? <AlertCircle size={15} />
+                      : <Settings size={15} />}
+                  <span>{providerStatus.message}</span>
+                </>
+              )}
             </div>
           </div>
         </div>

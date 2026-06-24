@@ -1,14 +1,11 @@
 import { useState, useCallback } from "react";
 import type {
+  AuditEvent,
   WorkBlock,
   OutlookCalendarEvent,
   UserCorrection,
   ReviewCopilotSuggestion,
 } from "../../../../packages/domain/src/models";
-import { removeSeededWorkBlocks, removeSeededCorrections } from "../lib/blocks";
-import { outlookEventsToWorkBlocks, parseOutlookIcs } from "../../../../packages/integrations/src/calendar/outlookIcs";
-import { createAuditEvent } from "../lib/audit";
-import type { PersistedAppState } from "../services/localStore"; // rough
 
 interface UseBlocksLedgerParams {
   initialBlocks: WorkBlock[];
@@ -17,7 +14,7 @@ interface UseBlocksLedgerParams {
   initialReviewSuggestions: ReviewCopilotSuggestion[];
   currentWeekId: string;
   isDemoMode: boolean;
-  addAuditEvent: (event: any) => void; // for side effect
+  addAuditEvent: (event: Omit<AuditEvent, "event_id" | "timestamp"> & { timestamp?: string }) => void;
 }
 
 export function useBlocksLedger(params: UseBlocksLedgerParams) {
@@ -115,13 +112,6 @@ export function useBlocksLedger(params: UseBlocksLedgerParams) {
     });
   }, [blocks, addCorrection]);
 
-  const importOutlookIcs = useCallback((file: File) => {
-    // Note: the actual reader logic can stay in App or be moved fully.
-    // For now the hook provides the setter API.
-    // Full implementation would move the FileReader here.
-    console.warn("importOutlookIcs logic partially moved - full file handling recommended in hook or service");
-  }, []);
-
   // Expose setters for more complex cases like AI results
   return {
     blocks,
@@ -135,7 +125,6 @@ export function useBlocksLedger(params: UseBlocksLedgerParams) {
     updateBlock,
     confirmBlock,
     excludeBlock,
-    importOutlookIcs,
     addCorrection,
   };
 }

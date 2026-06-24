@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
 import { BarChart3, ChevronLeft, ChevronRight } from "lucide-react";
-import type { PersistedForecastRecord } from "../../services/localStore";
 import type { WorkBlock } from "../../../../../packages/domain/src/models";
 import { computeWeeklyCapacitySnapshot } from "../../../../../packages/inference/src/capacity";
 import { categoryColors } from "../../../../../packages/domain/src/taxonomy";
@@ -11,30 +10,20 @@ import { MetricCard } from "../common/MetricCard";
 import { StackedBar } from "../common/StackedBar";
 import { BarLine } from "../common/BarLine";
 import { RiskRow } from "../common/RiskRow";
-import { ForecastAgentPanel } from "./ForecastAgentPanel";
 
 export function WeeklyCapacityScreen({
   snapshot: currentSnapshot,
   weekRangeLabel,
-  nextWeekRangeLabel,
-  generatedForecast,
-  forecastStatus,
-  forecastError,
-  onGenerateForecast,
   hasWorkBlocks,
   blocks,
 }: {
   snapshot: ReturnType<typeof computeWeeklyCapacitySnapshot>;
   weekRangeLabel: string;
-  nextWeekRangeLabel: string;
-  generatedForecast: PersistedForecastRecord | null;
-  forecastStatus: "idle" | "generating" | "error";
-  forecastError: string | null;
-  onGenerateForecast: () => void;
   hasWorkBlocks: boolean;
   blocks: WorkBlock[];
 }) {
   const [weekOffset, setWeekOffset] = useState(0);
+  const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
 
   const viewedMonday = useMemo(() => {
     const now = new Date();
@@ -64,6 +53,11 @@ export function WeeklyCapacityScreen({
   );
 
   const isCurrentWeek = weekOffset === 0;
+  const blockerCount = useMemo(() => viewedBlocks.filter((b) => b.blocker_flag).length, [viewedBlocks]);
+  const unallocatedPct = useMemo(() => {
+    const total = snapshot.category_allocation.reduce((acc, item) => acc + item.value, 0);
+    return Math.max(0, 100 - total);
+  }, [snapshot]);
 
   if (!hasWorkBlocks) {
     return (
@@ -71,11 +65,13 @@ export function WeeklyCapacityScreen({
         <div className="screen-header">
           <div>
             <p className="eyebrow">Weekly capacity view</p>
-            <h1>{weekRangeLabel}: waiting for real workload signal.</h1>
-          </div>
-          <div className="summary-score">
-            <span>Summary confidence</span>
-            <strong>--</strong>
+            <div className="headline-with-score">
+              <h1>{weekRangeLabel}: waiting for real workload signal.</h1>
+              <div className="summary-score">
+                <span>Summary confidence</span>
+                <strong>--</strong>
+              </div>
+            </div>
           </div>
         </div>
         <EmptyState
@@ -91,32 +87,36 @@ export function WeeklyCapacityScreen({
     <section className="screen capacity-screen">
       <div className="screen-header">
         <div>
-          <p className="eyebrow">Weekly capacity view</p>
           <div className="week-nav">
-            <button
-              className="week-nav-chevron"
-              type="button"
-              onClick={() => setWeekOffset((o) => o - 1)}
-              aria-label="Previous week"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <h1>{viewedWeekRangeLabel}: {pct(snapshot.reliable_new_work_capacity_pct)} reliable capacity for new planned work.</h1>
-            <button
-              className="week-nav-chevron"
-              type="button"
-              disabled={isCurrentWeek}
-              onClick={() => setWeekOffset((o) => o + 1)}
-              aria-label="Next week"
-            >
-              <ChevronRight size={16} />
-            </button>
+            <p className="eyebrow">Weekly capacity view</p>
+            <div className="week-nav-controls">
+              <button
+                className="week-nav-chevron"
+                type="button"
+                onClick={() => setWeekOffset((o) => o - 1)}
+                aria-label="Previous week"
+                title="Previous week"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <button
+                className="week-nav-chevron"
+                type="button"
+                disabled={isCurrentWeek}
+                onClick={() => setWeekOffset((o) => o + 1)}
+                aria-label={isCurrentWeek ? "Cannot navigate past current week" : "Next week"}
+                title={isCurrentWeek ? "Cannot navigate past current week" : "Next week"}
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
           </div>
-        </div>
-        <div className="header-actions">
-          <div className="summary-score">
-            <span>Summary confidence</span>
-            <strong>{Math.round(snapshot.summary_confidence * 100)}%</strong>
+          <div className="headline-with-score">
+            <h1>{viewedWeekRangeLabel}: {pct(snapshot.reliable_new_work_capacity_pct)} reliable capacity for new planned work.</h1>
+            <div className="summary-score">
+              <span>Summary confidence</span>
+              <strong>{Math.round(snapshot.summary_confidence * 100)}%</strong>
+            </div>
           </div>
         </div>
       </div>
@@ -125,19 +125,8 @@ export function WeeklyCapacityScreen({
         <MetricCard label="Allocated capacity" value={snapshot.allocated_pct} helper="Estimated distribution this week" />
         <MetricCard label="Effective planned work" value={snapshot.planned_pct} helper="Capacity spent on planned work" />
         <MetricCard label="Reactive load" value={snapshot.reactive_pct} helper="Unplanned support and interruption work" />
-        <MetricCard label="Reliable new work" value={snapshot.reliable_new_work_capacity_pct} helper="Forecast for next week" />
+        <MetricCard label="Reliable new work" value={snapshot.reliable_new_work_capacity_pct} helper="Forecast for next week" showRing />
       </div>
-
-      {isCurrentWeek && (
-        <ForecastAgentPanel
-          generatedForecast={generatedForecast}
-          nextWeekRangeLabel={nextWeekRangeLabel}
-          status={forecastStatus}
-          error={forecastError}
-          deterministicReliableCapacity={snapshot.reliable_new_work_capacity_pct}
-          onGenerate={onGenerateForecast}
-        />
-      )}
 
       {!isCurrentWeek && viewedBlocks.length === 0 && (
         <EmptyState
@@ -152,15 +141,33 @@ export function WeeklyCapacityScreen({
           <h2>100% weekly capacity model</h2>
           <span>standard 40-hour baseline</span>
         </div>
-        <StackedBar snapshot={snapshot} />
+        <StackedBar snapshot={snapshot} hoveredCategory={hoveredCategory} onHoverCategory={setHoveredCategory} />
         <div className="allocation-grid">
           {snapshot.category_allocation.map((item) => (
-            <div className="allocation-row" key={item.label}>
+            <div
+              className="allocation-row"
+              key={item.label}
+              title={item.label}
+              style={{ opacity: hoveredCategory && hoveredCategory !== item.label ? 0.35 : 1, transition: "opacity 0.12s" }}
+              onMouseEnter={() => setHoveredCategory(item.label)}
+              onMouseLeave={() => setHoveredCategory(null)}
+            >
               <span className="dot" style={{ background: categoryColors[item.label] }} />
               <span>{item.label}</span>
               <strong>{pct(item.value)}</strong>
             </div>
           ))}
+          {unallocatedPct > 0 && (
+            <div
+              className="allocation-row"
+              title="Hours not yet assigned to a category"
+              style={{ opacity: hoveredCategory ? 0.35 : 1, transition: "opacity 0.12s" }}
+            >
+              <span className="dot" style={{ background: "var(--surface-muted)", border: "1px solid var(--border-strong)" }} />
+              <span>Unallocated / buffer</span>
+              <strong>{pct(unallocatedPct)}</strong>
+            </div>
+          )}
         </div>
       </section>
 
@@ -168,7 +175,7 @@ export function WeeklyCapacityScreen({
         <section className="capacity-section">
           <div className="section-title">
             <h2>Planned vs reactive</h2>
-            <span>politics-to-math translator</span>
+            <span>where your hours actually went</span>
           </div>
           <div className="comparison-bars">
             <BarLine label="Planned" value={snapshot.planned_pct} tone="blue" />
@@ -183,10 +190,37 @@ export function WeeklyCapacityScreen({
             <span>forecast inputs</span>
           </div>
           <div className="risk-list">
-            <RiskRow label="Context switch burden" value={snapshot.context_switch_score} />
-            <RiskRow label="WIP overload" value={snapshot.wip_load_score} />
-            <RiskRow label="Carryover risk" value={snapshot.carryover_risk_pct / 40} />
-            <RiskRow label="Meeting density" value={snapshot.meeting_pct / 35} />
+            <RiskRow
+              label="Context switch burden"
+              value={snapshot.context_switch_score}
+              tooltip="Task-switching cost index: 0 = minimal, 100 = very high burden"
+              hint="/100"
+            />
+            <RiskRow
+              label="WIP overload"
+              value={snapshot.wip_load_score}
+              tooltip="Parallel work-in-progress pressure: 0 = manageable, 100 = critical"
+              hint="/100"
+            />
+            <RiskRow
+              label="Carryover risk"
+              value={snapshot.carryover_risk_pct / 40}
+              tooltip="Likelihood of blocks spilling into next week: 0 = low, 100 = high"
+              hint="/100"
+            />
+            <RiskRow
+              label="Meeting density"
+              value={snapshot.meeting_pct / 35}
+              tooltip="Meeting load relative to capacity: 0 = light, 100 = saturated"
+              hint="/100"
+            />
+            <RiskRow
+              label="Active blockers"
+              value={Math.min(blockerCount / 5, 1)}
+              displayValue={blockerCount}
+              tooltip="Number of work blocks flagged as a blocker this week"
+              dangerActive={blockerCount > 0}
+            />
           </div>
         </section>
       </div>

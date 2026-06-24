@@ -43,6 +43,18 @@ struct ActiveWindowPayload {
 struct NarrativeGenerationRequest {
     prompt: String,
     model: Option<String>,
+    // AI config for multi-provider support
+    ai_config: Option<AIConfigRequest>,
+}
+
+#[derive(Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct AIConfigRequest {
+    provider: Option<String>,
+    api_key: Option<String>,
+    base_url: Option<String>,
+    model: Option<String>,
+    vision_model: Option<String>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -64,6 +76,7 @@ struct NarrativeGenerationResponse {
 struct WorkBlockClassificationRequest {
     prompt: String,
     model: Option<String>,
+    ai_config: Option<AIConfigRequest>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -97,6 +110,7 @@ struct WorkBlockClassificationResponse {
 struct ReviewCopilotRequest {
     prompt: String,
     model: Option<String>,
+    ai_config: Option<AIConfigRequest>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -130,6 +144,7 @@ struct ReviewCopilotResponse {
 struct ForecastAgentRequest {
     prompt: String,
     model: Option<String>,
+    ai_config: Option<AIConfigRequest>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -162,6 +177,53 @@ struct VisualContextRequest {
     window_title: Option<String>,
     session_id: Option<String>,
     model: Option<String>,
+    ai_config: Option<AIConfigRequest>,
+}
+
+#[derive(Deserialize)]
+struct AgentChatRequest {
+    prompt: String,
+    ai_config: Option<AIConfigRequest>,
+}
+
+#[derive(Serialize)]
+struct AgentChatResponse {
+    response: String,
+    model: String,
+}
+
+/// Generic AI request. The frontend owns all operation-specific shape
+/// (instructions, response schema, sampling) and passes it through; Rust keeps
+/// only the native concerns: credential resolution, the HTTP call, optional
+/// screenshot capture (raw bytes never round-trip to JS), and text extraction.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AiCompleteRequest {
+    prompt: String,
+    instructions: String,
+    /// Goes verbatim into body["text"]["format"]: either {"type":"text"} or a
+    /// {"type":"json_schema", ...} block built on the TypeScript side.
+    response_format: Value,
+    model: Option<String>,
+    temperature: Option<f64>,
+    top_p: Option<f64>,
+    reasoning_effort: Option<String>,
+    /// When true, Rust captures a PNG, injects it as input_image, and deletes
+    /// the file immediately. Keeps screenshot bytes out of the frontend bundle.
+    capture_screen: Option<bool>,
+    /// When true, fall back to OPENAI_VISION_MODEL before OPENAI_MODEL.
+    vision_model_fallback: Option<bool>,
+    ai_config: Option<AIConfigRequest>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AiCompleteResponse {
+    output_text: String,
+    model: String,
+    /// Present only when capture_screen was requested.
+    captured_at_ms: Option<u64>,
+    raw_screenshot_retained: Option<bool>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -318,6 +380,21 @@ fn sample_active_window() -> ActiveWindowPayload {
     }
 }
 
+fn model_supports_reasoning_effort(model: &str) -> bool {
+    let normalized = model.to_ascii_lowercase();
+    normalized.starts_with("o1")
+        || normalized.starts_with("o3")
+        || normalized.starts_with("o4")
+        || normalized.starts_with("gpt-5")
+        || normalized.contains("reasoning")
+}
+
+fn with_reasoning_effort_if_supported(body: &mut Value, model: &str) {
+    if model_supports_reasoning_effort(model) {
+        body["reasoning"] = json!({ "effort": "low" });
+    }
+}
+
 fn extract_response_text(value: &Value) -> Option<String> {
     if let Some(output_text) = value.get("output_text").and_then(Value::as_str) {
         return Some(output_text.to_string());
@@ -407,25 +484,160 @@ fn set_activity_capture_paused(activity_state: State<'_, ActivityCaptureState>, 
     activity_state.paused.store(paused, Ordering::SeqCst);
 }
 
-fn openai_api_key() -> Result<String, String> {
-    env::var("OPENAI_API_KEY")
-        .ok()
-        .filter(|value| !value.trim().is_empty())
-        .ok_or_else(|| {
-            "OPENAI_API_KEY is not configured. Add it to the repository's .env file and restart ClearCapacity."
-                .to_string()
+fn get_ai_credentials(config: Option<&AIConfigRequest>) -> Result<(String, String), String> {
+    let provider = config
+        .and_then(|c| c.provider.as_deref())
+        .unwrap_or("openai");
+    let provider_key_name = match provider {
+        "grok" => "XAI_API_KEY",
+        "claude" => "ANTHROPIC_API_KEY",
+        "deepseek" => "DEEPSEEK_API_KEY",
+        _ => "OPENAI_API_KEY",
+    };
+    let api_key = config
+        .and_then(|c| c.api_key.as_deref())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(|s| s.to_string())
+        .or_else(|| {
+            env::var(provider_key_name)
+                .ok()
+                .filter(|v| !v.trim().is_empty())
         })
+        .or_else(|| {
+            if provider == "grok" {
+                env::var("GROK_API_KEY")
+                    .ok()
+                    .filter(|v| !v.trim().is_empty())
+            } else {
+                None
+            }
+        })
+        .ok_or_else(|| {
+            format!(
+                "No API key for provider {}. Set in settings or env.",
+                provider
+            )
+        })?;
+
+    let base_url = config
+        .and_then(|c| c.base_url.as_deref())
+        .map(|s| s.trim_end_matches('/').to_string())
+        .unwrap_or_else(|| match provider {
+            "grok" => "https://api.x.ai/v1".to_string(),
+            "claude" => "https://api.anthropic.com/v1".to_string(),
+            "deepseek" => "https://api.deepseek.com".to_string(),
+            "custom" => "https://api.openai.com/v1".to_string(),
+            _ => "https://api.openai.com/v1".to_string(),
+        });
+
+    Ok((api_key, base_url))
+}
+
+fn extract_provider_error(value: &Value) -> Option<&str> {
+    value
+        .get("error")
+        .and_then(|error| {
+            error
+                .get("message")
+                .and_then(Value::as_str)
+                .or_else(|| error.as_str())
+        })
+        .or_else(|| value.get("message").and_then(Value::as_str))
+        .or_else(|| value.get("detail").and_then(Value::as_str))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct TestAIConnectionRequest {
+    ai_config: AIConfigRequest,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct TestAIConnectionResponse {
+    provider: String,
+    model: String,
+    message: String,
+}
+
+#[tauri::command]
+async fn test_ai_connection(
+    request: TestAIConnectionRequest,
+) -> Result<TestAIConnectionResponse, String> {
+    let config = &request.ai_config;
+    let provider = config.provider.as_deref().unwrap_or("openai");
+    let model = config
+        .model
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| "Enter a model before testing the connection.".to_string())?;
+    let (api_key, base_url) = get_ai_credentials(Some(config))?;
+    let client = reqwest::Client::new();
+    let url = format!("{}/models", base_url.trim_end_matches('/'));
+    let mut request_builder = client.get(url);
+
+    request_builder = if provider == "claude" {
+        request_builder
+            .header("x-api-key", api_key)
+            .header("anthropic-version", "2023-06-01")
+    } else {
+        request_builder.bearer_auth(api_key)
+    };
+
+    let response = request_builder
+        .send()
+        .await
+        .map_err(|error| format!("Could not reach the provider: {error}"))?;
+    let status = response.status();
+    let response_text = response
+        .text()
+        .await
+        .map_err(|error| format!("Provider response could not be read: {error}"))?;
+    let value = serde_json::from_str::<Value>(&response_text).unwrap_or(Value::Null);
+
+    if !status.is_success() {
+        let message =
+            extract_provider_error(&value).unwrap_or("The provider rejected the connection.");
+        return Err(format!("{message} ({status})"));
+    }
+
+    let models = value
+        .get("data")
+        .and_then(Value::as_array)
+        .or_else(|| value.get("models").and_then(Value::as_array));
+    if let Some(models) = models {
+        let model_available = models.iter().any(|item| {
+            item.get("id")
+                .or_else(|| item.get("name"))
+                .and_then(Value::as_str)
+                .is_some_and(|id| id == model)
+        });
+        if !model_available {
+            return Err(format!(
+                "Connected to the provider, but model “{model}” is not available to this API key."
+            ));
+        }
+    }
+
+    Ok(TestAIConnectionResponse {
+        provider: provider.to_string(),
+        model: model.to_string(),
+        message: format!("Connected to {provider}. Model “{model}” is available."),
+    })
 }
 
 #[tauri::command]
 async fn generate_weekly_narrative_with_openai(
     request: NarrativeGenerationRequest,
 ) -> Result<NarrativeGenerationResponse, String> {
-    let api_key = openai_api_key()?;
+    let (api_key, base_url) = get_ai_credentials(request.ai_config.as_ref())?;
     let model = request
         .model
+        .or_else(|| request.ai_config.as_ref().and_then(|c| c.model.clone()))
         .or_else(|| env::var("OPENAI_MODEL").ok())
-        .unwrap_or_else(|| "gpt-5.5".to_string());
+        .unwrap_or_else(|| "gpt-4o".to_string());
     let schema = json!({
       "type": "object",
       "additionalProperties": false,
@@ -443,13 +655,10 @@ async fn generate_weekly_narrative_with_openai(
         "manager_ready_summary": { "type": "string" }
       }
     });
-    let body = json!({
+    let mut body = json!({
       "model": model,
       "store": false,
-      "reasoning": {
-        "effort": "low"
-      },
-      "instructions": "You generate ClearCapacity weekly workload narratives from structured local analyst-work context. Be concrete, concise, explainable, and careful not to overstate certainty. Return only JSON matching the requested schema.",
+      "instructions": "You generate ClearCapacity weekly workload narratives from structured local analyst-work context. Be concrete, concise, explainable, and careful not to overstate certainty. Return only JSON matching the requested schema. Adapt to any model capabilities.",
       "input": request.prompt,
       "text": {
         "format": {
@@ -460,34 +669,35 @@ async fn generate_weekly_narrative_with_openai(
         }
       }
     });
+    with_reasoning_effort_if_supported(&mut body, &model);
 
     let client = reqwest::Client::new();
     let response = client
-        .post("https://api.openai.com/v1/responses")
+        .post(format!("{}/responses", base_url))
         .bearer_auth(api_key)
         .json(&body)
         .send()
         .await
-        .map_err(|error| format!("OpenAI request failed: {error}"))?;
+        .map_err(|error| format!("AI request failed: {error}"))?;
     let status = response.status();
     let value = response
         .json::<Value>()
         .await
-        .map_err(|error| format!("OpenAI response could not be read: {error}"))?;
+        .map_err(|error| format!("AI response could not be read: {error}"))?;
 
     if !status.is_success() {
         let message = value
             .get("error")
             .and_then(|error| error.get("message"))
             .and_then(Value::as_str)
-            .unwrap_or("OpenAI returned an error.");
+            .unwrap_or("AI provider returned an error.");
         return Err(format!("{message} ({status})"));
     }
 
     let output_text = extract_response_text(&value)
-        .ok_or_else(|| "OpenAI response did not include generated text.".to_string())?;
+        .ok_or_else(|| "AI response did not include generated text.".to_string())?;
     let narrative = serde_json::from_str::<GeneratedWeeklyNarrative>(&output_text)
-        .map_err(|error| format!("OpenAI narrative JSON could not be parsed: {error}"))?;
+        .map_err(|error| format!("AI narrative JSON could not be parsed: {error}"))?;
 
     Ok(NarrativeGenerationResponse { narrative, model })
 }
@@ -496,11 +706,12 @@ async fn generate_weekly_narrative_with_openai(
 async fn classify_active_window_sessions_with_openai(
     request: WorkBlockClassificationRequest,
 ) -> Result<WorkBlockClassificationResponse, String> {
-    let api_key = openai_api_key()?;
+    let (api_key, base_url) = get_ai_credentials(request.ai_config.as_ref())?;
     let model = request
         .model
+        .or_else(|| request.ai_config.as_ref().and_then(|c| c.model.clone()))
         .or_else(|| env::var("OPENAI_MODEL").ok())
-        .unwrap_or_else(|| "gpt-5.5".to_string());
+        .unwrap_or_else(|| "gpt-4o".to_string());
     let schema = json!({
       "type": "object",
       "additionalProperties": false,
@@ -579,13 +790,10 @@ async fn classify_active_window_sessions_with_openai(
         }
       }
     });
-    let body = json!({
+    let mut body = json!({
       "model": model,
       "store": false,
-      "reasoning": {
-        "effort": "low"
-      },
-      "instructions": "You classify local macOS active-window sessions into ClearCapacity draft work blocks. Be conservative, evidence-based, and return only JSON matching the requested schema.",
+      "instructions": "You classify local macOS active-window sessions into ClearCapacity draft work blocks. Be conservative, evidence-based, prefer high-confidence only when signals are clear. Return only JSON matching the requested schema.",
       "input": request.prompt,
       "text": {
         "format": {
@@ -596,34 +804,35 @@ async fn classify_active_window_sessions_with_openai(
         }
       }
     });
+    with_reasoning_effort_if_supported(&mut body, &model);
 
     let client = reqwest::Client::new();
     let response = client
-        .post("https://api.openai.com/v1/responses")
+        .post(format!("{}/responses", base_url))
         .bearer_auth(api_key)
         .json(&body)
         .send()
         .await
-        .map_err(|error| format!("OpenAI request failed: {error}"))?;
+        .map_err(|error| format!("AI request failed: {error}"))?;
     let status = response.status();
     let value = response
         .json::<Value>()
         .await
-        .map_err(|error| format!("OpenAI response could not be read: {error}"))?;
+        .map_err(|error| format!("AI response could not be read: {error}"))?;
 
     if !status.is_success() {
         let message = value
             .get("error")
             .and_then(|error| error.get("message"))
             .and_then(Value::as_str)
-            .unwrap_or("OpenAI returned an error.");
+            .unwrap_or("AI provider returned an error.");
         return Err(format!("{message} ({status})"));
     }
 
     let output_text = extract_response_text(&value)
-        .ok_or_else(|| "OpenAI response did not include generated text.".to_string())?;
+        .ok_or_else(|| "AI response did not include generated text.".to_string())?;
     let result = serde_json::from_str::<WorkBlockClassificationResult>(&output_text)
-        .map_err(|error| format!("OpenAI classification JSON could not be parsed: {error}"))?;
+        .map_err(|error| format!("AI classification JSON could not be parsed: {error}"))?;
 
     Ok(WorkBlockClassificationResponse { result, model })
 }
@@ -632,11 +841,12 @@ async fn classify_active_window_sessions_with_openai(
 async fn generate_review_copilot_suggestions_with_openai(
     request: ReviewCopilotRequest,
 ) -> Result<ReviewCopilotResponse, String> {
-    let api_key = openai_api_key()?;
+    let (api_key, base_url) = get_ai_credentials(request.ai_config.as_ref())?;
     let model = request
         .model
+        .or_else(|| request.ai_config.as_ref().and_then(|c| c.model.clone()))
         .or_else(|| env::var("OPENAI_MODEL").ok())
-        .unwrap_or_else(|| "gpt-5.5".to_string());
+        .unwrap_or_else(|| "gpt-4o".to_string());
     let nullable_taxonomy = |values: Vec<&str>| {
         json!({
           "anyOf": [
@@ -730,12 +940,9 @@ async fn generate_review_copilot_suggestions_with_openai(
         }
       }
     });
-    let body = json!({
+    let mut body = json!({
       "model": model,
       "store": false,
-      "reasoning": {
-        "effort": "low"
-      },
       "instructions": "You generate ClearCapacity Daily Review Copilot suggestions. Be conservative, actionable, and return only JSON matching the requested schema.",
       "input": request.prompt,
       "text": {
@@ -747,34 +954,35 @@ async fn generate_review_copilot_suggestions_with_openai(
         }
       }
     });
+    with_reasoning_effort_if_supported(&mut body, &model);
 
     let client = reqwest::Client::new();
     let response = client
-        .post("https://api.openai.com/v1/responses")
+        .post(format!("{}/responses", base_url))
         .bearer_auth(api_key)
         .json(&body)
         .send()
         .await
-        .map_err(|error| format!("OpenAI request failed: {error}"))?;
+        .map_err(|error| format!("AI request failed: {error}"))?;
     let status = response.status();
     let value = response
         .json::<Value>()
         .await
-        .map_err(|error| format!("OpenAI response could not be read: {error}"))?;
+        .map_err(|error| format!("AI response could not be read: {error}"))?;
 
     if !status.is_success() {
         let message = value
             .get("error")
             .and_then(|error| error.get("message"))
             .and_then(Value::as_str)
-            .unwrap_or("OpenAI returned an error.");
+            .unwrap_or("AI provider returned an error.");
         return Err(format!("{message} ({status})"));
     }
 
     let output_text = extract_response_text(&value)
-        .ok_or_else(|| "OpenAI response did not include generated text.".to_string())?;
+        .ok_or_else(|| "AI response did not include generated text.".to_string())?;
     let result = serde_json::from_str::<ReviewCopilotResult>(&output_text)
-        .map_err(|error| format!("OpenAI review suggestions JSON could not be parsed: {error}"))?;
+        .map_err(|error| format!("AI review suggestions JSON could not be parsed: {error}"))?;
 
     Ok(ReviewCopilotResponse { result, model })
 }
@@ -783,11 +991,12 @@ async fn generate_review_copilot_suggestions_with_openai(
 async fn generate_forecast_agent_with_openai(
     request: ForecastAgentRequest,
 ) -> Result<ForecastAgentResponse, String> {
-    let api_key = openai_api_key()?;
+    let (api_key, base_url) = get_ai_credentials(request.ai_config.as_ref())?;
     let model = request
         .model
+        .or_else(|| request.ai_config.as_ref().and_then(|c| c.model.clone()))
         .or_else(|| env::var("OPENAI_MODEL").ok())
-        .unwrap_or_else(|| "gpt-5.5".to_string());
+        .unwrap_or_else(|| "gpt-4o".to_string());
     let string_array = || {
         json!({
           "type": "array",
@@ -839,12 +1048,9 @@ async fn generate_forecast_agent_with_openai(
         "conservative_capacity_pct": pct_number()
       }
     });
-    let body = json!({
+    let mut body = json!({
       "model": model,
       "store": false,
-      "reasoning": {
-        "effort": "low"
-      },
       "instructions": "You generate ClearCapacity next-week capacity forecasts. Be conservative, explainable, planning-oriented, and return only JSON matching the requested schema.",
       "input": request.prompt,
       "text": {
@@ -856,34 +1062,35 @@ async fn generate_forecast_agent_with_openai(
         }
       }
     });
+    with_reasoning_effort_if_supported(&mut body, &model);
 
     let client = reqwest::Client::new();
     let response = client
-        .post("https://api.openai.com/v1/responses")
+        .post(format!("{}/responses", base_url))
         .bearer_auth(api_key)
         .json(&body)
         .send()
         .await
-        .map_err(|error| format!("OpenAI request failed: {error}"))?;
+        .map_err(|error| format!("AI request failed: {error}"))?;
     let status = response.status();
     let value = response
         .json::<Value>()
         .await
-        .map_err(|error| format!("OpenAI response could not be read: {error}"))?;
+        .map_err(|error| format!("AI response could not be read: {error}"))?;
 
     if !status.is_success() {
         let message = value
             .get("error")
             .and_then(|error| error.get("message"))
             .and_then(Value::as_str)
-            .unwrap_or("OpenAI returned an error.");
+            .unwrap_or("AI provider returned an error.");
         return Err(format!("{message} ({status})"));
     }
 
     let output_text = extract_response_text(&value)
-        .ok_or_else(|| "OpenAI response did not include generated text.".to_string())?;
+        .ok_or_else(|| "AI response did not include generated text.".to_string())?;
     let forecast = serde_json::from_str::<ForecastAgentResult>(&output_text)
-        .map_err(|error| format!("OpenAI forecast JSON could not be parsed: {error}"))?;
+        .map_err(|error| format!("AI forecast JSON could not be parsed: {error}"))?;
 
     Ok(ForecastAgentResponse { forecast, model })
 }
@@ -892,12 +1099,19 @@ async fn generate_forecast_agent_with_openai(
 async fn capture_visual_context_with_openai(
     request: VisualContextRequest,
 ) -> Result<VisualContextResponse, String> {
-    let api_key = openai_api_key()?;
+    let (api_key, base_url) = get_ai_credentials(request.ai_config.as_ref())?;
     let model = request
         .model
+        .or_else(|| {
+            request
+                .ai_config
+                .as_ref()
+                .and_then(|c| c.vision_model.clone())
+        })
+        .or_else(|| request.ai_config.as_ref().and_then(|c| c.model.clone()))
         .or_else(|| env::var("OPENAI_VISION_MODEL").ok())
         .or_else(|| env::var("OPENAI_MODEL").ok())
-        .unwrap_or_else(|| "gpt-5.5".to_string());
+        .unwrap_or_else(|| "gpt-4o".to_string());
     let captured_at_ms = now_ms();
     let image_base64 = capture_screen_png_base64()?;
     let data_url = format!("data:image/png;base64,{image_base64}");
@@ -960,12 +1174,9 @@ async fn capture_visual_context_with_openai(
         }
       }
     });
-    let body = json!({
+    let mut body = json!({
       "model": model,
       "store": false,
-      "reasoning": {
-        "effort": "low"
-      },
       "instructions": "You generate privacy-conscious ClearCapacity Visual Context insights from consented screenshots. Avoid transcribing sensitive details and return only JSON matching the requested schema.",
       "input": [{
         "role": "user",
@@ -990,34 +1201,35 @@ async fn capture_visual_context_with_openai(
         }
       }
     });
+    with_reasoning_effort_if_supported(&mut body, &model);
 
     let client = reqwest::Client::new();
     let response = client
-        .post("https://api.openai.com/v1/responses")
+        .post(format!("{}/responses", base_url))
         .bearer_auth(api_key)
         .json(&body)
         .send()
         .await
-        .map_err(|error| format!("OpenAI request failed: {error}"))?;
+        .map_err(|error| format!("AI request failed: {error}"))?;
     let status = response.status();
     let value = response
         .json::<Value>()
         .await
-        .map_err(|error| format!("OpenAI response could not be read: {error}"))?;
+        .map_err(|error| format!("AI response could not be read: {error}"))?;
 
     if !status.is_success() {
         let message = value
             .get("error")
             .and_then(|error| error.get("message"))
             .and_then(Value::as_str)
-            .unwrap_or("OpenAI returned an error.");
+            .unwrap_or("AI provider returned an error.");
         return Err(format!("{message} ({status})"));
     }
 
     let output_text = extract_response_text(&value)
-        .ok_or_else(|| "OpenAI response did not include generated text.".to_string())?;
+        .ok_or_else(|| "AI response did not include generated text.".to_string())?;
     let insight = serde_json::from_str::<VisualContextInsightOutput>(&output_text)
-        .map_err(|error| format!("OpenAI visual context JSON could not be parsed: {error}"))?;
+        .map_err(|error| format!("AI visual context JSON could not be parsed: {error}"))?;
 
     Ok(VisualContextResponse {
         insight,
@@ -1027,6 +1239,153 @@ async fn capture_visual_context_with_openai(
         window_title: request.window_title,
         session_id: request.session_id,
         raw_screenshot_retained: false,
+    })
+}
+
+#[tauri::command]
+async fn chat_with_agent(request: AgentChatRequest) -> Result<AgentChatResponse, String> {
+    let (api_key, base_url) = get_ai_credentials(request.ai_config.as_ref())?;
+    let model = request
+        .ai_config
+        .as_ref()
+        .and_then(|c| c.model.clone())
+        .or_else(|| env::var("OPENAI_MODEL").ok())
+        .unwrap_or_else(|| "gpt-4o".to_string());
+
+    // Use text format for conversational agent (no json_schema).
+    let body = json!({
+      "model": model,
+      "store": false,
+      "instructions": "You are the ClearCapacity Agent. Your focus is helping the user understand and explain their tracked capacity (reliable new-work %), current day/week workload (blocks, sessions, calendar, corrections), and primary focus/projects. Use only provided context and tool results. Be factual, concise, reference specific numbers/projects/times. If insufficient data say so.",
+      "input": request.prompt,
+      "text": {
+        "format": { "type": "text" }
+      }
+    });
+
+    let client = reqwest::Client::new();
+    let response = client
+        .post(format!("{}/responses", base_url))
+        .bearer_auth(api_key)
+        .json(&body)
+        .send()
+        .await
+        .map_err(|error| format!("AI request failed: {error}"))?;
+    let status = response.status();
+    let value = response
+        .json::<Value>()
+        .await
+        .map_err(|error| format!("AI response could not be read: {error}"))?;
+
+    if !status.is_success() {
+        let message = value
+            .get("error")
+            .and_then(|error| error.get("message"))
+            .and_then(Value::as_str)
+            .unwrap_or("AI provider returned an error.");
+        return Err(format!("{message} ({status})"));
+    }
+
+    let output_text = extract_response_text(&value)
+        .ok_or_else(|| "AI response did not include generated text.".to_string())?;
+
+    Ok(AgentChatResponse {
+        response: output_text,
+        model,
+    })
+}
+
+/// Generic transport for every AI operation. Replaces the per-operation
+/// *_with_openai commands: the frontend supplies instructions, the response
+/// format/schema, and any sampling overrides, so prompt and schema tuning live
+/// entirely in TypeScript (the improvement loop's safe scope).
+#[tauri::command]
+async fn ai_complete(request: AiCompleteRequest) -> Result<AiCompleteResponse, String> {
+    let (api_key, base_url) = get_ai_credentials(request.ai_config.as_ref())?;
+    let vision_fallback = request.vision_model_fallback.unwrap_or(false);
+    let model = request
+        .model
+        .or_else(|| request.ai_config.as_ref().and_then(|c| c.model.clone()))
+        .or_else(|| {
+            if vision_fallback {
+                env::var("OPENAI_VISION_MODEL").ok()
+            } else {
+                None
+            }
+        })
+        .or_else(|| env::var("OPENAI_MODEL").ok())
+        .unwrap_or_else(|| "gpt-4o".to_string());
+
+    let mut captured_at_ms: Option<u64> = None;
+    let mut raw_screenshot_retained: Option<bool> = None;
+
+    let input = if request.capture_screen.unwrap_or(false) {
+        let timestamp = now_ms();
+        let image_base64 = capture_screen_png_base64()?;
+        let data_url = format!("data:image/png;base64,{image_base64}");
+        captured_at_ms = Some(timestamp);
+        raw_screenshot_retained = Some(false);
+        json!([{
+            "role": "user",
+            "content": [
+                { "type": "input_text", "text": request.prompt },
+                { "type": "input_image", "image_url": data_url, "detail": "low" }
+            ]
+        }])
+    } else {
+        json!(request.prompt)
+    };
+
+    let mut body = json!({
+        "model": model,
+        "store": false,
+        "instructions": request.instructions,
+        "input": input,
+        "text": { "format": request.response_format }
+    });
+
+    if let Some(temperature) = request.temperature {
+        body["temperature"] = json!(temperature);
+    }
+    if let Some(top_p) = request.top_p {
+        body["top_p"] = json!(top_p);
+    }
+    match request.reasoning_effort.as_deref() {
+        Some(effort) => body["reasoning"] = json!({ "effort": effort }),
+        None => with_reasoning_effort_if_supported(&mut body, &model),
+    }
+
+    let client = reqwest::Client::new();
+    let response = client
+        .post(format!("{}/responses", base_url))
+        .bearer_auth(api_key)
+        .json(&body)
+        .send()
+        .await
+        .map_err(|error| format!("AI request failed: {error}"))?;
+    let status = response.status();
+    let value = response
+        .json::<Value>()
+        .await
+        .map_err(|error| format!("AI response could not be read: {error}"))?;
+
+    if !status.is_success() {
+        let message = value
+            .get("error")
+            .and_then(|error| error.get("message"))
+            .and_then(Value::as_str)
+            .unwrap_or("AI provider returned an error.");
+        return Err(format!("{message} ({status})"));
+    }
+
+    let output_text = extract_response_text(&value)
+        .ok_or_else(|| "AI response did not include generated text.".to_string())?;
+
+    Ok(AiCompleteResponse {
+        output_text,
+        model,
+        captured_at_ms,
+        raw_screenshot_retained,
     })
 }
 
@@ -1168,6 +1527,7 @@ pub fn run() {
             paused: activity_capture_paused.clone(),
         })
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_store::Builder::default().build())
         .invoke_handler(tauri::generate_handler![
             set_pause_menu_label,
             set_activity_capture_paused,
@@ -1176,7 +1536,10 @@ pub fn run() {
             generate_review_copilot_suggestions_with_openai,
             generate_forecast_agent_with_openai,
             capture_visual_context_with_openai,
-            set_clear_capacity_window_mode
+            set_clear_capacity_window_mode,
+            chat_with_agent,
+            ai_complete,
+            test_ai_connection
         ])
         .setup(move |app| {
             #[cfg(target_os = "macos")]

@@ -1,4 +1,4 @@
-import { Monitor, Check, ChevronRight, Play, Pause } from "lucide-react";
+import { Monitor, Check, ChevronRight, Play, Pause, X } from "lucide-react";
 import type { ActiveWindowSample, ActivitySession, WorkBlock } from "../../../../../packages/domain/src/models";
 import type { Screen } from "../../lib/types";
 import { getLocalDateKey } from "../../lib/date";
@@ -12,7 +12,8 @@ export function CompactWidget({
   snapshot,
   onPauseChange,
   onOpenScreen,
-  onConfirm
+  onConfirm,
+  onExclude
 }: {
   paused: boolean;
   activeWindowSamples: ActiveWindowSample[];
@@ -22,6 +23,7 @@ export function CompactWidget({
   onPauseChange: (paused: boolean) => void;
   onOpenScreen: (screen: Screen) => void;
   onConfirm: (blockId: string) => void;
+  onExclude: (blockId: string) => void;
 }) {
   const latestSample = activeWindowSamples[activeWindowSamples.length - 1];
   const latestSession = activeWindowSessions[0];
@@ -72,10 +74,16 @@ export function CompactWidget({
           <small>{nextReview ? nextReview.project_name : "New inferred work will appear here."}</small>
         </div>
         {nextReview && (
-          <button type="button" onClick={() => onConfirm(nextReview.work_block_id)}>
-            <Check size={16} />
-            Confirm Block
-          </button>
+          <div className="quick-review-actions">
+            <button type="button" className="quick-review-confirm" onClick={() => onConfirm(nextReview.work_block_id)}>
+              <Check size={14} />
+              Confirm
+            </button>
+            <button type="button" className="quick-review-exclude" onClick={() => onExclude(nextReview.work_block_id)}>
+              <X size={14} />
+              Exclude
+            </button>
+          </div>
         )}
       </section>
 

@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Search } from "lucide-react";
+import { Search, ScrollText } from "lucide-react";
 import type { AuditEvent } from "../../../../../packages/domain/src/models";
 import { auditTypeLabel } from "../../lib/format";
 import { formatAuditTime } from "../../lib/format";
 import { AuditEventRow } from "./AuditEventRow";
+import { EmptyState } from "../common/EmptyState";
 
 export function AuditLogScreen({ auditEvents }: { auditEvents: AuditEvent[] }) {
   type AuditFilter = "all" | "capture" | "session" | "visual" | "calendar" | "correction" | "classifier" | "copilot" | "forecast" | "narrative" | "privacy";
@@ -63,6 +64,7 @@ export function AuditLogScreen({ auditEvents }: { auditEvents: AuditEvent[] }) {
               className={filter === item.id ? "is-active" : ""}
               key={item.id}
               type="button"
+              aria-pressed={filter === item.id}
               onClick={() => setFilter(item.id)}
             >
               {item.label}
@@ -76,16 +78,34 @@ export function AuditLogScreen({ auditEvents }: { auditEvents: AuditEvent[] }) {
             placeholder="Search audit events"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(e) => { if (e.key === "Escape") { setQuery(""); setFilter("all"); } }}
           />
         </div>
       </div>
 
       <div className="audit-list">
         {filteredEvents.length === 0 ? (
-          <section className="audit-empty">
-            <strong>No audit events match.</strong>
-            <span>Capture samples, imports, corrections, and privacy changes will appear here.</span>
-          </section>
+          auditEvents.length === 0 ? (
+            <EmptyState
+              icon={ScrollText}
+              title="No audit events yet."
+              description="Capture samples, imports, corrections, and privacy changes will appear here as you use ClearCapacity."
+            />
+          ) : (
+            <EmptyState
+              icon={ScrollText}
+              title="No events match."
+              description="Try a different filter or search term to find what you're looking for."
+            >
+              <button
+                type="button"
+                className="secondary-action"
+                onClick={() => { setFilter("all"); setQuery(""); }}
+              >
+                Clear filters
+              </button>
+            </EmptyState>
+          )
         ) : (
           filteredEvents.map((event) => <AuditEventRow event={event} key={event.event_id} />)
         )}

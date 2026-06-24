@@ -113,6 +113,35 @@ export function computeWeeklyCapacitySnapshot(
   };
 }
 
+export type ForecastAccuracyRating = "on_target" | "close" | "off";
+
+export interface ForecastAccuracy {
+  predicted_pct: number;
+  actual_pct: number;
+  error_pts: number; // absolute points between forecast and outcome
+  signed_error_pts: number; // predicted - actual (positive = over-predicted)
+  rating: ForecastAccuracyRating;
+}
+
+/**
+ * Score a past forecast against the capacity the model actually computed for the
+ * week it targeted. Pure and primitive-only so it stays unit-testable and free of
+ * frontend persistence types. Thresholds are point-deltas on the 0–100 reliable
+ * new-work capacity scale.
+ */
+export function scoreForecastAccuracy(predictedPct: number, actualPct: number): ForecastAccuracy {
+  const signed = roundPct(predictedPct - actualPct);
+  const error = Math.abs(signed);
+  const rating: ForecastAccuracyRating = error <= 5 ? "on_target" : error <= 12 ? "close" : "off";
+  return {
+    predicted_pct: roundPct(predictedPct),
+    actual_pct: roundPct(actualPct),
+    error_pts: error,
+    signed_error_pts: signed,
+    rating
+  };
+}
+
 export function generateWeeklyNarrative(snapshot: WeeklyCapacitySnapshot): WeeklyNarrative {
   const reactiveDominant = snapshot.reactive_pct > snapshot.planned_pct * 0.7;
   const denseMeetings = snapshot.meeting_pct >= 18;

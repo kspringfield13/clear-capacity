@@ -21,13 +21,24 @@ Analyst workload is often split across planned projects, recurring reporting, me
 - foreground app and window-title sampling
 - local session grouping and audit history
 - Outlook `.ics` calendar import
+- Today review queue to confirm, relabel, or exclude inferred work blocks
 - reviewable work ledger with confidence and evidence
-- Daily Review corrections and exclusions
 - category, work-mode, planned-status, and project labels
-- explainable weekly capacity calculation
+- explainable weekly capacity model with a dedicated next-week forecast view
+- searchable correction history and a filterable audit trail
+- conversational agent for asking questions about your workload and capacity
 - optional OpenAI-assisted classification, review suggestions, forecasts, and narratives
 - optional screenshot-derived visual context with an explicit opt-in toggle
 - browser-local persistence for prototype data
+
+## App Navigation
+
+The app is organized into four primary sections, each with focused sub-views:
+
+- **Today** — the daily review queue. Confirm, relabel, or exclude inferred work blocks, with an opt-in Review Copilot that suggests cleanup actions you approve before they apply.
+- **Week** — `Capacity` (the explainable weekly allocation model and risk modifiers), `Forecast` (an AI projection of next week's reliable capacity with scenarios, constraints, and recommendations), and `Summary` (an editable analyst or manager narrative).
+- **Agent** — a conversational view to ask questions about your workload, plan, and understand the capacity model.
+- **History** — `Activity` (the live work ledger and capture timeline), `Corrections` (a searchable log of every label, category, project, and planned-status edit), and `Audit` (the filterable trail of all local signals, inferences, and privacy events).
 
 ## Privacy Model
 
@@ -78,22 +89,6 @@ npm run dev
 ```
 
 Open `http://127.0.0.1:5173`. Native activity capture, menu-bar behavior, and OpenAI commands require the Tauri desktop app.
-
-## Product Demo
-
-Launch a polished, fully populated demo without an API key or real activity data:
-
-[![Watch the ClearCapacity product demo](docs/assets/clear-capacity-demo-poster.png)](docs/assets/clear-capacity-demo.mp4?raw=1)
-
-**[Watch the 16-second product demo (MP4)](docs/assets/clear-capacity-demo.mp4?raw=1)**
-
-```bash
-npm run demo
-```
-
-Demo mode includes realistic work blocks, active-window sessions, Outlook events, review corrections, an AI forecast, an editable weekly narrative, visual-context metadata, and a complete audit trail. It is clearly labeled, does not persist changes, and never overwrites normal local data.
-
-See [Product Demo](docs/DEMO.md) for the three-minute presenter script and direct links to each feature view.
 
 ## Run the Desktop App
 

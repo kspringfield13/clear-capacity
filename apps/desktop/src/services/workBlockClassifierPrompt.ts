@@ -7,7 +7,7 @@ import type {
 } from "../../../../packages/domain/src/models";
 import { plannedStatuses, workCategories, workModes } from "../../../../packages/domain/src/taxonomy";
 
-export const WORK_BLOCK_CLASSIFIER_PROMPT_VERSION = "clear-capacity-work-block-classifier-v1";
+export const WORK_BLOCK_CLASSIFIER_PROMPT_VERSION = "clear-capacity-work-block-classifier-v2";
 
 function sortByStartTime<T extends { start_time: string }>(items: T[]) {
   return [...items].sort((left, right) => new Date(left.start_time).getTime() - new Date(right.start_time).getTime());
@@ -109,10 +109,14 @@ export function buildWorkBlockClassifierPrompt({
       "Classify only the provided active-window sessions.",
       "Do not create blocks for Outlook meetings; those are imported separately.",
       "Merge adjacent or related sessions when they appear to represent one coherent task.",
+      "Every provided session has already passed the product's readiness threshold and should normally be assigned to a work block.",
+      "Short duration alone is not a reason to omit a session; merge short fragments with related work when possible.",
+      "When evidence is ambiguous, create a conservative generic block with lower confidence instead of returning no block.",
+      "If input_sessions is non-empty, return at least one work block.",
       "Keep blocks draft-quality: confidence should reflect uncertainty.",
       "Use generic labels when app/window evidence is ambiguous.",
       "Never infer sensitive content beyond the visible app/window metadata.",
-      "Return no block for sessions that are too short or too ambiguous to classify usefully."
+      "Omit a session only when the metadata clearly represents non-work system noise such as a lock screen or blank desktop."
     ],
     taxonomy: {
       categories: workCategories,
@@ -133,7 +137,7 @@ export function buildWorkBlockClassifierPrompt({
     recent_user_corrections: recentCorrections.map(summarizeCorrection),
     output_rules: {
       session_ids:
-        "Every output work block must list the session_id values it was derived from. Use each session at most once.",
+        "Every output work block must copy exact session_id values from input_sessions. Never invent or rewrite an ID. Use each session at most once.",
       title:
         "project_name should be a short human-readable task label, not merely the app name unless the evidence is ambiguous.",
       stakeholder:

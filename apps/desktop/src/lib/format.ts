@@ -47,10 +47,52 @@ export function fieldLabel(field: UserCorrection["field"]) {
     exclude: "Excluded block",
     verification: "Verified block",
     manager_summary: "Manager summary",
-    calendar_import: "Calendar import"
+    calendar_import: "Calendar import",
+    start_time: "Start time",
+    end_time: "End time"
   };
 
   return labels[field];
+}
+
+const PLANNED_STATUS_LABELS: Record<string, string> = {
+  planned: "Planned",
+  unplanned: "Unplanned",
+  fixed: "Fixed",
+  blocked: "Blocked",
+};
+
+export function plannedStatusLabel(status: string): string {
+  return PLANNED_STATUS_LABELS[status] ?? status;
+}
+
+const PRIVACY_LABELS: Record<string, string> = {
+  local_only: "Local only",
+  derived_only: "Derived only",
+  excluded: "Excluded",
+};
+
+const PRIVACY_TOOLTIPS: Record<string, string> = {
+  local_only: "Raw data stays on this device and is never shared",
+  derived_only: "Only anonymised summaries leave this device",
+  excluded: "This event was excluded from all reports",
+};
+
+export function privacyLevelLabel(level: string): string {
+  return PRIVACY_LABELS[level] ?? level;
+}
+
+export function privacyLevelTooltip(level: string): string {
+  return PRIVACY_TOOLTIPS[level] ?? "";
+}
+
+export function humanizeCorrectionValue(field: UserCorrection["field"], value: string): string {
+  if (field === "planned_status") return plannedStatusLabel(value);
+  if (field === "start_time" || field === "end_time") {
+    const date = new Date(value);
+    if (!isNaN(date.getTime())) return formatTime(value);
+  }
+  return value;
 }
 
 export function auditTypeLabel(type: AuditEventType) {

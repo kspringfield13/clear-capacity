@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { ClipboardCopy } from "lucide-react";
 import type { AuditEvent } from "../../../../../packages/domain/src/models";
-import { auditTypeLabel } from "../../lib/format";
-import { formatAuditTime } from "../../lib/format";
+import { auditTypeLabel, formatAuditTime, privacyLevelLabel, privacyLevelTooltip } from "../../lib/format";
 
 export function AuditEventRow({ event }: { event: AuditEvent }) {
   const [copied, setCopied] = useState(false);
@@ -19,7 +18,12 @@ export function AuditEventRow({ event }: { event: AuditEvent }) {
           <strong>{event.title}</strong>
           <small>{event.summary}</small>
         </div>
-        <span className="audit-privacy">{event.privacy_level}</span>
+        <span
+          className={`audit-privacy audit-privacy--${event.privacy_level}`}
+          title={privacyLevelTooltip(event.privacy_level)}
+        >
+          {privacyLevelLabel(event.privacy_level)}
+        </span>
       </summary>
       <div className="audit-detail">
         <div className="audit-detail-header">
