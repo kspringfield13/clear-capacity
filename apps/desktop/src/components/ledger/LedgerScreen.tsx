@@ -51,11 +51,11 @@ export function LedgerScreen({
     (session) => !classifiedSessionIds.has(session.session_id) && session.sample_count >= 2
   ).length;
 
-  const q = searchQuery.toLowerCase();
+  const q = searchQuery.trim().toLowerCase();
   const visibleBlocks = q
     ? blocks.filter((b) =>
         b.project_name.toLowerCase().includes(q) ||
-        b.stakeholder_group.toLowerCase().includes(q) ||
+        (b.stakeholder_group ?? "").toLowerCase().includes(q) ||
         b.category.toLowerCase().includes(q) ||
         b.mode.toLowerCase().includes(q)
       )

@@ -69,8 +69,12 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
+- [ ] **Add Focus Management to BlockCard Time Editor** — time range editor pops up without focusing the first input or providing Escape-key dismiss; add `autoFocus` to first time input, `onKeyDown` Escape handler, and `aria-label="Time range editor"` to the container.
+- [ ] **ConfidenceChip level casing is inconsistent** — level comparison uses mixed case (`"Needs review"` vs lowercase logic); normalize to consistent lowercase throughout.
 
-### New Features
+### Accessibility
+- [ ] **Heatmap legend cells lack aria-labels** — `ActivityHeatmap` legend cells use `data-level` but have no `aria-label`; add `aria-label="Intensity level N of 5"` to each.
+- [ ] **EmptyState sections lack descriptive aria-labels** — `<section className="empty-state">` has no `aria-label`; add optional `ariaLabel` prop defaulting to `title`, and pass meaningful labels at each call site.
 
 ### Code Quality
 
