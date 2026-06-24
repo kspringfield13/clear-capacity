@@ -30,6 +30,7 @@ import type {
 } from "../../../../../packages/domain/src/models";
 import type { AgentChatMessage } from "../../lib/types";
 import { agentTools, AGENT_INSTRUCTIONS } from "../../services/agentTools";
+import type { tool as AiToolFn } from "ai";
 
 const AgentMarkdown = lazy(() => import("./AgentMarkdown"));
 const CHAT_STORAGE_KEY = "clear-capacity.agent-chat.v2";
@@ -250,12 +251,16 @@ export function AgentScreen({
 
   // Wrap Eve-style tools (inputSchema) for the ai SDK (expects parameters).
   // Execute is rebound to inject our app context (the "ctx" in a real Eve tool).
-  function createBoundTools(ctx: typeof context, createTool: any) {
+  // createTool is the `tool` helper from the ai SDK; t is intentionally `any` because Eve
+  // tool execute signatures have narrow ctx types (e.g. { snapshot }) that are structurally
+  // incompatible with a shared interface, but are always safe at runtime.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function createBoundTools(ctx: typeof context, createTool: typeof AiToolFn) {
     const toAiTool = (t: any) =>
       createTool({
         description: t.description,
         parameters: t.inputSchema ?? t.parameters,
-        execute: async (input: any, _options?: any) => t.execute(input ?? {}, ctx),
+        execute: async (input: Record<string, unknown>) => t.execute(input ?? {}, ctx),
       });
 
     return {

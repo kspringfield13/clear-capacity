@@ -60,6 +60,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **Narrative audit-type pill renders as plain unstyled text** — replaced near-transparent base rule with indigo tint; added light-mode override (`#eef2ff`/`#c7d2fe`/`#3730a3`) and explicit dark-mode override (`#141438`/`#252570`/`#a5b4fc`) in `styles.css` following the three-rule per-type badge pattern; self-review passed. (2026-06-24)
 - [x] **Audit filter chips don't expose active state to screen readers** — added `aria-pressed={filter === item.id}` to the filter `<button>`s in `AuditLogScreen.tsx` so screen-reader users know which filter is applied; self-review passed. (2026-06-24)
 - [x] **CorrectionsScreen: Escape key clears search** — added `onKeyDown` to the search `<input>` in `CorrectionsScreen.tsx`; Escape clears `query`, matching AuditLogScreen and LedgerScreen behavior; self-review passed. (2026-06-24)
+- [x] **AgentScreen `any` typed tool params** — `createTool: any` → `typeof AiToolFn` (type-only import from `ai`); `input: any, _options?: any` → `input: Record<string, unknown>` (unused `_options` dropped); `t` remains `any` with explanatory comment (Eve ctx types structurally incompatible with shared interface); build passes; self-review passed. (2026-06-24)
 
 ## In Progress
 _(none)_
@@ -71,7 +72,6 @@ _(none)_
 ### New Features
 
 ### Code Quality
-- [ ] **AgentScreen `any` typed tool params** — `createTool: any` and `input: any, _options?: any` in `AgentScreen.tsx` (lines ~253–258); replace with proper tool/input types or at minimum narrow to `Record<string, unknown>`.
 
 ---
 
