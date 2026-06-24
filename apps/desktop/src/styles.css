@@ -975,10 +975,17 @@ h3 {
 
 .onboarding-step {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   font-size: 13px;
   color: var(--text-muted);
+}
+
+.onboarding-step-hint {
+  display: block;
+  font-size: 11px;
+  color: var(--text-subtle);
+  margin-top: 2px;
 }
 
 .onboarding-step.is-done {

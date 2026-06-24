@@ -7,40 +7,51 @@ Verification gate: `npm run build` must pass before marking done.
 ---
 
 ## Done
-- [x] **Toolbar actions slot** — replaced empty `toolbarActions: []` with screen-aware IIFE in `App.tsx`; Classify/Review Copilot/Forecast/Regenerate now appear in the toolbar as primary actions with correct disabled states. [PR #2](https://github.com/kspringfield13/clear-capacity/pull/2) (2026-06-21)
+- [x] **ConfidenceChip level casing** — verified already normalized in `ConfidenceChip.tsx` (className lowercases via `level.toLowerCase()`, "Needs review" → `low`; emitted classes are consistent — no action needed). 2026-06-24
+- [x] **Heatmap legend cells aria-labels** — verified handled in `ActivityHeatmap.tsx`: the `.heatmap-legend` is `aria-hidden="true"` (decorative, with visible "Less → More" text) and each populated data cell already carries `role="img"` + `aria-label`. 2026-06-24
+- [x] **ForecastList uses item text as React key** — changed `key={item}` to `key={`${index}-${item.slice(0,20)}`}` in `ForecastList.tsx` (line 6); eliminates duplicate-key React warnings when AI returns identical bullet items. 2026-06-24
+- [x] **BlockCard category select clips its current label** — widened `.review-screen .tag-grid` first column from `minmax(0, 1.5fr)` to `minmax(0, 2.4fr)` in `styles.css` (line 2019); category column now ~55% of row width, enough to show "Documentation / Requirements" unclipped. Ledger and mobile rules untouched. 2026-06-24
+- [x] **Onboarding checklist incomplete steps are dead-ends** — added `hint` field to each step in `SetupScreen.tsx`; hints render as a `.onboarding-step-hint` block span below the label only for incomplete steps; `.onboarding-step` changed to `align-items: flex-start` and `.onboarding-step-hint` rule added to `styles.css` (`var(--text-subtle)`, 11px). 2026-06-24
 
 ## In Progress
-- [ ] **Async status hook** — BLOCKED: committed `App.tsx` is incompatible with the async `localStore.ts` and `AIConfig`-extended `models.ts` that are uncommitted in the working tree. The hook was written (`useAsyncStatus.ts`) and all call sites mapped, but `npm run build` fails with pre-existing type errors before my changes are even reached. Unblock by committing the full in-progress refactor on this branch first, then retry.
+_(none)_
 
 ## Next
 
 ### UI & UX Polish
-- [ ] **Async status hook** — see In Progress above; retry after base-branch refactor is committed.
-- [ ] **Retry buttons on error states** — Classification, review copilot, forecast, narrative, and visual context errors surface messages but offer no retry CTA inline. Add a "Try again" button wherever an error state is shown.
-- [ ] **Keyboard navigation between screens** — Add `⌘1`–`⌘6` shortcuts mapped to the six main screens (setup, ledger, daily, weekly, narrative, audit). Hook into the existing `window.addEventListener` pattern in App.tsx.
-- [ ] **Audit log search/filter** — The AuditLogScreen shows a flat list of up to 1000 events. Add a text filter input that narrows by title/summary, and a type-filter dropdown using the existing `AuditEventType` union.
-- [ ] **Week selector on WeeklyCapacityScreen** — Currently locked to current week. Add previous/next week chevrons so users can review prior weeks' capacity without losing state.
-- [ ] **Onboarding progress indicator** — SetupScreen exists but there's no visual progress guide for new users. Add a checklist showing: tracking on → calendar imported → AI configured → first classification run.
-- [ ] **Skeleton loading states** — AI operations (classify, review copilot, forecast, narrative) show status strings. Replace with subtle skeleton placeholders so the layout doesn't shift when results arrive.
-- [ ] **Empty state polish** — Each screen has a different empty state quality. Audit and harmonize: consistent illustration/icon, headline, and primary CTA per screen.
-- [ ] **CompactWidget quick-confirm** — The compact mode widget shows blocks but confirm/exclude requires switching to large mode. Add inline confirm/exclude swipe or button directly in `CompactWidget`.
-- [ ] **Dark mode token audit** — Run through every screen in dark mode and fix any hardcoded colors or contrast issues that slip past the CSS variable system.
-- [ ] **Capacity percentage ring or gauge** — The WeeklyCapacityScreen shows percentage as text. Add a small visual arc/ring component next to the number for immediate at-a-glance reading.
+- [ ] **SetupScreen provider status not announced to screen readers** — `.ai-provider-status` in `SetupScreen.tsx` (line 385) is conditionally rendered with `role="status"`, but an ARIA live region must already be in the DOM before its content arrives to reliably announce. Render the container persistently (empty when `providerStatus` is null) with `aria-live="polite"` and `aria-atomic="true"` so the Test Connection / Save result is announced.
+- [ ] **DailyReview progress track lacks progressbar semantics** — the `.review-progress-track` / `.review-progress-fill` bar in `DailyReviewScreen.tsx` (lines 97–99) is visual-only; only the wrapping `.review-progress` div carries `role="status"`. Add `role="progressbar"`, `aria-valuenow={progressPct}`, `aria-valuemin={0}`, `aria-valuemax={100}`, and `aria-label="Review progress"` to the `.review-progress-track` div so assistive tech exposes the completion percentage, not just the "N of M" string.
+- [ ] **ActivityCapturePanel uses app_name as React key** — `key={session.app_name}` in `ActivityCapturePanel.tsx` (line 97) duplicates when the same app appears more than once in `latestSessionSummaries`. Change to `key={`${session.app_name}-${index}`}` using the map index.
 
-### New Features
-- [ ] **Export capacity report** — Add a "Copy as Markdown" and "Download .txt" option on the NarrativeScreen that formats the manager-ready narrative with the week date header for easy pasting into email/Slack.
-- [ ] **Block duration edit** — Users can relabel blocks but not adjust their start/end time. Add a time-range editor inline on BlockCard so the duration can be corrected without excluding and re-classifying.
-- [ ] **Blocker flag visual treatment** — `blocker_flag: true` exists in the domain model but it's unclear how prominently it surfaces in the UI. Add a red badge or banner on BlockCard and in the WeeklyCapacityScreen risk summary.
-- [ ] **"Mark all confirmed" bulk action** — On DailyReviewScreen, add a "Confirm all" button for when the user trusts all AI-classified blocks and just wants to stamp them verified in one tap.
-- [ ] **Activity heatmap** — On the ledger screen or as a new panel, show a 7-day heatmap of active-window session density by hour so users can spot focus vs. fragmented time visually.
+### Accessibility
+- [ ] **EmptyState sections lack descriptive aria-labels** — `<section className="empty-state">` in `EmptyState.tsx` (line 15) has no `aria-label`; add an optional `ariaLabel` prop defaulting to `title`, and pass meaningful labels at each call site.
+- [ ] **ReviewCopilotPanel contextual aria-labels** — the Apply/Dismiss buttons in `ReviewCopilotPanel.tsx` (lines 62–63) read identically to every suggestion ("Apply Suggestion" / "Dismiss Suggestion"). Add the suggestion title to each `aria-label` (e.g. `aria-label={`Apply suggestion: ${suggestion.title}`}`) so screen readers announce which suggestion is being acted on.
 
 ### Code Quality
-- [ ] **Split App.tsx** — At 1487 lines, App.tsx is a god component. Move each async operation (classifyActiveWindowSessions, generateReviewCopilotSuggestions, generateForecastAgent, regenerateNarrative, captureVisualContext) into a dedicated custom hook. Keep App.tsx as a thin orchestrator.
+- [ ] **AppShell / CompactWidget `snapshot: any` type fix** — replace `snapshot: any` with the proper `WeeklyCapacitySnapshot` type (from `packages/domain/src/models.ts`) in `AppShell.tsx` (line 32) and `CompactWidget.tsx` (line 22).
+
+> **Strategic enhancements (intelligence engine · integrations · trust & verification UX)** — the three tracks below are larger, multi-step bets than the tactical polish above, but they live under `## Next` on purpose so the improvement routine picks them up in order once the polish items clear. Each bullet is sized to land in one loop pass; sequence within a track top-to-bottom (later items depend on earlier ones). Items tagged **[manual / Rust]** need `src-tauri/` or network/OAuth work that is out of loop scope — build the loop-safe slice noted in the bullet and leave the native half as a flagged follow-up. The forecast-accuracy feature (persisted `forecastHistory` + `scoreForecastAccuracy`) shipped in PR #19 and is the reference pattern for retained-history work.
+
+### Intelligence Engine
+- [ ] **Multi-week snapshot history store** *(foundation — do first)* — today `computeWeeklyCapacitySnapshot` runs over all blocks for a single `week_id` and nothing is retained across weeks, so trends/baselines are impossible. Add a persisted `snapshotHistory: { week_id, snapshot, computed_at }[]` (cap ~24) written when the ISO week rolls over, mirroring the `forecastHistory` pattern from PR #19. Pure storage + wiring: `services/localStore.ts` (field + parse guard), `hooks/usePersistence.ts`, `hooks/useDerived.ts` / `App.tsx`. Unlocks every item below.
+- [ ] **Personal baselines + trend deltas** *(depends on snapshot history)* — add a pure `computeCapacityBaselines(history)` in `packages/inference/src/capacity.ts` returning rolling medians (4–6 wk) for `reactive_pct`, `meeting_pct`, `context_switch_score`, and `reliable_new_work_capacity_pct`; render small "vs your 6-wk median +N/−N" chips on `WeeklyCapacityScreen.tsx` metrics so a number reads against the user's own norm, not a static 100 baseline.
+- [ ] **Correction-driven bias signal** — `corrections` are collected but never fed back into the model. Add a pure `analyzeCorrections(corrections)` in inference that surfaces systematic mislabels (e.g. category X → Y corrected ≥3×, or planned→unplanned drift) and render an explainable "Model bias" note on the Forecast/Capacity screen. No retraining — just close the visible loop between review effort and model behavior.
+- [ ] **Evidence-based forecast confidence** *(builds on PR #19)* — aggregate past `forecastHistory` scores into a rolling mean-absolute-error and show "Forecasts have averaged ±N pts over the last K weeks" beneath the accuracy banner in `ForecastAgentPanel.tsx`, so displayed confidence is grounded in track record rather than the model's self-reported number. Pure helper alongside `scoreForecastAccuracy`.
+
+### Integrations
+- [ ] **Importable `RawEvent` schema (decouple sources — do first)** — `SourceType` already reserves `slack`/`git`/`browser`/`task` but only `window`+`calendar` are wired. Define a documented JSON import shape that maps onto `RawEvent`→`WorkBlock` and an `importRawEvents()` entry point in `packages/integrations/`, so new signal sources need data, not new code. Frontend + packages only; lays the groundwork for the two items below.
+- [ ] **Git activity as a planned-work signal** *(depends on import schema)* — parse a committed/exported git log (commits, PR metadata) into deep-work `WorkBlock`s keyed by repo→project. Build the **pure TS parser** in `packages/integrations/src/git/` against a fixture now (mirror `calendar/outlookIcs.ts`, fully loop-testable). The live fetch/watch is **[manual / Rust]** — flag the `src-tauri/` half as a follow-up.
+- [ ] **Automated calendar sync** **[manual / Rust]** — replace the manual `.ics` export (the biggest onboarding wall) with Google / Microsoft Graph sync. OAuth + network live in the Tauri layer and are out of loop scope. Loop-safe slice: a provider-agnostic `CalendarSource` interface in `packages/integrations/` plus a disabled "Connect calendar" stub in `SetupScreen.tsx` that the native layer can later fulfill; document the Rust follow-up here.
+
+### Trust & Verification UX
+- [ ] **"Why this block?" evidence drill-down** — `WorkBlock.evidence[]` and `derived_from[]` are captured but not fully surfaced. Add an expandable evidence trail to `BlockCard.tsx` (hover/expand) listing the raw signals and the inference path that produced the block, reinforcing the explainability differentiator. Frontend + `styles.css` only.
+- [ ] **Sensitive-content review queue** — `VisualContextInsight.sensitive_content_detected` is recorded but there is nowhere to review or purge flagged captures. Add a filtered view under History listing flagged insights with a per-item "Discard" action that writes a `visual_context` audit event. Frontend only; fits the privacy model.
+- [ ] **Data export & retention controls** — (a) export the work ledger + audit trail to JSON/CSV from `SetupScreen.tsx` (pure, frontend); (b) add a user-set retention window that auto-expires `activeWindowSamples` older than N days. Both loop-safe and reinforce the local-first / user-controlled-data positioning.
+- [ ] **Forecast track-record panel** *(builds on PR #19)* — add a "Forecast track record" list to `ForecastScreen.tsx` showing predicted-vs-actual per past week with the On target / Close / Off rating chips, so the model can be audited over time rather than only for the current week. Reads the existing `forecastHistory`.
 
 ---
 
 ## Never
 - Do not touch `apps/desktop/src-tauri/` (Rust shell) — Tauri changes need manual testing outside the loop.
 - Do not modify `.env` or commit secrets.
-- Each task gets its own `improve/<slug>` branch and PR — human reviews and merges.
 - Do not change `vite.config.ts` port (5173) or `tauri.conf.json` in tandem without flagging it.
