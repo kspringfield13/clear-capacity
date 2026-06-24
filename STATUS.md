@@ -54,6 +54,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **ConfidenceChip percentage has no context** — added `title={`${pct}% classification confidence`}` to `.confidence` span in `ConfidenceChip.tsx`; extracted `pct` variable to avoid double computation; self-review passed. (2026-06-24)
 - [x] **WeeklyCapacityScreen "Next week" button title doesn't reflect disabled state** — changed `aria-label` and `title` on the next-week chevron to `"Cannot navigate past current week"` when `isCurrentWeek` is true in `WeeklyCapacityScreen.tsx`; self-review passed. (2026-06-24)
 - [x] **AuditLogScreen Escape key clears filter** — added `onKeyDown` to the search `<input>` in `AuditLogScreen.tsx`; Escape resets both `query` and `filter` to defaults, matching the "Clear filters" button and the LedgerScreen Escape-clears-search pattern; self-review passed. (2026-06-24)
+- [x] **BlockCard time error has no live region** — added a visually-hidden `role="alert"` span ("End time must be after start time") inside `.time-range-editor` in `BlockCard.tsx`; added reusable `.sr-only` utility class to `styles.css`; self-review passed. (2026-06-24)
 
 ## In Progress
 _(none)_
@@ -61,7 +62,6 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
-- [ ] **BlockCard time error has no live region** — in `components/ledger/BlockCard.tsx`, the `timeError` state only toggles the `.time-range-editor--error` CSS class (invisible to screen readers); add a visually-hidden `role="alert"` message "End time must be after start time" rendered alongside the error state.
 
 ### New Features
 

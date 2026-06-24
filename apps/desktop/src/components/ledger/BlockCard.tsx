@@ -93,6 +93,9 @@ export function BlockCard({
               >
                 <X size={13} />
               </button>
+              {timeError && (
+                <span role="alert" className="sr-only">End time must be after start time</span>
+              )}
             </div>
           ) : (
             <>
