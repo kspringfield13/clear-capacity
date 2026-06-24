@@ -47,3 +47,4 @@
 ## 2026-06-24
 
 - 00:00 UTC — **improve**: LedgerScreen search wired — added `searchQuery` state + case-insensitive filter across project_name/stakeholder_group/category/mode; Escape clears search; "No blocks match" `EmptyState` with "Clear search" CTA when no results; `LedgerScreen.tsx`; self-review passed
+- 00:38 UTC — **curator**: visual pass ran (24 screenshots, 6 screens × light/dark × wide/narrow) — app confirmed highly polished; reconciled all 4 Next items (still valid, paths verified), reordered UI&UX by user-visible impact, added audit-derived ConfidenceChip-tooltip item (chip never says the % is classification confidence)

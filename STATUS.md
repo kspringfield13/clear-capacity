@@ -57,10 +57,11 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
-- [ ] **ConfidenceChip shows "Needs review 0%"** — when `value === 0` render "Unscored" (no percentage) so brand-new blocks don't claim "Needs review" with a meaningless 0%.
-- [ ] **BlockCard time error has no live region** — `timeError` CSS class on `.time-range-editor--error` is invisible to screen readers; add a visually-hidden `role="alert"` message "End time must be after start time" alongside the error state.
-- [ ] **WeeklyCapacityScreen "Next week" button title doesn't reflect disabled state** — `title="Next week"` stays static; change to `title="Cannot navigate past current week"` when `isCurrentWeek` is true.
-- [ ] **AuditLogScreen Escape key clears filter** — add `onKeyDown` handler on the search input so pressing Escape resets both `query` and `filter` to defaults, matching the existing "Clear filters" button behavior.
+- [ ] **ConfidenceChip shows "Needs review 0%"** — in `components/common/ConfidenceChip.tsx`, when `value === 0` render "Unscored" (no percentage) so brand-new blocks don't claim "Needs review" with a meaningless 0%.
+- [ ] **ConfidenceChip percentage has no context** — the bare "Medium 76%" / "High 95%" / "Needs review 72%" chip in `components/common/ConfidenceChip.tsx` appears on every BlockCard topline (daily + ledger) but never says the number is *classification confidence*; add `title={`${pct}% classification confidence`}` to the `.confidence` span so a hover explains what it measures.
+- [ ] **WeeklyCapacityScreen "Next week" button title doesn't reflect disabled state** — in `components/capacity/WeeklyCapacityScreen.tsx` (line ~108) `title="Next week"` stays static even when the button is disabled; change to `title="Cannot navigate past current week"` (and matching `aria-label`) when `isCurrentWeek` is true.
+- [ ] **AuditLogScreen Escape key clears filter** — in `components/audit/AuditLogScreen.tsx`, add an `onKeyDown` handler on the search input so pressing Escape resets both `query` and `filter` to defaults, matching the existing "Clear filters" button (and the Escape-clears-search pattern already used in LedgerScreen).
+- [ ] **BlockCard time error has no live region** — in `components/ledger/BlockCard.tsx`, the `timeError` state only toggles the `.time-range-editor--error` CSS class (invisible to screen readers); add a visually-hidden `role="alert"` message "End time must be after start time" rendered alongside the error state.
 
 ### New Features
 
