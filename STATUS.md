@@ -7,6 +7,7 @@ Verification gate: `npm run build` must pass before marking done.
 ---
 
 ## Done
+- [x] **ConfidenceChip medium style + block-exclude button style** — added `.confidence.medium` yellow rules in all three style blocks (base, Geist-light section, `html[data-theme="dark"]` override); added `.block-actions button.block-exclude` muted-text base + destructive-red hover rules for both light and dark modes; `styles.css` only; self-review passed. (2026-06-23)
 - [x] **Toolbar actions slot** — replaced empty `toolbarActions: []` with screen-aware IIFE in `App.tsx`; Classify/Review Copilot/Forecast/Regenerate now appear in the toolbar as primary actions with correct disabled states. [PR #2](https://github.com/kspringfield13/clear-capacity/pull/2) (2026-06-21)
 - [x] **Async status hook** — extracted `useAsyncStatus` hook, removed 10 duplicate state declarations from App.tsx. [PR #4](https://github.com/kspringfield13/clear-capacity/pull/4) (2026-06-21)
 - [x] **Retry buttons on error states** — added inline "Try again" buttons to all AI error states (classify, review copilot, forecast, narrative, visual context). [PR #5](https://github.com/kspringfield13/clear-capacity/pull/5) (2026-06-21)
@@ -70,11 +71,15 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
+- [ ] **Add Focus Management to BlockCard Time Editor** — time range editor pops up without focusing the first input or providing Escape-key dismiss; add `autoFocus` to first time input, `onKeyDown` Escape handler, and `aria-label="Time range editor"` to the container.
+- [ ] **ConfidenceChip level casing is inconsistent** — level comparison uses mixed case (`"Needs review"` vs lowercase logic); normalize to consistent lowercase throughout.
 - [ ] **SetupScreen provider status not announced to screen readers** — `ai-provider-status` is conditionally rendered with `role="status"`, but ARIA live regions must be in the DOM before content arrives to announce. Render the container persistently (empty when no status) with `aria-live="polite"` and `aria-atomic="true"` so the connection test result is reliably announced.
 - [ ] **ForecastList uses item text as React key** — `key={item}` in `ForecastList.tsx` (line 7) causes React key warnings and DOM thrashing when the AI returns duplicate bullet items. Change to `key={`${index}-${item.slice(0,20)}`}` using the map index.
 - [ ] **ActivityCapturePanel uses app_name as React key** — `key={session.app_name}` (~line 97) duplicates when the same app appears more than once in `latestSessionSummaries`. Change to `key={`${session.app_name}-${index}`}`.
 
-### New Features
+### Accessibility
+- [ ] **Heatmap legend cells lack aria-labels** — `ActivityHeatmap` legend cells use `data-level` but have no `aria-label`; add `aria-label="Intensity level N of 5"` to each.
+- [ ] **EmptyState sections lack descriptive aria-labels** — `<section className="empty-state">` has no `aria-label`; add optional `ariaLabel` prop defaulting to `title`, and pass meaningful labels at each call site.
 
 ### Code Quality
 - [ ] **AppShell `snapshot: any` type fix** — replace `snapshot: any` with the proper `WeeklyCapacitySnapshot` type in `AppShell.tsx` and `CompactWidget.tsx`.

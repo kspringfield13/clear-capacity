@@ -33,6 +33,8 @@ Cloud sessions are stateless — without this file, every run relearns the codeb
 - **Screen-reader live regions**: use `role="alert"` on a conditionally-rendered element (or a persistently-rendered element whose content changes) to announce validation errors to screen readers. The `.sr-only` utility class in `styles.css` (1×1px, clipped, absolute, `border: 0`) hides the element visually without removing it from the accessibility tree — use it for any visually-hidden but SR-meaningful text.
 - **Verification gate**: `npm run build` (`tsc -b && vite build`) must pass before committing. There is no automated test suite.
 - **Out of loop scope**: `apps/desktop/src-tauri/` (Rust), `.env`, and the 5173 port config are off-limits to the frontend loop. Anything needing Rust (model params, request bodies, JSON schemas, per-command model routing) is a manual follow-up — leave a clear note in STATUS.md.
+- **Branch protection on main**: direct `git push origin main` returns HTTP 403. All loop commits must go via an `improve/<slug>` branch + PR (GitHub MCP `create_pull_request`). The STATUS.md "Never" section already requires this pattern.
+- **npm install required in fresh containers**: `node_modules` is absent in new cloud sessions; run `npm install` before `npm run build` or the tsc step fails with "Cannot find module 'react'" errors on every file.
 
 ## Recurring UX rough edges (watch for these)
 - **Don't render raw enum/snake_case values in the UI**: domain enums like `PrivacyLevel` (`local_only`/`derived_only`/`excluded`) and `PlannedStatus` (`planned`/`unplanned`/…) must pass through a humanizing helper in `lib/format.ts` (`auditTypeLabel`/`plannedStatusLabel`/`privacyLevelLabel`) before display — never `{event.privacy_level}` directly. Note `WorkCategory`/`WorkMode` are stored as already-human strings in `taxonomy.ts`, but `CorrectionsScreen` renders `old_value`/`new_value` blind across ALL field types, so planned-status edits leak lowercase and time edits leak raw ISO strings — humanize by `correction.field`.
@@ -46,6 +48,8 @@ Cloud sessions are stateless — without this file, every run relearns the codeb
 
 ## Open architectural notes
 - `App.tsx` is a state-wiring orchestrator (~828 lines). Decomposition complete: AI ops in `hooks/use*.ts`, toolbar actions in `lib/toolbarActions.ts` (`buildToolbarActions`), screen routing in `components/shell/ScreenRouter.tsx`. Future growth should land in new hooks or components, not App.tsx.
+- **Async op hook pattern**: each AI hook takes a params object (data + setter callbacks), calls `useAsyncStatus`, defines the async function + any internal `useEffect` triggers, and returns `{status, error, run, reset}`. The auto-trigger effects (`useNarrativeGeneration`, `useVisualContext`) live inside the hook. `resetLocalData` in App.tsx calls each hook's `reset` function.
+- **Hook ordering in App.tsx**: the AI hooks are called AFTER `useDerived` because they need `snapshot`, `activeWindowSessions`, `todayKey`, `hasNarrativeEvidence` from `useDerived`. This ordering does not violate Rules of Hooks (all calls are unconditional).
 
 ---
 _Entries below are appended by autonomous runs. Keep the file curated — prune stale notes as you add new ones._
