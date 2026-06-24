@@ -61,11 +61,16 @@ export function BlockCard({
       <div className="block-topline">
         <div className="block-time">
           {editingTime ? (
-            <div className={`time-range-editor${timeError ? " time-range-editor--error" : ""}`}>
+            <div
+              className={`time-range-editor${timeError ? " time-range-editor--error" : ""}`}
+              aria-label="Time range editor"
+              onKeyDown={(e) => { if (e.key === "Escape") setEditingTime(false); }}
+            >
               <input
                 type="time"
                 value={draftStart}
                 aria-label="Start time"
+                autoFocus
                 onChange={(e) => { setDraftStart(e.target.value); setTimeError(false); }}
               />
               <span aria-hidden="true">–</span>
