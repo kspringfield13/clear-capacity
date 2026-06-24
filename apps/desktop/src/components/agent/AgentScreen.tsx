@@ -567,7 +567,7 @@ export function AgentScreen({
                   {!isCurrentStream && m.content && (
                     <div className="agent-message-meta">
                       <time>{m.createdAt ? new Date(m.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : ""}</time>
-                      <button type="button" onClick={() => void copyMessage(m)} title="Copy response">
+                      <button type="button" onClick={() => void copyMessage(m)} title="Copy response" aria-label="Copy response">
                         {copiedMessageId === m.id ? <Check size={13} /> : <Copy size={13} />}
                       </button>
                       {m.role === "assistant" && m.analysisSummary && (
@@ -575,6 +575,7 @@ export function AgentScreen({
                           type="button"
                           onClick={() => setExpandedDetails((value) => ({ ...value, [m.id]: !value[m.id] }))}
                           aria-expanded={Boolean(expandedDetails[m.id])}
+                          aria-label="Toggle analysis details"
                         >
                           Analysis <ChevronDown size={13} />
                         </button>
@@ -631,6 +632,7 @@ export function AgentScreen({
             onClick={handleSend}
             disabled={!input.trim() || isSending}
             title="Send"
+            aria-label="Send message"
           >
             <Send size={16} />
           </button>

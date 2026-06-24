@@ -62,6 +62,8 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **Audit filter chips don't expose active state to screen readers** — added `aria-pressed={filter === item.id}` to the filter `<button>`s in `AuditLogScreen.tsx` so screen-reader users know which filter is applied; self-review passed. (2026-06-24)
 - [x] **CorrectionsScreen: Escape key clears search** — added `onKeyDown` to the search `<input>` in `CorrectionsScreen.tsx`; Escape clears `query`, matching AuditLogScreen and LedgerScreen behavior; self-review passed. (2026-06-24)
 - [x] **AgentScreen `any` typed tool params** — `createTool: any` → `typeof AiToolFn` (type-only import from `ai`); `input: any, _options?: any` → `input: Record<string, unknown>` (unused `_options` dropped); `t` remains `any` with explanatory comment (Eve ctx types structurally incompatible with shared interface); build passes; self-review passed. (2026-06-24)
+- [x] **AgentScreen & ContextNavigation accessibility** — added `aria-label` to icon-only copy/send/analysis buttons in `AgentScreen.tsx`; added `aria-pressed` to ContextNavigation nav buttons; self-review passed. (2026-06-24)
+- [x] **SetupScreen AI form labels not associated with inputs** — added `htmlFor` to all five `<label>` elements and matching `id` to each input/select (`ai-provider`, `ai-api-key`, `ai-base-url`, `ai-model`, `ai-vision-model`) in `SetupScreen.tsx`; clicking a label now focuses its field; self-review passed. (2026-06-24)
 
 ## In Progress
 _(none)_
@@ -71,12 +73,17 @@ _(none)_
 ### UI & UX Polish
 - [ ] **Add Focus Management to BlockCard Time Editor** — time range editor pops up without focusing the first input or providing Escape-key dismiss; add `autoFocus` to first time input, `onKeyDown` Escape handler, and `aria-label="Time range editor"` to the container.
 - [ ] **ConfidenceChip level casing is inconsistent** — level comparison uses mixed case (`"Needs review"` vs lowercase logic); normalize to consistent lowercase throughout.
+- [ ] **SetupScreen provider status not announced to screen readers** — `ai-provider-status` is conditionally rendered with `role="status"`, but ARIA live regions must be in the DOM before content arrives to announce. Render the container persistently (empty when no status) with `aria-live="polite"` and `aria-atomic="true"` so the connection test result is reliably announced.
+- [ ] **ForecastList uses item text as React key** — `key={item}` in `ForecastList.tsx` (line 7) causes React key warnings and DOM thrashing when the AI returns duplicate bullet items. Change to `key={`${index}-${item.slice(0,20)}`}` using the map index.
+- [ ] **ActivityCapturePanel uses app_name as React key** — `key={session.app_name}` (~line 97) duplicates when the same app appears more than once in `latestSessionSummaries`. Change to `key={`${session.app_name}-${index}`}`.
 
 ### Accessibility
 - [ ] **Heatmap legend cells lack aria-labels** — `ActivityHeatmap` legend cells use `data-level` but have no `aria-label`; add `aria-label="Intensity level N of 5"` to each.
 - [ ] **EmptyState sections lack descriptive aria-labels** — `<section className="empty-state">` has no `aria-label`; add optional `ariaLabel` prop defaulting to `title`, and pass meaningful labels at each call site.
 
 ### Code Quality
+- [ ] **AppShell `snapshot: any` type fix** — replace `snapshot: any` with the proper `WeeklyCapacitySnapshot` type in `AppShell.tsx` and `CompactWidget.tsx`.
+- [ ] **ReviewCopilotPanel contextual aria-labels** — add suggestion title to Apply/Dismiss button `aria-label`s so screen readers announce which suggestion is being acted on.
 
 ---
 

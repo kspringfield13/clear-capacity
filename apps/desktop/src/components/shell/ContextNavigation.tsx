@@ -23,6 +23,7 @@ export function ContextNavigation({
           key={view.id}
           type="button"
           onClick={() => setActive(view.id)}
+          aria-pressed={active === view.id}
         >
           {view.label}
         </button>
