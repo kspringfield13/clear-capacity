@@ -77,6 +77,7 @@ export function AuditLogScreen({ auditEvents }: { auditEvents: AuditEvent[] }) {
             placeholder="Search audit events"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(e) => { if (e.key === "Escape") { setQuery(""); setFilter("all"); } }}
           />
         </div>
       </div>

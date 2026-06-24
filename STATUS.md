@@ -53,6 +53,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **ConfidenceChip shows "Needs review 0%"** — when `value === 0` now renders "Unscored" (muted chip, no percentage) in `ConfidenceChip.tsx`; added `.confidence.unscored` light + dark CSS in `styles.css`; self-review passed. (2026-06-24)
 - [x] **ConfidenceChip percentage has no context** — added `title={`${pct}% classification confidence`}` to `.confidence` span in `ConfidenceChip.tsx`; extracted `pct` variable to avoid double computation; self-review passed. (2026-06-24)
 - [x] **WeeklyCapacityScreen "Next week" button title doesn't reflect disabled state** — changed `aria-label` and `title` on the next-week chevron to `"Cannot navigate past current week"` when `isCurrentWeek` is true in `WeeklyCapacityScreen.tsx`; self-review passed. (2026-06-24)
+- [x] **AuditLogScreen Escape key clears filter** — added `onKeyDown` to the search `<input>` in `AuditLogScreen.tsx`; Escape resets both `query` and `filter` to defaults, matching the "Clear filters" button and the LedgerScreen Escape-clears-search pattern; self-review passed. (2026-06-24)
 
 ## In Progress
 _(none)_
@@ -60,7 +61,6 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
-- [ ] **AuditLogScreen Escape key clears filter** — in `components/audit/AuditLogScreen.tsx`, add an `onKeyDown` handler on the search input so pressing Escape resets both `query` and `filter` to defaults, matching the existing "Clear filters" button (and the Escape-clears-search pattern already used in LedgerScreen).
 - [ ] **BlockCard time error has no live region** — in `components/ledger/BlockCard.tsx`, the `timeError` state only toggles the `.time-range-editor--error` CSS class (invisible to screen readers); add a visually-hidden `role="alert"` message "End time must be after start time" rendered alongside the error state.
 
 ### New Features
