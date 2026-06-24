@@ -1405,6 +1405,14 @@ h3 {
   font-size: 11px;
 }
 
+/* No-status state: stay in DOM + AT for live-region init, take no visual space */
+.ai-provider-status:not(.is-success):not(.is-error):not(.is-info) {
+  height: 0;
+  padding: 0;
+  border-width: 0;
+  overflow: hidden;
+}
+
 .ai-provider-status svg {
   flex: 0 0 auto;
   margin-top: 1px;
