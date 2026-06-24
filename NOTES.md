@@ -48,6 +48,8 @@ Cloud sessions are stateless — without this file, every run relearns the codeb
 
 ## Open architectural notes
 - `App.tsx` is a state-wiring orchestrator (~828 lines). Decomposition complete: AI ops in `hooks/use*.ts`, toolbar actions in `lib/toolbarActions.ts` (`buildToolbarActions`), screen routing in `components/shell/ScreenRouter.tsx`. Future growth should land in new hooks or components, not App.tsx.
+- **Async op hook pattern**: each AI hook takes a params object (data + setter callbacks), calls `useAsyncStatus`, defines the async function + any internal `useEffect` triggers, and returns `{status, error, run, reset}`. The auto-trigger effects (`useNarrativeGeneration`, `useVisualContext`) live inside the hook. `resetLocalData` in App.tsx calls each hook's `reset` function.
+- **Hook ordering in App.tsx**: the AI hooks are called AFTER `useDerived` because they need `snapshot`, `activeWindowSessions`, `todayKey`, `hasNarrativeEvidence` from `useDerived`. This ordering does not violate Rules of Hooks (all calls are unconditional).
 
 ---
 _Entries below are appended by autonomous runs. Keep the file curated — prune stale notes as you add new ones._
