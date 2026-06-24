@@ -56,6 +56,7 @@ export function CorrectionsScreen({
               placeholder="Search field, project, or value"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={(event) => { if (event.key === "Escape") setQuery(""); }}
             />
           </div>
           <button
