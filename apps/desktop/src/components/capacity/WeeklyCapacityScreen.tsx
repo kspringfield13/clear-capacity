@@ -104,8 +104,8 @@ export function WeeklyCapacityScreen({
                 type="button"
                 disabled={isCurrentWeek}
                 onClick={() => setWeekOffset((o) => o + 1)}
-                aria-label="Next week"
-                title="Next week"
+                aria-label={isCurrentWeek ? "Cannot navigate past current week" : "Next week"}
+                title={isCurrentWeek ? "Cannot navigate past current week" : "Next week"}
               >
                 <ChevronRight size={16} />
               </button>
