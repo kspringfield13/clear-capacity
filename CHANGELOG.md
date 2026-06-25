@@ -73,5 +73,6 @@
 
 ## 2026-06-25
 
+- 07:09 UTC — **improve**: Marooned single-suggestion layout fix — added `max-width: 760px` to `.copilot-inline` and changed `.copilot-inline .copilot-list` grid to `repeat(auto-fit, minmax(280px, 1fr))` so a lone card fills its container instead of floating at 360px in an 880px panel; `styles.css`; self-review passed
 - 00:39 UTC — **curator**: visual pass ran (24 screenshots, 9 screens incl. forecast/corrections/agent × light/dark + 4 compact) — app confirmed highly polished; moved ActivityCapturePanel React-key item to Done (already fixed); verified remaining 5 Next items against code; replenished UI & UX Polish with 2 audit-grounded items (Audit log shows raw enum/ISO correction values while Corrections screen humanizes them — App.tsx:514; single AI suggestion marooned in Daily "Suggested cleanup" panel) and reordered by user-visible impact; refreshed the stale CorrectionsScreen note in NOTES (screen now humanizes; remaining leak is the audit-event summary in App.tsx)
 - 06:04 UTC — **improve**: Audit log correction summary humanized — added `humanizeCorrectionValue` import and applied it to both old/new values in the `user_correction` audit summary in `App.tsx`; changed arrow from `->` to `→`; Audit log now reads "Planned → Unplanned" / "9:00 AM → 10:00 AM" matching Corrections screen display; self-review passed
