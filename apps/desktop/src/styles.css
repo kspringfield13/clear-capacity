@@ -982,7 +982,11 @@ h3 {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
+}
+
+.onboarding-progress-track {
+  margin-bottom: 10px;
 }
 
 .onboarding-checklist-header strong {
@@ -5443,6 +5447,10 @@ html[data-theme="dark"] .stacked-bar {
   border-color: var(--border);
   background: var(--surface-elevated);
 }
+
+html[data-theme="dark"] .risk-track span[data-severity="low"] { background: #6b7280; }
+html[data-theme="dark"] .risk-track span[data-severity="mid"] { background: var(--warning); }
+html[data-theme="dark"] .risk-track span[data-severity="high"] { background: #f97316; }
 
 html[data-theme="dark"] .audit-badge.active_window_sample,
 html[data-theme="dark"] .audit-badge.work_block_classification {

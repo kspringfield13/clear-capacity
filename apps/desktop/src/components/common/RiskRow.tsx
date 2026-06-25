@@ -32,7 +32,7 @@ export function RiskRow({
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={shown}
-        aria-valuetext={dangerActive ? `${label}: ${shown}` : `${shown} of 100`}
+        aria-valuetext={dangerActive ? `${label}: ${shown}` : `${shown} of 100, ${severity} severity`}
       >
         <span
           data-severity={severity}
