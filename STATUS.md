@@ -13,6 +13,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **ForecastList uses item text as React key** — changed `key={item}` to `key={`${index}-${item.slice(0,20)}`}` in `ForecastList.tsx` (line 6); eliminates duplicate-key React warnings when AI returns identical bullet items. 2026-06-24
 - [x] **BlockCard category select clips its current label** — widened `.review-screen .tag-grid` first column from `minmax(0, 1.5fr)` to `minmax(0, 2.4fr)` in `styles.css` (line 2019); category column now ~55% of row width, enough to show "Documentation / Requirements" unclipped. Ledger and mobile rules untouched. 2026-06-24
 - [x] **Onboarding checklist incomplete steps are dead-ends** — added `hint` field to each step in `SetupScreen.tsx`; hints render as a `.onboarding-step-hint` block span below the label only for incomplete steps; `.onboarding-step` changed to `align-items: flex-start` and `.onboarding-step-hint` rule added to `styles.css` (`var(--text-subtle)`, 11px). 2026-06-24
+- [x] **ActivityCapturePanel uses app_name as React key** — verified already fixed in `ActivityCapturePanel.tsx` (line 97 now uses `key={`${session.app_name}-${index}`}`); no duplicate-key risk when the same app recurs. 2026-06-25
 
 ## In Progress
 _(none)_
@@ -20,11 +21,12 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
+- [ ] **Audit log shows raw enum/ISO correction values while Corrections screen humanizes them** — when a correction is recorded, `App.tsx` (line 514) builds the `user_correction` audit summary as `` `${fullCorrection.old_value} -> ${fullCorrection.new_value}` `` using the raw stored values, so the Audit log reads "planned → unplanned" (and bare ISO strings for `start_time`/`end_time` edits) while `CorrectionsScreen.tsx` renders the same edit humanized as "Planned → Unplanned" via `humanizeCorrectionValue`. Humanize both values with `humanizeCorrectionValue(fullCorrection.field, …)` (already exported from `lib/format.ts`) and use the "→" glyph so the two views agree. Frontend only (`App.tsx` + existing helper).
 - [ ] **DailyReview progress track lacks progressbar semantics** — the `.review-progress-track` / `.review-progress-fill` bar in `DailyReviewScreen.tsx` (lines 97–99) is visual-only; only the wrapping `.review-progress` div carries `role="status"`. Add `role="progressbar"`, `aria-valuenow={progressPct}`, `aria-valuemin={0}`, `aria-valuemax={100}`, and `aria-label="Review progress"` to the `.review-progress-track` div so assistive tech exposes the completion percentage, not just the "N of M" string.
-- [ ] **ActivityCapturePanel uses app_name as React key** — `key={session.app_name}` in `ActivityCapturePanel.tsx` (line 97) duplicates when the same app appears more than once in `latestSessionSummaries`. Change to `key={`${session.app_name}-${index}`}` using the map index.
+- [ ] **Single AI suggestion looks marooned in the Daily "Suggested cleanup" panel** — `.copilot-inline .copilot-list` uses `grid-template-columns: repeat(auto-fit, minmax(280px, 360px))` (`styles.css` line ~2140), so when the copilot returns one suggestion the 360px card sits alone against ~880px of empty panel (clearly visible on the Daily screen, light + dark). Constrain the emptiness — e.g. give `.copilot-inline` (or the list) a `max-width` so the single card reads as intentional rather than broken. `ReviewCopilotPanel.tsx` / `styles.css`.
 
 ### Accessibility
-- [ ] **EmptyState sections lack descriptive aria-labels** — `<section className="empty-state">` in `EmptyState.tsx` (line 15) has no `aria-label`; add an optional `ariaLabel` prop defaulting to `title`, and pass meaningful labels at each call site.
+- [ ] **EmptyState sections lack descriptive aria-labels** — `<section className="empty-state">` in `components/common/EmptyState.tsx` (line 15) has no `aria-label`; add an optional `ariaLabel` prop defaulting to `title`, and pass meaningful labels at each call site.
 - [ ] **ReviewCopilotPanel contextual aria-labels** — the Apply/Dismiss buttons in `ReviewCopilotPanel.tsx` (lines 62–63) read identically to every suggestion ("Apply Suggestion" / "Dismiss Suggestion"). Add the suggestion title to each `aria-label` (e.g. `aria-label={`Apply suggestion: ${suggestion.title}`}`) so screen readers announce which suggestion is being acted on.
 
 ### Code Quality
