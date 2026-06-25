@@ -4985,6 +4985,9 @@ select {
 .bar-track .teal { background: #00ac96; }
 .bar-track .purple { background: #a000f8; }
 .risk-track span { background: #ffae00; }
+.risk-track span[data-severity="low"] { background: #94a3b8; }
+.risk-track span[data-severity="mid"] { background: #ff9300; }
+.risk-track span[data-severity="high"] { background: #ea580c; }
 
 .narrative-panel {
   padding: 24px;
@@ -5441,6 +5444,10 @@ html[data-theme="dark"] .stacked-bar {
   border-color: var(--border);
   background: var(--surface-elevated);
 }
+
+html[data-theme="dark"] .risk-track span[data-severity="low"] { background: #6b7280; }
+html[data-theme="dark"] .risk-track span[data-severity="mid"] { background: var(--warning); }
+html[data-theme="dark"] .risk-track span[data-severity="high"] { background: #f97316; }
 
 html[data-theme="dark"] .audit-badge.active_window_sample,
 html[data-theme="dark"] .audit-badge.work_block_classification {
