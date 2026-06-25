@@ -15,6 +15,8 @@ export function RiskRow({
 }) {
   const bounded = Math.max(0, Math.min(1, value));
   const shown = displayValue !== undefined ? displayValue : Math.round(bounded * 100);
+  const pct = bounded * 100;
+  const severity = dangerActive ? undefined : pct < 34 ? "low" : pct < 67 ? "mid" : "high";
   return (
     <div className="risk-row">
       <span title={tooltip}>{label}</span>
@@ -25,9 +27,10 @@ export function RiskRow({
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={shown}
-        aria-valuetext={dangerActive ? `${label}: ${shown}` : `${shown} of 100`}
+        aria-valuetext={dangerActive ? `${label}: ${shown}` : `${shown} of 100, ${severity} severity`}
       >
         <span
+          data-severity={severity}
           style={{
             width: `${bounded * 100}%`,
             ...(dangerActive ? { background: "var(--danger)" } : {}),
