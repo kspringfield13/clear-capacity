@@ -7,7 +7,6 @@ Verification gate: `npm run build` must pass before marking done.
 ---
 
 ## Done
-- [x] **Forecast detail cards wrap 3+1, stranding "Assumptions" alone** — changed `.forecast-grid` in `styles.css` from `repeat(auto-fit, minmax(min(240px,100%),1fr))` to `repeat(2,minmax(0,1fr))`; added `.forecast-grid` to `@media (max-width:600px)` single-column rule. Even 2×2 layout at all wide widths, single column on mobile. `styles.css` only. 2026-06-25
 - [x] **SetupScreen provider status not announced to screen readers** — always apply `ai-provider-status` base class; add CSS that collapses element (height:0/padding:0/border-width:0/overflow:hidden) when no modifier class is active, keeping it in the DOM + AT for live-region init without `display:none`. `SetupScreen.tsx` + `styles.css`. 2026-06-24
 - [x] **ConfidenceChip level casing** — verified already normalized in `ConfidenceChip.tsx` (className lowercases via `level.toLowerCase()`, "Needs review" → `low`; emitted classes are consistent — no action needed). 2026-06-24
 - [x] **Heatmap legend cells aria-labels** — verified handled in `ActivityHeatmap.tsx`: the `.heatmap-legend` is `aria-hidden="true"` (decorative, with visible "Less → More" text) and each populated data cell already carries `role="img"` + `aria-label`. 2026-06-24
@@ -19,6 +18,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **Weekly "Delivery risk modifiers" bars don't encode severity by color** — added `data-severity="low|mid|high"` to `.risk-track > span` in `RiskRow.tsx`; added threshold CSS rules (low <34: slate #94a3b8/#6b7280, mid 34–66: amber `var(--warning)`, high ≥67: orange #ea580c/#f97316) for light + dark in `styles.css`; `dangerActive` row's red treatment untouched; also improves screen-reader `aria-valuetext` with severity level. 2026-06-25
 - [x] **Audit log shows raw enum/ISO correction values while Corrections screen humanizes them** — imported `humanizeCorrectionValue` in `App.tsx`; changed `summary` in `addCorrection()` from `` `${old_value} -> ${new_value}` `` to `` `${humanizeCorrectionValue(field, old_value)} → ${humanizeCorrectionValue(field, new_value)}` `` so the Audit log now shows "Planned → Unplanned" and formatted times instead of raw enums/ISO strings. `App.tsx` only. 2026-06-25
 - [x] **Onboarding "Getting started" completion has no progress bar** — added a slim progress bar (`review-progress-track` / `review-progress-fill` reuse) below `.onboarding-checklist-header` in `SetupScreen.tsx` with `role="progressbar"` + full ARIA attrs; added `.onboarding-progress-track { margin-bottom: 10px }` to `styles.css`; trimmed header `margin-bottom` 12→8px. 2026-06-25
+- [x] **Forecast detail cards wrap 3+1, stranding "Assumptions" alone** — changed `.forecast-grid` in `styles.css` from `repeat(auto-fit, minmax(min(240px, 100%), 1fr))` to `repeat(2, minmax(0, 1fr))` for a balanced 2×2 layout; added `.forecast-grid` to the `@media (max-width: 600px)` single-column rule. `styles.css` only. 2026-06-25
 
 ## In Progress
 _(none)_
