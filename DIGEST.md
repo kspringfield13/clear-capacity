@@ -49,3 +49,5 @@
 > **Strategic backlog:** 11 items across three tracks (Intelligence Engine, Integrations, Trust & Verification). These are larger multi-step bets; the tactical polish queue will clear first.
 >
 > **Multi-iteration note:** Two fixes this cycle required multiple passes — ActivityCapturePanel React key (3 iterations) and category select width (2 iterations). No regressions reported; both landed cleanly.
+
+(email delivered as draft — Gmail connector exposes create_draft only, no direct send API available in this run; draft ID r4261511126484178343)
