@@ -17,6 +17,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **Single AI suggestion looks marooned in the Daily "Suggested cleanup" panel** — added `max-width: 760px` to `.copilot-inline` (caps section at two-card width) and changed `.copilot-inline .copilot-list` grid to `repeat(auto-fit, minmax(280px, 1fr))` so a lone card fills its container instead of floating at 360px in an 880px panel. `styles.css`. 2026-06-25
 - [x] **Weekly "Delivery risk modifiers" bars don't encode severity by color** — added `data-severity="low|mid|high"` to `.risk-track > span` in `RiskRow.tsx`; added threshold CSS rules (low <34: slate #94a3b8/#6b7280, mid 34–66: amber `var(--warning)`, high ≥67: orange #ea580c/#f97316) for light + dark in `styles.css`; `dangerActive` row's red treatment untouched; also improves screen-reader `aria-valuetext` with severity level. 2026-06-25
 - [x] **Audit log shows raw enum/ISO correction values while Corrections screen humanizes them** — imported `humanizeCorrectionValue` in `App.tsx`; changed `summary` in `addCorrection()` from `` `${old_value} -> ${new_value}` `` to `` `${humanizeCorrectionValue(field, old_value)} → ${humanizeCorrectionValue(field, new_value)}` `` so the Audit log now shows "Planned → Unplanned" and formatted times instead of raw enums/ISO strings. `App.tsx` only. 2026-06-25
+- [x] **Onboarding "Getting started" completion has no progress bar** — added a slim progress bar (`review-progress-track` / `review-progress-fill` reuse) below `.onboarding-checklist-header` in `SetupScreen.tsx` with `role="progressbar"` + full ARIA attrs; added `.onboarding-progress-track { margin-bottom: 10px }` to `styles.css`; trimmed header `margin-bottom` 12→8px. 2026-06-25
 
 ## In Progress
 _(none)_
@@ -24,7 +25,6 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
-- [ ] **Onboarding "Getting started" completion has no progress bar** — the `.onboarding-checklist-header` in `components/settings/SetupScreen.tsx` (lines 191–193) shows `{completedCount}/{steps.length} complete` as bare text (confirmed in this run's Settings screenshots: "3/4 complete" with no visual fill). `completedCount`/`steps.length` are already computed (lines 87–88). Add a slim progress bar under the header reusing the existing `.review-progress-track` / `.review-progress-fill` pattern (styles.css) — `width: ${(completedCount/steps.length)*100}%` — so first-run completion is visible at a glance, matching the DailyReview progress treatment. Frontend only (`SetupScreen.tsx` + `styles.css`).
 - [ ] **DailyReview progress track lacks progressbar semantics** — the `.review-progress-track` / `.review-progress-fill` bar in `components/review/DailyReviewScreen.tsx` (lines 97–98) is visual-only; only the wrapping `.review-progress` div (line 95) carries `role="status"`. Add `role="progressbar"`, `aria-valuenow={progressPct}`, `aria-valuemin={0}`, `aria-valuemax={100}`, and `aria-label="Review progress"` to the `.review-progress-track` div so assistive tech exposes the completion percentage, not just the "N of M" string.
 
 ### Accessibility

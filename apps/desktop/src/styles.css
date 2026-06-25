@@ -982,7 +982,11 @@ h3 {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
+}
+
+.onboarding-progress-track {
+  margin-bottom: 10px;
 }
 
 .onboarding-checklist-header strong {

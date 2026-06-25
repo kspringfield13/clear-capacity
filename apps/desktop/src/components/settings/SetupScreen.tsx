@@ -192,6 +192,16 @@ export function SetupScreen({
             <strong>Getting started</strong>
             <span>{completedCount}/{steps.length} complete</span>
           </div>
+          <div
+            className="review-progress-track onboarding-progress-track"
+            role="progressbar"
+            aria-valuenow={Math.round((completedCount / steps.length) * 100)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="Getting started progress"
+          >
+            <div className="review-progress-fill" style={{ width: `${(completedCount / steps.length) * 100}%` }} />
+          </div>
           <ol className="onboarding-steps">
             {steps.map((step) => (
               <li key={step.label} className={step.done ? "onboarding-step is-done" : "onboarding-step"}>
