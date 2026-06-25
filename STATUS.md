@@ -32,7 +32,7 @@ _(none)_
 - [ ] **ReviewCopilotPanel contextual aria-labels** — the Apply/Dismiss buttons in `ReviewCopilotPanel.tsx` (lines 62–63) read identically to every suggestion ("Apply Suggestion" / "Dismiss Suggestion"). Add the suggestion title to each `aria-label` (e.g. `aria-label={`Apply suggestion: ${suggestion.title}`}`) so screen readers announce which suggestion is being acted on.
 
 ### Code Quality
-- [ ] **AppShell / CompactWidget `snapshot: any` type fix** — replace `snapshot: any` with the proper `WeeklyCapacitySnapshot` type (from `packages/domain/src/models.ts`) in `AppShell.tsx` (line 32) and `CompactWidget.tsx` (line 22).
+- [ ] **AppShell / CompactWidget `snapshot: any` type fix** — replace `snapshot: any` with the proper `WeeklyCapacitySnapshot` type (from `packages/domain/src/models.ts`, line 206) in `components/shell/AppShell.tsx` (line 32) and `components/compact/CompactWidget.tsx` (line 22).
 
 > **Strategic enhancements (intelligence engine · integrations · trust & verification UX)** — the three tracks below are larger, multi-step bets than the tactical polish above, but they live under `## Next` on purpose so the improvement routine picks them up in order once the polish items clear. Each bullet is sized to land in one loop pass; sequence within a track top-to-bottom (later items depend on earlier ones). Items tagged **[manual / Rust]** need `src-tauri/` or network/OAuth work that is out of loop scope — build the loop-safe slice noted in the bullet and leave the native half as a flagged follow-up. The forecast-accuracy feature (persisted `forecastHistory` + `scoreForecastAccuracy`) shipped in PR #19 and is the reference pattern for retained-history work.
 
