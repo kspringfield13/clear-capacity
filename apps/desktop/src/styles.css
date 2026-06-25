@@ -982,7 +982,11 @@ h3 {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
+}
+
+.onboarding-progress-track {
+  margin-bottom: 10px;
 }
 
 .onboarding-checklist-header strong {
@@ -2117,6 +2121,8 @@ select {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
+  /* Cap at two-card width so a single suggestion reads as intentional, not marooned */
+  max-width: 760px;
 }
 
 .copilot-inline-head {
@@ -2137,7 +2143,8 @@ select {
 }
 
 .copilot-inline .copilot-list {
-  grid-template-columns: repeat(auto-fit, minmax(280px, 360px));
+  /* auto-fit collapses empty tracks so a lone card fills the full row width */
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
 
 .copilot-list p {
@@ -4982,6 +4989,9 @@ select {
 .bar-track .teal { background: #00ac96; }
 .bar-track .purple { background: #a000f8; }
 .risk-track span { background: #ffae00; }
+.risk-track span[data-severity="low"] { background: #94a3b8; }
+.risk-track span[data-severity="mid"] { background: #ff9300; }
+.risk-track span[data-severity="high"] { background: #ea580c; }
 
 .narrative-panel {
   padding: 24px;
@@ -5438,6 +5448,10 @@ html[data-theme="dark"] .stacked-bar {
   border-color: var(--border);
   background: var(--surface-elevated);
 }
+
+html[data-theme="dark"] .risk-track span[data-severity="low"] { background: #6b7280; }
+html[data-theme="dark"] .risk-track span[data-severity="mid"] { background: var(--warning); }
+html[data-theme="dark"] .risk-track span[data-severity="high"] { background: #f97316; }
 
 html[data-theme="dark"] .audit-badge.active_window_sample,
 html[data-theme="dark"] .audit-badge.work_block_classification {
