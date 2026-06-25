@@ -25,7 +25,7 @@ import {
   getBusinessWeekRangeLabel,
   getLocalDateKey,
 } from "./lib/date";
-import { fieldLabel } from "./lib/format";
+import { fieldLabel, humanizeCorrectionValue } from "./lib/format";
 import { createAuditEvent } from "./lib/audit";
 import { removeSeededCorrections, removeSeededWorkBlocks } from "./lib/blocks";
 import { useDerived } from "./hooks/useDerived";
@@ -511,7 +511,7 @@ export function App() {
         type: "user_correction",
         source: "review_layer",
         title: fieldLabel(fullCorrection.field),
-        summary: `${fullCorrection.old_value} -> ${fullCorrection.new_value}`,
+        summary: `${humanizeCorrectionValue(fullCorrection.field, fullCorrection.old_value)} → ${humanizeCorrectionValue(fullCorrection.field, fullCorrection.new_value)}`,
         privacy_level: "local_only",
         timestamp,
         details: {
