@@ -2117,6 +2117,8 @@ select {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
+  /* Cap at two-card width so a single suggestion reads as intentional, not marooned */
+  max-width: 760px;
 }
 
 .copilot-inline-head {
@@ -2137,7 +2139,8 @@ select {
 }
 
 .copilot-inline .copilot-list {
-  grid-template-columns: repeat(auto-fit, minmax(280px, 360px));
+  /* auto-fit collapses empty tracks so a lone card fills the full row width */
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
 
 .copilot-list p {
