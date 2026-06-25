@@ -16,6 +16,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **ActivityCapturePanel uses app_name as React key** — verified already fixed in `ActivityCapturePanel.tsx` (line 97 now uses `key={`${session.app_name}-${index}`}`); no duplicate-key risk when the same app recurs. 2026-06-25
 - [x] **Single AI suggestion looks marooned in the Daily "Suggested cleanup" panel** — added `max-width: 760px` to `.copilot-inline` (caps section at two-card width) and changed `.copilot-inline .copilot-list` grid to `repeat(auto-fit, minmax(280px, 1fr))` so a lone card fills its container instead of floating at 360px in an 880px panel. `styles.css`. 2026-06-25
 - [x] **Weekly "Delivery risk modifiers" bars don't encode severity by color** — added `data-severity="low|mid|high"` to `.risk-track > span` in `RiskRow.tsx`; added threshold CSS rules (low <34: slate #94a3b8/#6b7280, mid 34–66: amber `var(--warning)`, high ≥67: orange #ea580c/#f97316) for light + dark in `styles.css`; `dangerActive` row's red treatment untouched; also improves screen-reader `aria-valuetext` with severity level. 2026-06-25
+- [x] **Audit log shows raw enum/ISO correction values while Corrections screen humanizes them** — added `humanizeCorrectionValue` to the import and applied it to both `old_value` and `new_value` in the `user_correction` audit summary in `App.tsx` (line 514); replaced `->` with `→`; audit log now shows e.g. "Planned → Unplanned" and formatted times instead of raw enums/ISO strings. `App.tsx`. 2026-06-25
 
 ## In Progress
 _(none)_
@@ -23,7 +24,6 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
-- [ ] **Audit log shows raw enum/ISO correction values while Corrections screen humanizes them** — when a correction is recorded, `App.tsx` (line 514) builds the `user_correction` audit summary as `` `${fullCorrection.old_value} -> ${fullCorrection.new_value}` `` using the raw stored values, so the Audit log reads "planned → unplanned" (and bare ISO strings for `start_time`/`end_time` edits) while `CorrectionsScreen.tsx` renders the same edit humanized as "Planned → Unplanned" via `humanizeCorrectionValue` (both confirmed side-by-side in this run's screenshots). Humanize both values with `humanizeCorrectionValue(fullCorrection.field, …)` (already exported from `lib/format.ts`) and use the "→" glyph so the two views agree. Frontend only (`App.tsx` + existing helper).
 - [ ] **DailyReview progress track lacks progressbar semantics** — the `.review-progress-track` / `.review-progress-fill` bar in `DailyReviewScreen.tsx` (lines 97–98) is visual-only; only the wrapping `.review-progress` div (line 95) carries `role="status"`. Add `role="progressbar"`, `aria-valuenow={progressPct}`, `aria-valuemin={0}`, `aria-valuemax={100}`, and `aria-label="Review progress"` to the `.review-progress-track` div so assistive tech exposes the completion percentage, not just the "N of M" string.
 
 ### Accessibility
