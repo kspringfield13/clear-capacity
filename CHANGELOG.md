@@ -70,4 +70,7 @@
 - 20:04 UTC — **improve**: BlockCard category select clips label fix — widened `.review-screen .tag-grid` first column from `minmax(0, 1.5fr)` to `minmax(0, 2.4fr)` in `styles.css`; category now ~55% of row width, "Documentation / Requirements" renders unclipped; ledger/mobile rules untouched; self-review passed
 - 20:47 UTC — **improve**: Onboarding checklist dead-end fix — added contextual `hint` to each step in `SetupScreen.tsx` rendered as `.onboarding-step-hint` (block span, 11px, `--text-subtle`) below the label for incomplete steps only; `align-items: flex-start` on `.onboarding-step`; `styles.css`; self-review passed
 - 21:30 UTC — **improve**: SetupScreen provider status ARIA live region — always apply `ai-provider-status` base class (removed conditional `undefined`); added CSS rule that collapses element to 0 height/padding/border when no modifier class is active, keeping it in DOM + AT for live-region registration without `display:none`; `SetupScreen.tsx`, `styles.css`; self-review passed
-- 23:04 UTC — **improve**: DailyReview progress track progressbar semantics — added `role="progressbar"`, `aria-valuenow={progressPct}`, `aria-valuemin={0}`, `aria-valuemax={100}`, `aria-label="Review progress"` to `.review-progress-track` div in `DailyReviewScreen.tsx`; assistive tech now exposes the numeric completion percentage alongside the "N of M" `role="status"` text; self-review passed
+
+## 2026-06-25
+
+- 00:05 UTC — **improve**: DailyReview progressbar semantics — added `role="progressbar"`, `aria-valuenow`, `aria-valuemin={0}`, `aria-valuemax={100}`, `aria-label="Review progress"` to `.review-progress-track` div in `DailyReviewScreen.tsx`; assistive tech now announces the numeric completion percentage; self-review passed

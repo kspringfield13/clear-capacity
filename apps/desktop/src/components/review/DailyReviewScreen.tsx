@@ -94,14 +94,7 @@ export function DailyReviewScreen({
 
       <div className="review-progress" role="status" aria-label={`${verifiedCount} of ${blocks.length} blocks verified`}>
         <span><b>{verifiedCount}</b> of {blocks.length} verified</span>
-        <div
-          className="review-progress-track"
-          role="progressbar"
-          aria-valuenow={progressPct}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label="Review progress"
-        >
+        <div className="review-progress-track" role="progressbar" aria-valuenow={progressPct} aria-valuemin={0} aria-valuemax={100} aria-label="Review progress">
           <div className="review-progress-fill" style={{ width: `${progressPct}%` }} />
         </div>
       </div>

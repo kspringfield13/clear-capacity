@@ -13,7 +13,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **ForecastList uses item text as React key** — changed `key={item}` to `key={`${index}-${item.slice(0,20)}`}` in `ForecastList.tsx` (line 6); eliminates duplicate-key React warnings when AI returns identical bullet items. 2026-06-24
 - [x] **BlockCard category select clips its current label** — widened `.review-screen .tag-grid` first column from `minmax(0, 1.5fr)` to `minmax(0, 2.4fr)` in `styles.css` (line 2019); category column now ~55% of row width, enough to show "Documentation / Requirements" unclipped. Ledger and mobile rules untouched. 2026-06-24
 - [x] **Onboarding checklist incomplete steps are dead-ends** — added `hint` field to each step in `SetupScreen.tsx`; hints render as a `.onboarding-step-hint` block span below the label only for incomplete steps; `.onboarding-step` changed to `align-items: flex-start` and `.onboarding-step-hint` rule added to `styles.css` (`var(--text-subtle)`, 11px). 2026-06-24
-- [x] **DailyReview progress track lacks progressbar semantics** — added `role="progressbar"`, `aria-valuenow={progressPct}`, `aria-valuemin={0}`, `aria-valuemax={100}`, `aria-label="Review progress"` to `.review-progress-track` div in `DailyReviewScreen.tsx`; assistive tech now exposes the numeric completion percentage in addition to the "N of M" text in the parent `role="status"`. 2026-06-24
+- [x] **DailyReview progress track lacks progressbar semantics** — added `role="progressbar"`, `aria-valuenow={progressPct}`, `aria-valuemin={0}`, `aria-valuemax={100}`, `aria-label="Review progress"` to `.review-progress-track` div in `DailyReviewScreen.tsx`; assistive tech now announces completion percentage. 2026-06-25
 
 ## In Progress
 _(none)_
