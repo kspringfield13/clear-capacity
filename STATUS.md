@@ -26,14 +26,14 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **BlockCard "% of week" capacity figure is a bare percentage with no explanation** — added `title="Share of this week's modeled capacity this block accounts for"` to the `.block-capacity` div and an `.sr-only` span with the same text in `BlockCard.tsx`; hover and screen-reader users on both the Daily review and Ledger now understand what the percentage measures. `BlockCard.tsx` only. 2026-06-26
 - [x] **BlockCard relabel selects have no field-name accessible label** — added `aria-label="Work category"`, `aria-label="Planned status"`, `aria-label="Work mode"` to the three relabel `<select>`s in `components/ledger/BlockCard.tsx`; kept the existing `title={currentValue}` for truncation tooltips. Screen readers now announce which field is being edited. `BlockCard.tsx` only. 2026-06-26
 - [x] **EmptyState sections lack descriptive aria-labels** — added optional `ariaLabel` prop (defaults to `title`) and applied as `aria-label` on the `<section>` in `components/common/EmptyState.tsx`; all 14 existing call sites inherit the title automatically with no changes needed. 2026-06-26
+- [x] **Demo "7-day activity pattern" heatmap never renders its grid** — added `activeWindowSamples` for yesterday, 2 days ago, and 3 days ago (2 sessions each at working-hours timestamps) in `services/demoData.ts`; `daysWithActivity` is now 4, clearing the `>= 2` threshold so the flagship heatmap grid renders in demo mode. `services/demoData.ts` only. 2026-06-26
 
 ## In Progress
 _(none)_
 
 ## Next
 
-### UI & UX Polish
-- [ ] **Demo "7-day activity pattern" heatmap never renders its grid** — `ActivityHeatmap.tsx` only draws the grid when `daysWithActivity >= 2` (line 58); the demo seeds every `activeWindowSamples` group on today (`services/demoData.ts` line 152 — `activeStart` is derived from `now`), so demo mode (the first thing a new user/evaluator sees) shows only the hollow "Limited activity so far" caption instead of the flagship heatmap. Spread the demo `activeWindowSamples` across ≥2–3 distinct days (seed earlier-week sessions) so the grid renders and showcases the feature. `services/demoData.ts` only.
+### UI & UX Polish — `ActivityHeatmap.tsx` only draws the grid when `daysWithActivity >= 2` (line 58); the demo seeds every `activeWindowSamples` group on today (`services/demoData.ts` line 152 — `activeStart` is derived from `now`), so demo mode (the first thing a new user/evaluator sees) shows only the hollow "Limited activity so far" caption instead of the flagship heatmap. Spread the demo `activeWindowSamples` across ≥2–3 distinct days (seed earlier-week sessions) so the grid renders and showcases the feature. `services/demoData.ts` only.
 
 ### Accessibility
 - [ ] **ReviewCopilotPanel contextual aria-labels** — the Apply/Dismiss buttons in `ReviewCopilotPanel.tsx` (lines 62–63) read identically to every suggestion ("Apply Suggestion" / "Dismiss Suggestion"). Add the suggestion title to each `aria-label` (e.g. `aria-label={`Apply suggestion: ${suggestion.title}`}`) so screen readers announce which suggestion is being acted on.

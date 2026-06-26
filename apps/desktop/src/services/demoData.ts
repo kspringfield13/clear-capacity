@@ -151,10 +151,33 @@ export function createDemoState(reference = new Date()): PersistedAppState {
 
   const activeStart = new Date(now);
   activeStart.setHours(Math.max(8, now.getHours() - 3), 5, 0, 0);
+
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  yesterday.setHours(9, 0, 0, 0);
+
+  const twoDaysAgo = new Date(now);
+  twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+  twoDaysAgo.setHours(10, 30, 0, 0);
+
+  const threeDaysAgo = new Date(now);
+  threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+  threeDaysAgo.setHours(9, 15, 0, 0);
+
   const activeWindowSamples = [
+    // Today
     ...samples("Codex", "ClearCapacity - capacity model", activeStart, 47),
     ...samples("Figma", "Executive capacity dashboard", addMinutes(activeStart, 58), 31),
-    ...samples("Slack", "Customer Success - retention request", addMinutes(activeStart, 99), 18)
+    ...samples("Slack", "Customer Success - retention request", addMinutes(activeStart, 99), 18),
+    // Yesterday — spread across morning and afternoon for visual depth
+    ...samples("DataGrip", "Revenue attribution query", yesterday, 52),
+    ...samples("Notion", "Self-service analytics requirements", addMinutes(yesterday, 70), 28),
+    // Two days ago
+    ...samples("Excel", "Weekly operating metrics workbook", twoDaysAgo, 63),
+    ...samples("Slack", "Data Platform - attribution mismatch", addMinutes(twoDaysAgo, 80), 22),
+    // Three days ago
+    ...samples("Codex", "Capacity model v2", threeDaysAgo, 38),
+    ...samples("Figma", "Executive capacity dashboard", addMinutes(threeDaysAgo, 50), 25)
   ];
 
   const calendarEvents: OutlookCalendarEvent[] = [
