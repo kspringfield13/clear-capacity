@@ -24,6 +24,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **Demo Audit log shows a raw `planned -> unplanned` correction value** — changed hardcoded seed summary from `"planned -> unplanned"` to `"Planned → Unplanned"` in `services/demoData.ts` (line 211); demo Audit screen now matches the humanized live-correction format. `services/demoData.ts` only. 2026-06-26
 - [x] **Weekly "Summary confidence" score has no explanation of what it measures** — added `title="How confident the model is in this week's capacity estimate"` and `.sr-only` span to BOTH `.summary-score` instances (empty-state and populated) in `WeeklyCapacityScreen.tsx`; hover and screen-reader users now see what the percentage measures. 2026-06-26
 - [x] **BlockCard "% of week" capacity figure is a bare percentage with no explanation** — added `title="Share of this week's modeled capacity this block accounts for"` to the `.block-capacity` div and an `.sr-only` span with the same text in `BlockCard.tsx`; hover and screen-reader users on both the Daily review and Ledger now understand what the percentage measures. `BlockCard.tsx` only. 2026-06-26
+- [x] **BlockCard relabel selects have no field-name accessible label** — added `aria-label="Work category"`, `aria-label="Planned status"`, `aria-label="Work mode"` to the three relabel `<select>`s in `components/ledger/BlockCard.tsx`; kept the existing `title={currentValue}` for truncation tooltips. Screen readers now announce which field is being edited. `BlockCard.tsx` only. 2026-06-26
 
 ## In Progress
 _(none)_
@@ -33,7 +34,6 @@ _(none)_
 ### UI & UX Polish
 
 ### Accessibility
-- [ ] **BlockCard relabel selects have no field-name accessible label** — the three relabel `<select>`s in `components/ledger/BlockCard.tsx` (lines 136 / 141 / 146 — category, planned status, mode) carry only `title={currentValue}`, so a screen reader announces just the value (e.g. "Documentation / requirement clarification, combo box") with no indication of WHICH field is being edited, and on the first card there is no column header to disambiguate the three side-by-side dropdowns. Add a static `aria-label` to each: `aria-label="Work category"`, `aria-label="Planned status"`, `aria-label="Work mode"` (keep the existing value `title` for the truncation tooltip). High impact — `BlockCard` renders on BOTH the Daily review and the Ledger, the two most-used screens. `BlockCard.tsx` only.
 - [ ] **EmptyState sections lack descriptive aria-labels** — `<section className="empty-state">` in `components/common/EmptyState.tsx` (line 15) has no `aria-label`; add an optional `ariaLabel` prop defaulting to `title`, and pass meaningful labels at each call site.
 - [ ] **ReviewCopilotPanel contextual aria-labels** — the Apply/Dismiss buttons in `ReviewCopilotPanel.tsx` (lines 62–63) read identically to every suggestion ("Apply Suggestion" / "Dismiss Suggestion"). Add the suggestion title to each `aria-label` (e.g. `aria-label={`Apply suggestion: ${suggestion.title}`}`) so screen readers announce which suggestion is being acted on.
 
