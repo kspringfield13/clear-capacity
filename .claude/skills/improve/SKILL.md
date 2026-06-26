@@ -1,14 +1,44 @@
 ---
 name: improve
-description: One improvement iteration for ClearCapacity. Reads STATUS.md, picks the top Next task, implements it, verifies with npm run build, and updates STATUS.md. Safe scope: apps/desktop/src/ and packages/ only.
+description: One improvement iteration for ClearCapacity. Reads STATUS.md, walks every "Next" sub-section top-to-bottom (UI & UX Polish → Accessibility → Code Quality → Intelligence Engine → Integrations → Trust & Verification UX) to pick the next eligible task, implements it (loop-safe slice only for [manual / Rust] items), verifies with npm run build, and updates STATUS.md. Safe scope: apps/desktop/src/ and packages/ only.
 ---
 
 You are running one iteration of the ClearCapacity improvement loop.
 
 ## Step 1 — Read state
-Read `/Users/kyle/dev/clear-capacity/STATUS.md`.
+Read `STATUS.md` at the repo root.
 - If "In Progress" has a task, resume it (don't start something new).
-- Otherwise pick the top unchecked task from "Next".
+- Otherwise pick the next eligible task from "Next" using the selection rules below.
+
+### Selecting the next task from "Next"
+"Next" is organized into sub-sections. Do NOT stop at the first sub-section — the
+routine is responsible for every sub-section, including the strategic tracks at
+the bottom. Walk the sub-sections **top-to-bottom in this order** and take the
+first unchecked `- [ ]` task you find:
+
+1. **UI & UX Polish**
+2. **Accessibility**
+3. **Code Quality**
+4. **Intelligence Engine**
+5. **Integrations**
+6. **Trust & Verification UX**
+
+Rules for the walk:
+- A sub-section with no unchecked tasks is skipped — move to the next one. This is
+  what carries the loop down into Accessibility → Intelligence Engine →
+  Integrations → Trust & Verification UX over successive runs.
+- The prose paragraph that introduces the strategic tracks (the blockquote about
+  "Strategic enhancements") is **not a task** — never treat it as selectable.
+- **Within a track, preserve order.** The strategic tracks are sequenced
+  top-to-bottom on purpose (later items depend on earlier ones — e.g. the
+  snapshot-history store must land before baselines/trends). Always take the
+  topmost unchecked item in the track; never skip ahead to a later one.
+- **`[manual / Rust]` items:** these need `src-tauri/`, network, or OAuth work
+  that is out of loop scope. Do NOT skip them — implement only the **loop-safe
+  slice** described in the bullet (frontend + `packages/` only, e.g. an interface
+  + a disabled stub), get the build green, and leave the native half as an
+  explicit flagged follow-up in your PR body and the STATUS.md note. Do not touch
+  `src-tauri/`.
 
 ## Step 2 — Understand before touching
 Read only the files relevant to your chosen task. Do not read the entire codebase speculatively. Key entry points:
@@ -93,7 +123,8 @@ Once the build is green:
    ```
 6. Output the PR URL so the user can review it.
 
-After pushing, return to the `codex/product-demo-video` branch (or whatever branch was active before you started):
+After pushing, return to whatever branch was active before you started. Capture it
+at the start of the run with `git rev-parse --abbrev-ref HEAD` and check it back out:
 ```
 git checkout <original-branch>
 ```
