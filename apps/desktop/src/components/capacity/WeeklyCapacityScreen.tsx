@@ -67,9 +67,10 @@ export function WeeklyCapacityScreen({
             <p className="eyebrow">Weekly capacity view</p>
             <div className="headline-with-score">
               <h1>{weekRangeLabel}: waiting for real workload signal.</h1>
-              <div className="summary-score">
+              <div className="summary-score" title="How confident the model is in this week's capacity estimate">
                 <span>Summary confidence</span>
                 <strong>--</strong>
+                <span className="sr-only">How confident the model is in this week's capacity estimate</span>
               </div>
             </div>
           </div>
@@ -113,9 +114,10 @@ export function WeeklyCapacityScreen({
           </div>
           <div className="headline-with-score">
             <h1>{viewedWeekRangeLabel}: {pct(snapshot.reliable_new_work_capacity_pct)} reliable capacity for new planned work.</h1>
-            <div className="summary-score">
+            <div className="summary-score" title="How confident the model is in this week's capacity estimate">
               <span>Summary confidence</span>
               <strong>{Math.round(snapshot.summary_confidence * 100)}%</strong>
+              <span className="sr-only">How confident the model is in this week's capacity estimate</span>
             </div>
           </div>
         </div>
