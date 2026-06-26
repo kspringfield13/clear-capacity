@@ -127,9 +127,10 @@ export function BlockCard({
           <h3 title={block.project_name}>{block.project_name}</h3>
           <p title={block.stakeholder_group}>{block.stakeholder_group}</p>
         </div>
-        <div className="block-capacity">
+        <div className="block-capacity" title="Share of this week's modeled capacity this block accounts for">
           <strong>{pct(block.estimated_capacity_pct)}</strong>
           <span className="capacity-caption">of week</span>
+          <span className="sr-only">Share of this week's modeled capacity this block accounts for</span>
         </div>
       </div>
       <div className="tag-grid">
