@@ -152,25 +152,32 @@ export function createDemoState(reference = new Date()): PersistedAppState {
   const activeStart = new Date(now);
   activeStart.setHours(Math.max(8, now.getHours() - 3), 5, 0, 0);
 
-  function prevDay(daysBack: number, hour: number, min = 5): Date {
-    const d = new Date(now);
-    d.setDate(d.getDate() - daysBack);
-    d.setHours(hour, min, 0, 0);
-    return d;
-  }
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  yesterday.setHours(9, 0, 0, 0);
+
+  const twoDaysAgo = new Date(now);
+  twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+  twoDaysAgo.setHours(10, 30, 0, 0);
+
+  const threeDaysAgo = new Date(now);
+  threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+  threeDaysAgo.setHours(9, 15, 0, 0);
 
   const activeWindowSamples = [
     // Today
     ...samples("Codex", "ClearCapacity - capacity model", activeStart, 47),
     ...samples("Figma", "Executive capacity dashboard", addMinutes(activeStart, 58), 31),
     ...samples("Slack", "Customer Success - retention request", addMinutes(activeStart, 99), 18),
-    // Prior days — spread across 3 earlier days so the heatmap grid renders in demo mode
-    ...samples("Codex", "Capacity model v2 - data pipeline", prevDay(1, 9), 55),
-    ...samples("DataGrip", "Revenue attribution - diagnosis", prevDay(1, 10, 15), 40),
-    ...samples("Excel", "Weekly operating metrics", prevDay(2, 9), 65),
-    ...samples("Slack", "Analytics team sync", prevDay(2, 11), 20),
-    ...samples("Figma", "Executive capacity dashboard", prevDay(3, 14), 35),
-    ...samples("Notion", "Self-service analytics requirements", prevDay(3, 15, 30), 25)
+    // Yesterday — spread across morning and afternoon for visual depth
+    ...samples("DataGrip", "Revenue attribution query", yesterday, 52),
+    ...samples("Notion", "Self-service analytics requirements", addMinutes(yesterday, 70), 28),
+    // Two days ago
+    ...samples("Excel", "Weekly operating metrics workbook", twoDaysAgo, 63),
+    ...samples("Slack", "Data Platform - attribution mismatch", addMinutes(twoDaysAgo, 80), 22),
+    // Three days ago
+    ...samples("Codex", "Capacity model v2", threeDaysAgo, 38),
+    ...samples("Figma", "Executive capacity dashboard", addMinutes(threeDaysAgo, 50), 25)
   ];
 
   const calendarEvents: OutlookCalendarEvent[] = [
