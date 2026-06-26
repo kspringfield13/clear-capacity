@@ -2863,6 +2863,61 @@ select {
   gap: 10px;
 }
 
+.forecast-range {
+  display: grid;
+  gap: 4px;
+}
+
+.forecast-range-track {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-muted);
+}
+
+.forecast-range-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--info);
+}
+
+.forecast-range-marker {
+  position: absolute;
+  top: -4px;
+  width: 2px;
+  height: 14px;
+  border-radius: 1px;
+  background: var(--info);
+  transform: translateX(-50%);
+}
+
+.forecast-range-label-row {
+  position: relative;
+  height: 18px;
+  font-size: 11px;
+  color: var(--text-subtle);
+}
+
+.forecast-range-label-row span {
+  position: absolute;
+  white-space: nowrap;
+}
+
+.forecast-range-label-row span:first-child {
+  left: 0;
+}
+
+.forecast-range-label-row span:last-child {
+  right: 0;
+}
+
+.forecast-range-label-center {
+  transform: translateX(-50%);
+}
+
 .forecast-list {
   display: grid;
   align-content: start;
