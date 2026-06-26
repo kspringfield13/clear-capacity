@@ -44,6 +44,14 @@ export function ForecastAgentPanel({
       )
     : 50;
 
+  const likelyLeft = forecast
+    ? Math.round(
+        ((forecast.likely_capacity_pct - forecast.conservative_capacity_pct) /
+          Math.max(1, forecast.optimistic_capacity_pct - forecast.conservative_capacity_pct)) *
+          100
+      )
+    : 0;
+
   return (
     <section className="capacity-section forecast-panel">
       <div className="section-title">
@@ -143,32 +151,18 @@ export function ForecastAgentPanel({
             </div>
           </div>
           <div
-            className="forecast-scenario-range"
+            className="forecast-range"
             role="img"
-            aria-label={`Scenario range — Conservative: ${pct(forecast.conservative_capacity_pct)}, Likely: ${pct(forecast.likely_capacity_pct)}, Optimistic: ${pct(forecast.optimistic_capacity_pct)}`}
+            aria-label={`Scenario range: conservative ${pct(forecast.conservative_capacity_pct)}, likely ${pct(forecast.likely_capacity_pct)}, optimistic ${pct(forecast.optimistic_capacity_pct)}`}
           >
-            <div className="forecast-range-ends">
-              <span>
-                {pct(forecast.conservative_capacity_pct)}
-                <small>Conservative</small>
-              </span>
-              <span>
-                {pct(forecast.optimistic_capacity_pct)}
-                <small>Optimistic</small>
-              </span>
-            </div>
             <div className="forecast-range-track">
-              <div
-                className="forecast-range-fill"
-                style={{ width: `${likelyPct}%` }}
-              />
-              <div
-                className="forecast-range-marker"
-                style={{ left: `${likelyPct}%` }}
-              >
-                <div className="forecast-range-marker-line" />
-                <span className="forecast-range-marker-label">Likely · {pct(forecast.likely_capacity_pct)}</span>
-              </div>
+              <div className="forecast-range-fill" style={{ width: `${likelyLeft}%` }} />
+              <div className="forecast-range-marker" style={{ left: `${likelyLeft}%` }} />
+            </div>
+            <div className="forecast-range-label-row">
+              <span>Conservative · {pct(forecast.conservative_capacity_pct)}</span>
+              <span className="forecast-range-label-center" style={{ left: `${likelyLeft}%` }}>Likely · {pct(forecast.likely_capacity_pct)}</span>
+              <span>Optimistic · {pct(forecast.optimistic_capacity_pct)}</span>
             </div>
           </div>
           <div className="forecast-copy">
