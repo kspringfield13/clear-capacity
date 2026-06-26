@@ -208,7 +208,7 @@ export function createDemoState(reference = new Date()): PersistedAppState {
     audit("calendar_import", importedAt, "Outlook calendar imported", "2 events parsed from outlook-export.ics", "outlook_ics", "local_only"),
     audit("work_block_classification", addMinutes(now, -94), "Work sessions classified", "7 sessions became explainable work blocks", "openai_classifier"),
     audit("visual_context", addMinutes(now, -82), "Visual context derived", "Capacity model implementation context added", "openai_vision"),
-    audit("user_correction", addMinutes(now, -68), "Planned status", "planned -> unplanned", "review_layer", "local_only"),
+    audit("user_correction", addMinutes(now, -68), "Planned status", "Planned → Unplanned", "review_layer", "local_only"),
     audit("review_copilot", addMinutes(now, -41), "Review suggestions generated", "1 suggestion prepared for approval", "openai_review_copilot"),
     audit("forecast_agent", addMinutes(now, -31), "Capacity forecast generated", "Next-week scenarios estimate 24% likely capacity", "openai_forecast_agent"),
     audit("narrative_generation", generatedAt, "Weekly narrative generated", "Analyst and manager summaries created", "openai_narrative"),
