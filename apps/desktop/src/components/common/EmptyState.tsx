@@ -4,15 +4,17 @@ export function EmptyState({
   icon: Icon,
   title,
   description,
+  ariaLabel,
   children
 }: {
   icon: LucideIcon;
   title: string;
   description: string;
+  ariaLabel?: string;
   children?: React.ReactNode;
 }) {
   return (
-    <section className="empty-state">
+    <section className="empty-state" aria-label={ariaLabel ?? title}>
       <div className="empty-state-icon">
         <Icon size={20} />
       </div>

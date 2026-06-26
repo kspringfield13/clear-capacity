@@ -25,6 +25,7 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **Weekly "Summary confidence" score has no explanation of what it measures** — added `title="How confident the model is in this week's capacity estimate"` and `.sr-only` span to BOTH `.summary-score` instances (empty-state and populated) in `WeeklyCapacityScreen.tsx`; hover and screen-reader users now see what the percentage measures. 2026-06-26
 - [x] **BlockCard "% of week" capacity figure is a bare percentage with no explanation** — added `title="Share of this week's modeled capacity this block accounts for"` to the `.block-capacity` div and an `.sr-only` span with the same text in `BlockCard.tsx`; hover and screen-reader users on both the Daily review and Ledger now understand what the percentage measures. `BlockCard.tsx` only. 2026-06-26
 - [x] **BlockCard relabel selects have no field-name accessible label** — added `aria-label="Work category"`, `aria-label="Planned status"`, `aria-label="Work mode"` to the three relabel `<select>`s in `components/ledger/BlockCard.tsx`; kept the existing `title={currentValue}` for truncation tooltips. Screen readers now announce which field is being edited. `BlockCard.tsx` only. 2026-06-26
+- [x] **EmptyState sections lack descriptive aria-labels** — added optional `ariaLabel` prop (defaults to `title`) to `EmptyState`; applied as `aria-label` on `<section className="empty-state">` so screen readers announce which empty state the user has landed on. `components/common/EmptyState.tsx` only. 2026-06-26
 
 ## In Progress
 _(none)_
@@ -36,7 +37,6 @@ _(none)_
 - [ ] **Demo "7-day activity pattern" heatmap never renders its grid** — `ActivityHeatmap.tsx` only draws the grid when `daysWithActivity >= 2` (line 58); the demo seeds every `activeWindowSamples` group on today (`services/demoData.ts` line 152 — `activeStart` is derived from `now`), so demo mode (the first thing a new user/evaluator sees) shows only the hollow "Limited activity so far" caption instead of the flagship heatmap. Spread the demo `activeWindowSamples` across ≥2–3 distinct days (seed earlier-week sessions) so the grid renders and showcases the feature. `services/demoData.ts` only.
 
 ### Accessibility
-- [ ] **EmptyState sections lack descriptive aria-labels** — `<section className="empty-state">` in `components/common/EmptyState.tsx` (line 15) has no `aria-label`; add an optional `ariaLabel` prop defaulting to `title`, and pass meaningful labels at each call site.
 - [ ] **ReviewCopilotPanel contextual aria-labels** — the Apply/Dismiss buttons in `ReviewCopilotPanel.tsx` (lines 62–63) read identically to every suggestion ("Apply Suggestion" / "Dismiss Suggestion"). Add the suggestion title to each `aria-label` (e.g. `aria-label={`Apply suggestion: ${suggestion.title}`}`) so screen readers announce which suggestion is being acted on.
 
 ### Code Quality
