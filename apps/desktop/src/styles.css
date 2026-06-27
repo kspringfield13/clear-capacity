@@ -7517,6 +7517,10 @@ html[data-theme="dark"] .agent-active .pause-button:hover {
   margin: 0;
 }
 
+details.activity-heatmap > summary {
+  cursor: pointer;
+}
+
 .heatmap-grid {
   display: grid;
   grid-template-columns: 22px repeat(7, 1fr);
