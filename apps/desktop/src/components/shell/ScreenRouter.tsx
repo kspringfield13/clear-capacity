@@ -233,6 +233,7 @@ export function ScreenRouter({
         <ForecastScreen
           snapshot={snapshot}
           nextWeekRangeLabel={nextWeekRangeLabel}
+          corrections={corrections}
           generatedForecast={generatedForecast}
           forecastAccuracy={forecastAccuracy}
           forecastStatus={forecastStatus}

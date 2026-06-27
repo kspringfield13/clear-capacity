@@ -230,6 +230,33 @@ export function createDemoState(reference = new Date()): PersistedAppState {
       correction_id: "demo-correction-2", work_block_id: "demo-dashboard", field: "project_name",
       old_value: "Dashboard work", new_value: "Executive capacity dashboard",
       timestamp: addMinutes(now, -55).toISOString(), reason: "User applied a more specific label."
+    },
+    // A repeated planned→unplanned drift (the model keeps over-counting planned work) plus a
+    // recurring category mislabel — both surface as "Model bias" notes on the Forecast screen.
+    {
+      correction_id: "demo-correction-3", work_block_id: "demo-attribution", field: "planned_status",
+      old_value: "planned", new_value: "unplanned", timestamp: addMinutes(now, -52).toISOString(),
+      reason: "Triggered by a data alert, not on the plan."
+    },
+    {
+      correction_id: "demo-correction-4", work_block_id: "demo-requirements", field: "planned_status",
+      old_value: "planned", new_value: "unplanned", timestamp: addMinutes(now, -47).toISOString(),
+      reason: "Pulled in mid-week by a stakeholder."
+    },
+    {
+      correction_id: "demo-correction-5", work_block_id: "demo-retention", field: "category",
+      old_value: "Planned analysis / project work", new_value: "Ad hoc stakeholder requests",
+      timestamp: addMinutes(now, -44).toISOString(), reason: "It was a support request, not project analysis."
+    },
+    {
+      correction_id: "demo-correction-6", work_block_id: "demo-attribution", field: "category",
+      old_value: "Planned analysis / project work", new_value: "Ad hoc stakeholder requests",
+      timestamp: addMinutes(now, -40).toISOString(), reason: "Reactive investigation off a fresh alert."
+    },
+    {
+      correction_id: "demo-correction-7", work_block_id: "demo-blocker", field: "category",
+      old_value: "Planned analysis / project work", new_value: "Ad hoc stakeholder requests",
+      timestamp: addMinutes(now, -36).toISOString(), reason: "Unblocking work, not the planned analysis."
     }
   ];
 
