@@ -36,10 +36,10 @@ export function ActivityCapturePanel({
   const latestSessionSummaries = summarizeRecentSessions(activeWindowSessions);
 
   return (
-    <section className="activity-capture-panel">
-      <div className="section-title">
+    <details className="activity-capture-panel">
+      <summary className="section-title">
         <div>
-          <h2>Live local capture</h2>
+          <span className="capture-panel-title">Live local capture</span>
           <span>{paused ? "Paused" : "Foreground app/window metadata only"}</span>
         </div>
         <div className="capture-actions">
@@ -47,14 +47,14 @@ export function ActivityCapturePanel({
             className="secondary-action"
             type="button"
             disabled={classificationStatus === "classifying" || unclassifiedSessionCount === 0}
-            onClick={onClassifySessions}
+            onClick={(e) => { e.stopPropagation(); onClassifySessions(); }}
           >
             <RefreshCw size={16} />
             <span>{classificationStatus === "classifying" ? "Classifying…" : "Classify Sessions"}</span>
           </button>
           <ConfidenceChip value={captureError ? 0.4 : paused ? 0.72 : 0.9} />
         </div>
-      </div>
+      </summary>
       {classificationStatus === "classifying" && (
         <p className="capture-note">
           Sending {unclassifiedSessionCount} ready session{unclassifiedSessionCount === 1 ? "" : "s"} to your AI provider…
@@ -116,6 +116,6 @@ export function ActivityCapturePanel({
           ))}
         </div>
       )}
-    </section>
+    </details>
   );
 }
