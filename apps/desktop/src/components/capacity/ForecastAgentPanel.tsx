@@ -52,6 +52,12 @@ export function ForecastAgentPanel({
       )
     : 0;
 
+  // When the marker sits near either end, the centered "Likely · X%" label collides
+  // with the edge-anchored Conservative/Optimistic labels. In that case the likely value
+  // is ~equal to the nearest end (and is still shown in the summary cards + range aria-label),
+  // so hide the inline center label rather than overlapping the end one.
+  const showLikelyLabel = likelyLeft > 12 && likelyLeft < 88;
+
   return (
     <section className="capacity-section forecast-panel">
       <div className="section-title">
@@ -164,7 +170,9 @@ export function ForecastAgentPanel({
             </div>
             <div className="forecast-range-label-row">
               <span>Conservative · {pct(forecast.conservative_capacity_pct)}</span>
-              <span className="forecast-range-label-center" style={{ left: `${likelyLeft}%` }}>Likely · {pct(forecast.likely_capacity_pct)}</span>
+              {showLikelyLabel && (
+                <span className="forecast-range-label-center" style={{ left: `${likelyLeft}%` }}>Likely · {pct(forecast.likely_capacity_pct)}</span>
+              )}
               <span>Optimistic · {pct(forecast.optimistic_capacity_pct)}</span>
             </div>
           </div>

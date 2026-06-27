@@ -20,9 +20,6 @@ _(none)_
 
 ## Next
 
-### UI & UX Polish
-- [ ] **Forecast scenario range-bar labels can overlap** — in `ForecastAgentPanel.tsx` the `.forecast-range-label-center` "Likely · X%" span (line 164) is absolutely positioned at `left: ${likelyLeft}%`, while the "Conservative · X%" / "Optimistic · X%" end labels sit at the row edges (lines 163–165). When the likely value sits near either end (e.g. likely close to conservative) the center label collides with the end label — in demo (14/24/34) it's centered and clear, but skewed scenarios overlap. Clamp the center label away from the ends (hide or nudge it when `likelyLeft` is within ~12% of 0/100), `styles.css` + `ForecastAgentPanel.tsx` only.
-
 ### Intelligence Engine
 _Reference pattern: persisted `forecastHistory` + `scoreForecastAccuracy` (PR #19) — mirror it for retained-history work._
 - [ ] **Multi-week snapshot history store** *(foundation — do first)* — today `computeWeeklyCapacitySnapshot` runs over a single `week_id` and nothing is retained across weeks, so trends/baselines are impossible. Add a persisted `snapshotHistory: { week_id, snapshot, computed_at }[]` (cap ~24) written when the ISO week rolls over, mirroring `forecastHistory`. Storage + wiring: `services/localStore.ts` (field + parse guard), `hooks/usePersistence.ts`, `hooks/useDerived.ts` / `App.tsx`. Unlocks everything below.
@@ -46,6 +43,7 @@ _Reference pattern: persisted `forecastHistory` + `scoreForecastAccuracy` (PR #1
 ## Done
 _Prior entries live in git history and merged PRs._
 
+- [x] **Forecast scenario range-bar labels can overlap** (2026-06-27) — in `components/capacity/ForecastAgentPanel.tsx`, the centered `.forecast-range-label-center` "Likely · X%" span collided with the edge-anchored Conservative/Optimistic labels when the marker sat near either end. Added a `showLikelyLabel = likelyLeft > 12 && likelyLeft < 88` guard and conditionally render the center label; near the ends the likely value ≈ the nearest scenario and is still shown in the summary cards + range `aria-label`, so no info is lost. TSX only — CSS `:first-child`/`:last-child` selectors stay correct in both branches.
 - [x] **Forecast screen shows 38% and 24% for the same metric without reconciling them** (2026-06-27) — added a `.forecast-baseline-note` reconciling line under the scenario summary in `ForecastAgentPanel.tsx` ("These are the AI's scenario estimates, refined from the deterministic N% reliable-capacity baseline."), using the existing `deterministicReliableCapacity` prop; new muted `.forecast-baseline-note` token-based style in `styles.css`. The AI scenario numbers and the deterministic baseline now read as distinct.
 - [x] **Agent empty-conversation state floats in dead space** (2026-06-27) — verified already solved: `.agent-starters` uses `flex: 0 0 auto; justify-content: flex-start`; stale duplicate removed from Next.
 - [x] **Live local capture panel starves the ledger work-block list** (2026-06-27) — verified already solved: `ActivityCapturePanel.tsx` is a `<details className="activity-capture-panel">` with a `<summary>`, closed by default, and the ledger override sets `max-height: none`; stale duplicate removed from Next.
