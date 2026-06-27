@@ -134,17 +134,17 @@ export function BlockCard({
         </div>
       </div>
       <div className="tag-grid">
-        <select title={block.category} value={block.category} onChange={(event) => onRelabel(block.work_block_id, "category", event.target.value as WorkCategory)}>
+        <select aria-label="Work category" title={block.category} value={block.category} onChange={(event) => onRelabel(block.work_block_id, "category", event.target.value as WorkCategory)}>
           {workCategories.map((category) => (
             <option key={category}>{category}</option>
           ))}
         </select>
-        <select title={plannedStatusLabel(block.planned_status)} value={block.planned_status} onChange={(event) => onRelabel(block.work_block_id, "planned_status", event.target.value as PlannedStatus)}>
+        <select aria-label="Planned status" title={plannedStatusLabel(block.planned_status)} value={block.planned_status} onChange={(event) => onRelabel(block.work_block_id, "planned_status", event.target.value as PlannedStatus)}>
           {plannedStatuses.map((status) => (
             <option key={status} value={status}>{plannedStatusLabel(status)}</option>
           ))}
         </select>
-        <select title={block.mode} value={block.mode} onChange={(event) => onRelabel(block.work_block_id, "mode", event.target.value as WorkMode)}>
+        <select aria-label="Work mode" title={block.mode} value={block.mode} onChange={(event) => onRelabel(block.work_block_id, "mode", event.target.value as WorkMode)}>
           {workModes.map((mode) => (
             <option key={mode}>{mode}</option>
           ))}

@@ -1745,6 +1745,14 @@ h3 {
   min-height: 0;
   overflow-y: auto;
   padding-right: 4px;
+  /* Scroll-shadow affordance: covers (local) hide shadows at the edges;
+     shadows (scroll) reveal when content extends beyond the visible area. */
+  background:
+    linear-gradient(var(--background) 30%, transparent) 0 0 / 100% 20px no-repeat local,
+    linear-gradient(transparent, var(--background) 70%) 0 100% / 100% 36px no-repeat local,
+    radial-gradient(farthest-side at 50% 0, var(--scroll-shadow), transparent) 0 0 / 100% 8px no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, var(--scroll-shadow), transparent) 0 100% / 100% 10px no-repeat scroll;
+  background-color: var(--background);
 }
 
 .block-card {
@@ -4146,6 +4154,7 @@ input:focus {
   --context-background: rgba(255, 255, 255, 0.94);
   --hover-background: #0000000d;
   --control-background: #ffffff;
+  --scroll-shadow: rgba(0, 0, 0, 0.10);
   --raised-shadow: 0 2px 2px rgba(0, 0, 0, 0.04);
   --radius: 6px;
   --radius-menu: 12px;
@@ -5371,6 +5380,7 @@ html[data-theme="dark"] {
   --surface-muted: #242424;
   --border: #ffffff1f;
   --border-strong: #ffffff38;
+  --scroll-shadow: rgba(255, 255, 255, 0.07);
   --text: #ededed;
   --text-muted: #a1a1a1;
   --text-subtle: #8f8f8f;
