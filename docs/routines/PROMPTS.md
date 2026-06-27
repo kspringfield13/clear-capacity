@@ -36,7 +36,7 @@ Steps:
 8. Append a one-line entry to CHANGELOG.md at the repo root. If CHANGELOG.md does not exist, create it with a `# Changelog` title. Find or create a `## YYYY-MM-DD` heading for today (UTC) as the LAST dated section of the file, and append a bullet beneath it in the form: `- HH:MM UTC — **improve**: <concise description of what shipped and the file(s) touched>`. Keep it to a single line.
 9. Update NOTES.md ONLY if this run produced a DURABLE learning — a new reusable pattern, a gotcha, a non-obvious decision, or a stale entry that needs correcting. Keep NOTES.md tight and curated (aim < ~150 lines); do not duplicate CLAUDE.md or STATUS.md, and do not log routine per-task chatter there (that's the changelog's job).
 10. Commit all changes (STATUS.md + CHANGELOG.md + NOTES.md if you changed it + implementation files) directly to the main branch with a concise message describing what was done, including a one-line note that it passed self-review. Do NOT create a branch and do NOT open a PR.
-11. Pull the latest main and rebase if needed, then push the commit to main.
+11. Sync and push: run `git pull --rebase origin main`, then `git push origin main`. If the push is REJECTED because main advanced under you, repeat (`git pull --rebase origin main`, then push) until it lands. If the rebase hits a conflict you cannot cleanly resolve within safe scope, abort (`git rebase --abort`), leave the item under "## In Progress" with a one-line note, and stop — never force-push.
 ```
 
 ---
