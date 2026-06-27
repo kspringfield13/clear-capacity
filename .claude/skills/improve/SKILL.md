@@ -1,44 +1,26 @@
 ---
 name: improve
-description: One improvement iteration for ClearCapacity. Reads STATUS.md, walks every "Next" sub-section top-to-bottom (UI & UX Polish → Accessibility → Code Quality → Intelligence Engine → Integrations → Trust & Verification UX) to pick the next eligible task, implements it (loop-safe slice only for [manual / Rust] items), verifies with npm run build, and updates STATUS.md. Safe scope: apps/desktop/src/ and packages/ only.
+description: One improvement iteration for ClearCapacity. Reads STATUS.md, takes the first unchecked task from the top of the Next backlog, implements it (loop-safe slice only for [manual / Rust] items), verifies with npm run build, opens a PR, and updates STATUS.md. Safe scope: apps/desktop/src/ and packages/ only.
 ---
 
 You are running one iteration of the ClearCapacity improvement loop.
 
-## Step 1 — Read state
+## Step 1 — Pick the task
 Read `STATUS.md` at the repo root.
-- If "In Progress" has a task, resume it (don't start something new).
-- Otherwise pick the next eligible task from "Next" using the selection rules below.
+- If **In Progress** has a task, resume it — don't start a new one.
+- Otherwise take the **first unchecked `- [ ]` task reading top-to-bottom through `## Next`**.
 
-### Selecting the next task from "Next"
-"Next" is organized into sub-sections. Do NOT stop at the first sub-section — the
-routine is responsible for every sub-section, including the strategic tracks at
-the bottom. Walk the sub-sections **top-to-bottom in this order** and take the
-first unchecked `- [ ]` task you find:
-
-1. **UI & UX Polish**
-2. **Accessibility**
-3. **Code Quality**
-4. **Intelligence Engine**
-5. **Integrations**
-6. **Trust & Verification UX**
-
-Rules for the walk:
-- A sub-section with no unchecked tasks is skipped — move to the next one. This is
-  what carries the loop down into Accessibility → Intelligence Engine →
-  Integrations → Trust & Verification UX over successive runs.
-- The prose paragraph that introduces the strategic tracks (the blockquote about
-  "Strategic enhancements") is **not a task** — never treat it as selectable.
-- **Within a track, preserve order.** The strategic tracks are sequenced
-  top-to-bottom on purpose (later items depend on earlier ones — e.g. the
-  snapshot-history store must land before baselines/trends). Always take the
-  topmost unchecked item in the track; never skip ahead to a later one.
-- **`[manual / Rust]` items:** these need `src-tauri/`, network, or OAuth work
-  that is out of loop scope. Do NOT skip them — implement only the **loop-safe
-  slice** described in the bullet (frontend + `packages/` only, e.g. an interface
-  + a disabled stub), get the build green, and leave the native half as an
-  explicit flagged follow-up in your PR body and the STATUS.md note. Do not touch
-  `src-tauri/`.
+`## Next` sections are in priority order and tasks within a section are
+dependency-ordered, so "first from the top" is always the correct pick — don't skip
+ahead to a later or easier one. Only `- [ ]` lines are tasks; section headings and
+italic notes are not. Two things to honor:
+- **Ordering tags** like *(do first)* / *(depends on …)* mean exactly that — never
+  start a dependent task before its prerequisite has landed in Done.
+- **`[manual / Rust]` tasks** need `src-tauri/`, network, or OAuth work that is out
+  of scope. Don't skip them — implement only the **loop-safe slice** the task
+  describes (frontend + `packages/` only, e.g. an interface + a disabled stub), keep
+  the build green, and record the native half as a flagged follow-up in the PR body
+  and the Done note. Never touch `src-tauri/`.
 
 ## Step 2 — Understand before touching
 Read only the files relevant to your chosen task. Do not read the entire codebase speculatively. Key entry points:
@@ -137,6 +119,9 @@ Format for done entry:
 ```
 - [x] **Task name** — what you did, files changed, PR link (YYYY-MM-DD)
 ```
+
+Keep "Done" lean: it's a rolling log, not an archive. Add your entry at the top and,
+if "Done" exceeds ~15 entries, drop the oldest — full history lives in git and merged PRs.
 
 ## Stop condition
 One task completed + build green + PR open + STATUS.md updated = done. Do not start a second task in the same run.
