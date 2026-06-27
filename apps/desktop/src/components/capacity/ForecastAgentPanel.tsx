@@ -150,6 +150,9 @@ export function ForecastAgentPanel({
               <small>if risks clear</small>
             </div>
           </div>
+          <p className="forecast-baseline-note">
+            These are the AI's scenario estimates, refined from the deterministic {pct(deterministicReliableCapacity)} reliable-capacity baseline.
+          </p>
           <div
             className="forecast-range"
             role="img"

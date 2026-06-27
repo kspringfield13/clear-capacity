@@ -2856,6 +2856,13 @@ select {
   gap: 10px;
 }
 
+.forecast-baseline-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-subtle);
+}
+
 .forecast-summary > div {
   display: grid;
   gap: 5px;
