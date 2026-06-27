@@ -21,7 +21,6 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
-- [ ] **"Current block" can highlight the wrong block** — `LedgerScreen.tsx:64` selects the highlighted "Current block" via a hardcoded `const current = blocks[7] ?? blocks[0]`, so the card labelled "Current block" is whatever sits at index 7, not the most recent/in-progress block (in demo it shows "Self-service analytics requirements" while the newest ledger block is "Capacity model v2"). Pick it by latest `end_time`/`start_time` (falling back to `blocks[0]` when the array is short) so the label is truthful. `LedgerScreen.tsx` only.
 - [ ] **Forecast screen shows 38% and 24% for the same metric without reconciling them** — the Forecast tab intro and accuracy banner say the deterministic reliable-capacity estimate is 38% ("the model now computes 38%" — `components/capacity/ForecastAgentPanel.tsx:82`), yet the Forecast Agent's first scenario card reads "Reliable new-work capacity 24%" / "Likely 24%" (lines ~133–146) with no note that the AI scenario refines the 38% baseline, so the two numbers read as contradictory. Relabel/annotate the scenario card (e.g. a `<small>` "AI likely case — refined from the 38% baseline") or add a one-line reconciling note so the deterministic baseline and the AI scenario are clearly distinct. Frontend only.
 
 ### Intelligence Engine
@@ -47,6 +46,7 @@ _Reference pattern: persisted `forecastHistory` + `scoreForecastAccuracy` (PR #1
 ## Done
 _Prior entries live in git history and merged PRs._
 
+- [x] **"Current block" can highlight the wrong block** (2026-06-27) — replaced hardcoded `blocks[7] ?? blocks[0]` with a `reduce` that picks the block with the latest `end_time`; falls back to `undefined` on an empty array (the existing `{current && (` guard handles that). `LedgerScreen.tsx` only.
 - [x] **Ledger work blocks sit below the fold under the heatmap** (2026-06-27) — converted `ActivityHeatmap.tsx` to a `<details className="activity-heatmap">` disclosure (closed by default); replaced `<p className="eyebrow">` with `<summary>`; trimmed cell rows from 7 px → 5 px in `styles.css`; ledger list now visible at first render without any scrolling.
 - [x] **BlockCard relabel selects have field-name aria-labels** (2026-06-27) — verified already present in `components/ledger/BlockCard.tsx`; all three relabel `<select>`s carry static `aria-label`s ("Work category" / "Planned status" / "Work mode") alongside the value `title`.
 - [x] **EmptyState descriptive aria-labels** (2026-06-27) — verified in `components/common/EmptyState.tsx`; optional `ariaLabel` prop renders `aria-label={ariaLabel ?? title}` on the `<section className="empty-state">`.
