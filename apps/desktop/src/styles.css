@@ -6276,7 +6276,8 @@ html[data-theme="dark"] .risk-track span[data-severity="high"] { background: #fb
   .capture-grid,
   .tag-grid,
   .settings-row,
-  .forecast-grid {
+  .forecast-grid,
+  .forecast-summary {
     grid-template-columns: 1fr;
   }
 
