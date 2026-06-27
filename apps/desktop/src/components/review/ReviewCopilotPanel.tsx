@@ -59,8 +59,8 @@ export function ReviewCopilotPanel({
               <p>{suggestion.rationale}</p>
               <small>{suggestion.work_block_ids.length} block{suggestion.work_block_ids.length === 1 ? "" : "s"}</small>
               <div className="copilot-actions">
-                <button type="button" onClick={() => onApply(suggestion)}>Apply Suggestion</button>
-                <button type="button" onClick={() => onDismiss(suggestion.suggestion_id)}>Dismiss Suggestion</button>
+                <button type="button" aria-label={`Apply suggestion: ${suggestion.title}`} onClick={() => onApply(suggestion)}>Apply Suggestion</button>
+                <button type="button" aria-label={`Dismiss suggestion: ${suggestion.title}`} onClick={() => onDismiss(suggestion.suggestion_id)}>Dismiss Suggestion</button>
               </div>
             </li>
           ))}
