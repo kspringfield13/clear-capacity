@@ -127,8 +127,8 @@ Read `docs/routines/PROMPTS.md` — the canonical current text of every routine 
 
 ## 1. Gather the past week's outcomes (evidence)
 - `git log --since='7 days ago' --date=iso --pretty=format:'%h %ad %s'` on main — commit cadence and types; flag messages noting reverts, skips, aborts, or 'visual pass skipped'.
-- CHANGELOG.md — the week's `improve` and `curator` entries: volume, what kinds of tasks shipped, gaps.
-- docs/digests/*.md — the week's daily digests (already-synthesized outcomes, including flags).
+- docs/digests/*.md — the PRIMARY week-long source: the past 7 daily digests (already-synthesized outcomes, including reverts/skips/flags). Use these (plus the `git log` above) for the full-week view.
+- CHANGELOG.md — recent detail only: the curator trims it to a rolling ~2-day window (today + yesterday), so it holds just the last couple of days of `improve`/`curator` entries. Do NOT expect a week of history here — rely on the digests and `git log` for anything older than yesterday.
 - NOTES.md — what cross-run learnings accumulated; is it growing usefully, bloating, or going stale?
 - STATUS.md — backlog health: is `## Next` being depleted or replenished? How often does the curator reconcile items the improver mislabeled or fix stale file paths (a sign a prompt points at the wrong files)?
 - If `gh` is available, scan recent PR/commit review comments for recurring complaints.
