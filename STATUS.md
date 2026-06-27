@@ -20,13 +20,10 @@ _(none)_
 
 ## Next
 
-### Accessibility
-- [ ] **BlockCard relabel selects have no field-name accessible label** — the three relabel `<select>`s in `components/ledger/BlockCard.tsx` (lines 136 / 141 / 146 — category, planned status, mode) carry only `title={currentValue}`, so a screen reader announces just the value with no indication of which field is being edited. Add a static `aria-label` to each (`"Work category"`, `"Planned status"`, `"Work mode"`); keep the value `title` for the truncation tooltip. High impact — `BlockCard` renders on both Daily review and the Ledger. `BlockCard.tsx` only.
-- [ ] **EmptyState sections lack descriptive aria-labels** — `<section className="empty-state">` in `components/common/EmptyState.tsx` (line 15) has no `aria-label`. Add an optional `ariaLabel` prop defaulting to `title`, and pass meaningful labels at each call site.
-- [ ] **ReviewCopilotPanel contextual aria-labels** — the Apply/Dismiss buttons in `ReviewCopilotPanel.tsx` (lines 62–63) read identically for every suggestion. Add the suggestion title to each `aria-label` (e.g. `aria-label={`Apply suggestion: ${suggestion.title}`}`) so screen readers announce which suggestion is acted on.
-
-### Code Quality
-- [ ] **AppShell / CompactWidget `snapshot: any` type fix** — replace `snapshot: any` with `WeeklyCapacitySnapshot` (from `packages/domain/src/models.ts`, line 207) in `components/shell/AppShell.tsx` (line 32) and `components/compact/CompactWidget.tsx` (line 22).
+### UI & UX Polish
+- [ ] **Agent compact view silently hides the Outlook metric and half the starter cards** — at narrow width the `@media (max-width: 600px)` block in `apps/desktop/src/styles.css` (lines ~7400–7414) sets `.briefing-metrics > div:last-child { display: none }` (drops the "Outlook / carryover risk" metric) and `.starter-grid > button:nth-child(n + 3) { display: none }` (hides 2 of the 4 "Start with an outcome" cards — "Find workload risks" and "Explain what changed"). Verified at 420px on the Agent screen: only Planned/Reactive render and only two starters appear. Don't drop content on phones — stack instead: let `.briefing-metrics` keep all three cells (single column, or 2 cols with the third wrapping to a full-width row) and let `.starter-grid` show all four cards stacked. `styles.css` only.
+- [ ] **Forecast scenario cards are cramped two-up on narrow screens** — `.forecast-summary` in `apps/desktop/src/styles.css` (line ~2839) is `repeat(auto-fit, minmax(min(170px, 100%), 1fr))`, so at ~420px the four cards (Reliable new-work capacity / Conservative / Likely / Optimistic) pack into two ~190px columns and their labels + helper text wrap to 2–3 lines. Verified on the Forecast tab at 420px. Add `.forecast-summary { grid-template-columns: 1fr; }` to the existing `@media (max-width: 600px)` block (line ~6248) so they stack into one readable column. `styles.css` only.
+- [ ] **Agent empty-conversation state floats in dead space** — with no messages, `.agent-starters` (`apps/desktop/src/styles.css` line ~6652) is `flex: 1 1 auto; justify-content: center`, so the "Start with an outcome" cards are vertically centered in the entire conversation void. Verified on the Agent screen (wide and 420px): a large blank band sits between the briefing card and the starters, and again above the composer, making the screen read as half-empty. Anchor the empty state near the top instead (e.g. `justify-content: flex-start` scoped under `.agent-chat-container.is-empty`, or a fixed modest top gap) so the prompts sit just below the briefing. `styles.css` only.
 
 ### Intelligence Engine
 _Reference pattern: persisted `forecastHistory` + `scoreForecastAccuracy` (PR #19) — mirror it for retained-history work._
@@ -41,7 +38,7 @@ _Reference pattern: persisted `forecastHistory` + `scoreForecastAccuracy` (PR #1
 - [ ] **Automated calendar sync** **[manual / Rust]** — replace the manual `.ics` export (the biggest onboarding wall) with Google / Microsoft Graph sync. OAuth + network live in Tauri. Loop-safe slice: a provider-agnostic `CalendarSource` interface in `packages/integrations/` plus a disabled "Connect calendar" stub in `SetupScreen.tsx`; document the Rust follow-up here.
 
 ### Trust & Verification UX
-- [ ] **"Why this block?" evidence drill-down** — `WorkBlock.evidence[]` renders via the `<details className="evidence">` disclosure in `components/ledger/BlockCard.tsx` (lines 152–159), but `WorkBlock.derived_from[]` (the inference path) is never shown. Extend that `<details>` with a labeled "Derived from" sub-list of `block.derived_from`. Frontend + `styles.css` only.
+- [ ] **"Why this block?" evidence drill-down** — `WorkBlock.evidence[]` renders via the `<details className="evidence">` disclosure in `components/ledger/BlockCard.tsx` (lines ~153–160), but `WorkBlock.derived_from[]` (the inference path) is never shown. Extend that `<details>` with a labeled "Derived from" sub-list of `block.derived_from`. Frontend + `styles.css` only.
 - [ ] **Sensitive-content review queue** — `VisualContextInsight.sensitive_content_detected` is recorded but there's nowhere to review or purge flagged captures. Add a filtered view under History listing flagged insights with a per-item "Discard" action that writes a `visual_context` audit event. Frontend only.
 - [ ] **Data export & retention controls** — (a) export the work ledger + audit trail to JSON/CSV from `SetupScreen.tsx`; (b) add a user-set retention window that auto-expires `activeWindowSamples` older than N days. Both loop-safe; reinforce the local-first positioning.
 - [ ] **Forecast track-record panel** *(builds on PR #19)* — add a "Forecast track record" list to `ForecastScreen.tsx` showing predicted-vs-actual per past week with On target / Close / Off chips, so the model can be audited over time. Reads the existing `forecastHistory`.
@@ -49,7 +46,12 @@ _Reference pattern: persisted `forecastHistory` + `scoreForecastAccuracy` (PR #1
 ---
 
 ## Done
-_(cleared 2026-06-26 — prior entries live in git history and merged PRs)_
+_Prior entries live in git history and merged PRs._
+
+- [x] **BlockCard relabel selects have field-name aria-labels** (2026-06-27) — verified already present in `components/ledger/BlockCard.tsx`; all three relabel `<select>`s carry static `aria-label`s ("Work category" / "Planned status" / "Work mode") alongside the value `title`.
+- [x] **EmptyState descriptive aria-labels** (2026-06-27) — verified in `components/common/EmptyState.tsx`; optional `ariaLabel` prop renders `aria-label={ariaLabel ?? title}` on the `<section className="empty-state">`.
+- [x] **ReviewCopilotPanel contextual aria-labels** (2026-06-27) — verified in `components/review/ReviewCopilotPanel.tsx`; the Apply/Dismiss buttons include the suggestion title in each `aria-label` (PR #58).
+- [x] **AppShell / CompactWidget snapshot type** (2026-06-27) — verified `snapshot: WeeklyCapacitySnapshot` in both `components/shell/AppShell.tsx` and `components/compact/CompactWidget.tsx`, replacing `snapshot: any` (PR #59).
 
 ---
 
