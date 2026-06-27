@@ -1,9 +1,26 @@
 ---
 name: improve
-description: One improvement iteration for ClearCapacity. Reads STATUS.md, takes the first unchecked task from the top of the Next backlog, implements it (loop-safe slice only for [manual / Rust] items), verifies with npm run build, opens a PR, and updates STATUS.md. Safe scope: apps/desktop/src/ and packages/ only.
+description: One improvement iteration for ClearCapacity. Syncs main, reads STATUS.md, takes the first unchecked task from the top of the Next backlog, implements it (loop-safe slice only for [manual / Rust] items), verifies (npm run build, plus /verify for UI tasks), then commits and pushes directly to main and records the change. Safe scope: apps/desktop/src/ and packages/ only. Run as a single sequential session — never fan out parallel runs.
 ---
 
 You are running one iteration of the ClearCapacity improvement loop.
+
+This loop commits **directly to `main`** — there are no feature branches and no PRs.
+That trades away the PR review gate, so two rules are load-bearing:
+- **Never commit a red build.** The build (and `/verify` for UI) is the only gate.
+- **One task = one atomic commit**, so any bad change is a clean `git revert <sha>` away.
+
+Run this loop as **one sequential session** (task → commit → push → next). Do not run
+multiple improve sessions concurrently: they would pick the same top-of-backlog task
+(producing duplicate work) and race on pushing to `main`.
+
+## Step 0 — Sync main
+Make sure you're on `main` and up to date before picking anything:
+```
+git checkout main
+git pull --rebase origin main
+```
+If the rebase hits a conflict, stop and report it — don't guess.
 
 ## Step 1 — Pick the task
 Read `STATUS.md` at the repo root.
@@ -19,8 +36,8 @@ italic notes are not. Two things to honor:
 - **`[manual / Rust]` tasks** need `src-tauri/`, network, or OAuth work that is out
   of scope. Don't skip them — implement only the **loop-safe slice** the task
   describes (frontend + `packages/` only, e.g. an interface + a disabled stub), keep
-  the build green, and record the native half as a flagged follow-up in the PR body
-  and the Done note. Never touch `src-tauri/`.
+  the build green, and record the native half as a flagged follow-up in the Done note
+  and CHANGELOG. Never touch `src-tauri/`.
 
 ## Step 2 — Understand before touching
 Read only the files relevant to your chosen task. Do not read the entire codebase speculatively. Key entry points:
@@ -50,78 +67,71 @@ If it fails:
 - Read the error output carefully.
 - Fix the type errors or bundle issues.
 - Re-run `npm run build`.
-- Do not mark the task done until the build is green.
+- Do not proceed until the build is green.
 
-If the build remains broken after two fix attempts, revert your changes with `git checkout -- .`, move the task to "In Progress" with a note explaining the blocker, and stop.
+If the build remains broken after two fix attempts, revert your changes with
+`git checkout -- .`, move the task to "In Progress" in STATUS.md with a note explaining
+the blocker, and stop. Nothing gets committed.
 
-## Step 5 — Commit and push a PR branch
-Once the build is green:
+**For UI-affecting tasks** (anything touching a component's render output or `styles.css`),
+the build passing is not enough — it won't catch a layout regression. Run `/verify` to
+launch the app and confirm the change looks right and nothing adjacent broke. If `/verify`
+surfaces a regression, fix it (or revert and move the task to In Progress) before committing.
 
-1. Create a branch named `improve/<slug>` where `<slug>` is a 2-4 word kebab-case summary of the task (e.g. `improve/toolbar-actions-slot`).
-   ```
-   git checkout -b improve/<slug>
-   ```
-2. Stage only the files you changed (never `git add -A`):
+## Step 5 — Commit and push to main
+Only once the build is green (and `/verify` is clean for UI tasks):
+
+1. Stage only the files you changed (never `git add -A`):
    ```
    git add <file1> <file2> ...
    ```
-3. Commit with a clear message:
+2. Commit with a clear message — imperative summary under 72 chars, then a short body
+   explaining what changed and why (which STATUS.md task it addresses):
    ```
-   git commit -m "<imperative summary under 72 chars>
+   git commit -m "<imperative summary>
 
-   Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+   <1-3 lines: what changed and which STATUS task it closes>
+
+   Co-Authored-By: Claude <noreply@anthropic.com>"
    ```
-4. Push the branch:
+3. Push directly to main, syncing first so the push is always a fast-forward:
    ```
-   git push -u origin improve/<slug>
+   git pull --rebase origin main && git push origin main
    ```
-5. Open a PR using `gh pr create`. Write the body yourself — do not use a template placeholder. The body must include:
-   - **What changed**: which files and what specifically was added/modified
-   - **Why**: which STATUS.md task this addresses and the user benefit
-   - **How to verify**: the exact manual steps to see the change working in the app (e.g. "run `npm run dev`, navigate to X screen, confirm Y behavior")
-   - **Build**: confirm `npm run build` passed
+   - If the push is **rejected** because something landed in the meantime, re-run
+     `git pull --rebase origin main` and push again.
+   - If the rebase hits a **conflict**, do not force anything — abort
+     (`git rebase --abort`), leave the task in "In Progress" with a note, and stop.
+   - On transient network errors, retry up to 4 times with exponential backoff
+     (2s, 4s, 8s, 16s).
+4. Capture the commit SHA (`git rev-parse --short HEAD`) for the records below.
 
-   Example:
+## Step 6 — Record and notify
+1. **STATUS.md** — move the completed task from "Next" to "Done" with a one-line note on
+   what you changed and the commit SHA. If blocked, leave it in "In Progress" with a note.
+   Clear "In Progress" once done.
+
+   Format for a done entry:
    ```
-   gh pr create \
-     --title "<imperative title>" \
-     --body "$(cat <<'EOF'
-   ## What changed
-   ...
-
-   ## Why
-   ...
-
-   ## How to verify
-   1. `npm run dev`
-   2. ...
-
-   ## Build
-   `npm run build` — green ✓
-
-   🤖 Generated with [Claude Code](https://claude.com/claude-code)
-   EOF
-   )"
+   - [x] **Task name** — what you did, files changed, `<short-sha>` (YYYY-MM-DD)
    ```
-6. Output the PR URL so the user can review it.
+   Keep "Done" lean: it's a rolling log, not an archive. Add your entry at the top and,
+   if "Done" exceeds ~15 entries, drop the oldest — full history lives in git.
 
-After pushing, return to whatever branch was active before you started. Capture it
-at the start of the run with `git rev-parse --abbrev-ref HEAD` and check it back out:
-```
-git checkout <original-branch>
-```
+2. **CHANGELOG.md** — append a dated one-line entry summarizing the change (and, for a
+   `[manual / Rust]` task, the flagged native follow-up).
 
-## Step 6 — Update STATUS.md
-Move the completed task from "Next" to "Done" with a one-line note on what you changed and the PR link.
-If the task is blocked, leave it in "In Progress" with a note. Clear "In Progress" once done.
+   Commit these bookkeeping updates (they can ride in the same commit as the change if you
+   update them before Step 5, or as a small follow-up commit — either is fine, but don't
+   leave them uncommitted).
 
-Format for done entry:
-```
-- [x] **Task name** — what you did, files changed, PR link (YYYY-MM-DD)
-```
-
-Keep "Done" lean: it's a rolling log, not an archive. Add your entry at the top and,
-if "Done" exceeds ~15 entries, drop the oldest — full history lives in git and merged PRs.
+3. **Notify** — end the run with a concise one-line summary suitable as a notification, so
+   the change is reviewable at a glance and revertable if unwanted:
+   ```
+   ✅ <task name> — <short-sha> (<n> file(s)). Revert with: git revert <short-sha>
+   ```
 
 ## Stop condition
-One task completed + build green + PR open + STATUS.md updated = done. Do not start a second task in the same run.
+One task completed + build green (+ /verify clean for UI) + commit pushed to main +
+STATUS.md and CHANGELOG.md updated + summary emitted = done. Do not start a second task in
+the same run.
