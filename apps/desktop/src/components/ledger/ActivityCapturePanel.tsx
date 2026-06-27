@@ -1,4 +1,4 @@
-import { RefreshCw } from "lucide-react";
+import { ChevronRight, RefreshCw } from "lucide-react";
 import type {
   ActiveWindowSample,
   ActivitySession,
@@ -38,9 +38,12 @@ export function ActivityCapturePanel({
   return (
     <details className="activity-capture-panel">
       <summary className="section-title">
-        <div className="capture-panel-heading">
-          <span className="capture-panel-title">Live local capture</span>
-          <span className="capture-panel-subtitle">{paused ? "Paused" : "Foreground app/window metadata only"}</span>
+        <div className="capture-panel-summary-main">
+          <ChevronRight className="capture-panel-caret" size={16} aria-hidden="true" />
+          <div className="capture-panel-heading">
+            <span className="capture-panel-title">Live local capture</span>
+            <span className="capture-panel-subtitle">{paused ? "Paused" : "Foreground app/window metadata only"}</span>
+          </div>
         </div>
         <div className="capture-actions">
           <button
