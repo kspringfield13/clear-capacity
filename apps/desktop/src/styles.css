@@ -6651,11 +6651,10 @@ html[data-theme="dark"] .risk-track span[data-severity="high"] { background: #fb
 }
 
 .agent-starters {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  min-height: 210px;
+  justify-content: flex-start;
   padding: 8px 2px;
 }
 

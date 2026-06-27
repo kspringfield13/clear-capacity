@@ -21,7 +21,6 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
-- [ ] **Agent empty-conversation state floats in dead space** — with no messages, `.agent-starters` (`apps/desktop/src/styles.css` line ~6652) is `flex: 1 1 auto; justify-content: center`, so the "Start with an outcome" cards are vertically centered in the entire conversation void. Verified on the Agent screen (wide and 420px): a large blank band sits between the briefing card and the starters, and again above the composer, making the screen read as half-empty. Anchor the empty state near the top instead (e.g. `justify-content: flex-start` scoped under `.agent-chat-container.is-empty`, or a fixed modest top gap) so the prompts sit just below the briefing. `styles.css` only.
 
 ### Intelligence Engine
 _Reference pattern: persisted `forecastHistory` + `scoreForecastAccuracy` (PR #19) — mirror it for retained-history work._
@@ -52,6 +51,7 @@ _Prior entries live in git history and merged PRs._
 - [x] **AppShell / CompactWidget snapshot type** (2026-06-27) — verified `snapshot: WeeklyCapacitySnapshot` in both `components/shell/AppShell.tsx` and `components/compact/CompactWidget.tsx`, replacing `snapshot: any` (PR #59).
 - [x] **Agent compact view silently hides the Outlook metric and half the starter cards** (2026-06-27) — removed `display: none` hiding rules in `@media (max-width: 600px)`; third briefing-metric now spans full-width (`grid-column: 1 / -1` + `border-top`), all four starter cards now visible via existing single-column grid. `styles.css` only.
 - [x] **Forecast scenario cards are cramped two-up on narrow screens** (2026-06-27) — added `.forecast-summary` to the `grid-template-columns: 1fr` rule in the `@media (max-width: 600px)` block in `styles.css`; four cards now stack single-column at ≤600px.
+- [x] **Agent empty-conversation state floats in dead space** (2026-06-27) — changed `.agent-starters` from `flex: 1 1 auto; justify-content: center` to `flex: 0 0 auto; justify-content: flex-start`; removed artificial `min-height: 210px`; cards now anchor just below briefing instead of centering in the void. `styles.css` only.
 
 ---
 
