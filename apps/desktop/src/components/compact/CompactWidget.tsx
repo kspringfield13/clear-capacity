@@ -1,5 +1,5 @@
 import { Monitor, Check, ChevronRight, Play, Pause, X } from "lucide-react";
-import type { ActiveWindowSample, ActivitySession, WorkBlock } from "../../../../../packages/domain/src/models";
+import type { ActiveWindowSample, ActivitySession, WeeklyCapacitySnapshot, WorkBlock } from "../../../../../packages/domain/src/models";
 import type { Screen } from "../../lib/types";
 import { getLocalDateKey } from "../../lib/date";
 import { pct } from "../../lib/format";
@@ -19,7 +19,7 @@ export function CompactWidget({
   activeWindowSamples: ActiveWindowSample[];
   activeWindowSessions: ActivitySession[];
   blocks: WorkBlock[];
-  snapshot: any;
+  snapshot: WeeklyCapacitySnapshot;
   onPauseChange: (paused: boolean) => void;
   onOpenScreen: (screen: Screen) => void;
   onConfirm: (blockId: string) => void;

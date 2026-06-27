@@ -96,4 +96,7 @@
 - 16:05 UTC — **improve**: BlockCard relabel selects accessible labels — added `aria-label="Work category"`, `aria-label="Planned status"`, `aria-label="Work mode"` to the three relabel `<select>`s in `BlockCard.tsx`; kept existing `title` for truncation tooltip; screen readers now announce which field is being edited; passed self-review.
 - 18:04 UTC — **improve**: EmptyState accessible section labels — added optional `ariaLabel` prop (defaults to `title`) and applied as `aria-label` on the `<section>` in `components/common/EmptyState.tsx`; all 14 existing call sites gain named landmarks automatically; passed self-review.
 - 22:06 UTC — **improve**: Demo heatmap grid now renders — added `activeWindowSamples` for yesterday, 2 days ago, and 3 days ago (2 sessions each at realistic working-hours timestamps) in `services/demoData.ts`; `daysWithActivity` rises from 1 to 4, clearing the `>= 2` threshold so the flagship 7-day heatmap grid renders instead of its sparse-data caption in demo mode; passed self-review.
-- 23:04 UTC — **improve**: ReviewCopilotPanel contextual aria-labels — added `aria-label={`Apply suggestion: ${suggestion.title}`}` and `aria-label={`Dismiss suggestion: ${suggestion.title}`}` to the Apply/Dismiss buttons in `components/review/ReviewCopilotPanel.tsx`; screen readers now announce which suggestion is being acted on; passed self-review.
+
+## 2026-06-27
+
+- 00:10 UTC — **improve**: AppShell/CompactWidget snapshot type fix — replaced `snapshot: any` with `WeeklyCapacitySnapshot` (imported from `packages/domain/src/models.ts`) in `AppShell.tsx` and `CompactWidget.tsx`; build passes tsc strict check; passed self-review.
