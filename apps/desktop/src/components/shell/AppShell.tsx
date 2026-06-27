@@ -1,5 +1,6 @@
 import { Settings, Moon, Pause, CalendarCheck, BarChart3, History, Bot, Radio, Gauge } from "lucide-react";
 import type { ReactNode } from "react";
+import type { WeeklyCapacitySnapshot } from "../../../../../packages/domain/src/models";
 import type { AppToolbarAction, Screen } from "../../lib/types";
 import { AppToolbar } from "./AppToolbar";
 import { ContextNavigation } from "./ContextNavigation";
@@ -29,7 +30,7 @@ export function AppShell({
   setActive: (screen: Screen) => void;
   toolbarActions: AppToolbarAction[];
   toolbarStatus: string;
-  snapshot: any; // ReturnType<typeof compute...> to avoid heavy import for now
+  snapshot: WeeklyCapacitySnapshot;
   hasWorkBlocks: boolean;
   reviewCount: number;
   paused: boolean;

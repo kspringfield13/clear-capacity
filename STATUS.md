@@ -27,19 +27,15 @@ Verification gate: `npm run build` must pass before marking done.
 - [x] **BlockCard relabel selects have no field-name accessible label** — added `aria-label="Work category"`, `aria-label="Planned status"`, `aria-label="Work mode"` to the three relabel `<select>`s in `components/ledger/BlockCard.tsx`; kept the existing `title={currentValue}` for truncation tooltips. Screen readers now announce which field is being edited. `BlockCard.tsx` only. 2026-06-26
 - [x] **EmptyState sections lack descriptive aria-labels** — added optional `ariaLabel` prop (defaults to `title`) and applied as `aria-label` on the `<section>` in `components/common/EmptyState.tsx`; all 14 existing call sites inherit the title automatically with no changes needed. 2026-06-26
 - [x] **Demo "7-day activity pattern" heatmap never renders its grid** — added `activeWindowSamples` for yesterday, 2 days ago, and 3 days ago (2 sessions each at working-hours timestamps) in `services/demoData.ts`; `daysWithActivity` is now 4, clearing the `>= 2` threshold so the flagship heatmap grid renders in demo mode. `services/demoData.ts` only. 2026-06-26
+- [x] **ReviewCopilotPanel contextual aria-labels** — added `aria-label={`Apply suggestion: ${suggestion.title}`}` and `aria-label={`Dismiss suggestion: ${suggestion.title}`}` to the Apply/Dismiss buttons in `ReviewCopilotPanel.tsx`; screen readers now announce which suggestion is being acted on. `ReviewCopilotPanel.tsx` only. 2026-06-27
+- [x] **AppShell / CompactWidget `snapshot: any` type fix** — replaced `snapshot: any` with `WeeklyCapacitySnapshot` from `packages/domain/src/models.ts` in `AppShell.tsx` and `CompactWidget.tsx`; eliminates the `any` escape hatch and catches future field mismatches at compile time. 2026-06-27
 
 ## In Progress
 _(none)_
 
 ## Next
 
-### UI & UX Polish — `ActivityHeatmap.tsx` only draws the grid when `daysWithActivity >= 2` (line 58); the demo seeds every `activeWindowSamples` group on today (`services/demoData.ts` line 152 — `activeStart` is derived from `now`), so demo mode (the first thing a new user/evaluator sees) shows only the hollow "Limited activity so far" caption instead of the flagship heatmap. Spread the demo `activeWindowSamples` across ≥2–3 distinct days (seed earlier-week sessions) so the grid renders and showcases the feature. `services/demoData.ts` only.
-
-### Accessibility
-- [ ] **ReviewCopilotPanel contextual aria-labels** — the Apply/Dismiss buttons in `ReviewCopilotPanel.tsx` (lines 62–63) read identically to every suggestion ("Apply Suggestion" / "Dismiss Suggestion"). Add the suggestion title to each `aria-label` (e.g. `aria-label={`Apply suggestion: ${suggestion.title}`}`) so screen readers announce which suggestion is being acted on.
-
 ### Code Quality
-- [ ] **AppShell / CompactWidget `snapshot: any` type fix** — replace `snapshot: any` with the proper `WeeklyCapacitySnapshot` type (from `packages/domain/src/models.ts`, line 206) in `components/shell/AppShell.tsx` (line 32) and `components/compact/CompactWidget.tsx` (line 22).
 
 > **Strategic enhancements (intelligence engine · integrations · trust & verification UX)** — the three tracks below are larger, multi-step bets than the tactical polish above, but they live under `## Next` on purpose so the improvement routine picks them up in order once the polish items clear. Each bullet is sized to land in one loop pass; sequence within a track top-to-bottom (later items depend on earlier ones). Items tagged **[manual / Rust]** need `src-tauri/` or network/OAuth work that is out of loop scope — build the loop-safe slice noted in the bullet and leave the native half as a flagged follow-up. The forecast-accuracy feature (persisted `forecastHistory` + `scoreForecastAccuracy`) shipped in PR #19 and is the reference pattern for retained-history work.
 
