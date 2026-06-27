@@ -20,9 +20,6 @@ _(none)_
 
 ## Next
 
-### UI & UX Polish
-- [ ] **Collapsed live-capture panel gives no "expandable" affordance** — `.activity-capture-panel summary::-webkit-details-marker { display: none }` in `styles.css` (~line 1515) strips the disclosure triangle, so the "Live local capture" row reads as a static card and users don't discover the capture stats inside. The sibling `.activity-heatmap` disclosure keeps its default ▶ marker and clearly reads as expandable (visible on the Ledger). Restore a caret affordance on the capture-panel `<summary>` (a rotating `ChevronRight` in `ActivityCapturePanel.tsx`, or drop the marker-hiding rule) to match the heatmap. `ActivityCapturePanel.tsx` + `styles.css`.
-
 ### Intelligence Engine
 _Reference pattern: persisted `forecastHistory` + `scoreForecastAccuracy` (PR #19) — mirror it for retained-history work._
 - [ ] **Personal baselines + trend deltas** *(depends on snapshot history)* — add a pure `computeCapacityBaselines(history)` in `packages/inference/src/capacity.ts` returning rolling medians (4–6 wk) for `reactive_pct`, `meeting_pct`, `context_switch_score`, and `reliable_new_work_capacity_pct`; render "vs your 6-wk median +N/−N" chips on `WeeklyCapacityScreen.tsx` so each number reads against the user's own norm.
@@ -44,6 +41,8 @@ _Reference pattern: persisted `forecastHistory` + `scoreForecastAccuracy` (PR #1
 
 ## Done
 _Prior entries live in git history and merged PRs._
+
+- [x] **Collapsed live-capture panel gives no "expandable" affordance** (2026-06-27) — added a rotating `ChevronRight` caret to the capture-panel `<summary>` so it now reads as expandable like the sibling `.activity-heatmap`. Wrapped the caret + `.capture-panel-heading` in a new `.capture-panel-summary-main` flex container (`align-items: center; gap: 8px; min-width: 0`) so the caret sits adjacent to the title while `.capture-actions` stays right-aligned via the summary's `space-between`. Caret is `aria-hidden` (the summary text supplies the accessible name), styled with `var(--text-subtle)` + a 0.15s `transition`, and rotates 90° via `.activity-capture-panel[open] .capture-panel-caret`. The existing `::-webkit-details-marker` hide rule stays so there's no double marker. `ActivityCapturePanel.tsx` + `styles.css`. Build green; passed self-review.
 
 - [x] **Live-capture panel title runs into its subtitle** (2026-06-27) — wrapped the `<summary>`'s heading `<div>` in `.capture-panel-heading` (`display: flex; flex-direction: column; gap: 2px; min-width: 0`) and gave the subtitle span `.capture-panel-subtitle` (12px, `var(--text-subtle)`) in `ActivityCapturePanel.tsx` + `styles.css`, so the bold "Live local capture" title now sits above the muted subtitle instead of running together. `min-width: 0` lets the heading shrink so the action group isn't pushed off at 420px. Build green; passed self-review.
 

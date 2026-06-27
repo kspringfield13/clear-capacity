@@ -1516,6 +1516,23 @@ h3 {
   display: none;
 }
 
+.capture-panel-summary-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.capture-panel-caret {
+  flex: 0 0 auto;
+  color: var(--text-subtle);
+  transition: transform 0.15s ease;
+}
+
+.activity-capture-panel[open] .capture-panel-caret {
+  transform: rotate(90deg);
+}
+
 .capture-panel-heading {
   display: flex;
   flex-direction: column;
