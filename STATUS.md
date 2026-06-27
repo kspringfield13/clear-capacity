@@ -50,6 +50,7 @@ _Reference pattern: persisted `forecastHistory` + `scoreForecastAccuracy` (PR #1
 ## Done
 _Prior entries live in git history and merged PRs._
 
+- [x] **Agent empty-conversation state floats in dead space** (2026-06-27) — changed `justify-content: center` → `justify-content: flex-start` on `.agent-starters` in `styles.css`; starter cards now anchor near the top instead of floating in the middle of the empty conversation void.
 - [x] **Ledger work blocks sit below the fold under the heatmap** (2026-06-27) — converted `ActivityHeatmap.tsx` to a `<details className="activity-heatmap">` disclosure (closed by default); replaced `<p className="eyebrow">` with `<summary>`; trimmed cell rows from 7 px → 5 px in `styles.css`; ledger list now visible at first render without any scrolling.
 - [x] **BlockCard relabel selects have field-name aria-labels** (2026-06-27) — verified already present in `components/ledger/BlockCard.tsx`; all three relabel `<select>`s carry static `aria-label`s ("Work category" / "Planned status" / "Work mode") alongside the value `title`.
 - [x] **EmptyState descriptive aria-labels** (2026-06-27) — verified in `components/common/EmptyState.tsx`; optional `ariaLabel` prop renders `aria-label={ariaLabel ?? title}` on the `<section className="empty-state">`.
