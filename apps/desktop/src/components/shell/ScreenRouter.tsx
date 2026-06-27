@@ -10,7 +10,7 @@ import type {
   WorkBlock,
   AIConfig,
 } from "../../../../../packages/domain/src/models";
-import type { PersistedForecastRecord, PersistedNarrativeRecord, ForecastAccuracyReview } from "../../services/localStore";
+import type { PersistedForecastRecord, PersistedNarrativeRecord, ForecastAccuracyReview, PersistedSnapshotRecord } from "../../services/localStore";
 import type { computeWeeklyCapacitySnapshot, generateWeeklyNarrative } from "../../../../../packages/inference/src/capacity";
 
 import { CompactWidget } from "../compact/CompactWidget";
@@ -34,6 +34,7 @@ interface ScreenRouterProps {
   activeWindowSamples: ActiveWindowSample[];
   activeWindowSessions: ActivitySession[];
   snapshot: ReturnType<typeof computeWeeklyCapacitySnapshot>;
+  snapshotHistory: PersistedSnapshotRecord[];
   onConfirm: (blockId: string) => void;
   onExclude: (blockId: string) => void;
   onRelabel: (blockId: string, field: keyof WorkBlock, value: WorkBlock[keyof WorkBlock]) => void;
@@ -98,6 +99,7 @@ export function ScreenRouter({
   activeWindowSamples,
   activeWindowSessions,
   snapshot,
+  snapshotHistory,
   onConfirm,
   onExclude,
   onRelabel,
@@ -221,6 +223,7 @@ export function ScreenRouter({
       {active === "weekly" && (
         <WeeklyCapacityScreen
           snapshot={snapshot}
+          snapshotHistory={snapshotHistory}
           weekRangeLabel={weekRangeLabel}
           hasWorkBlocks={blocks.length > 0}
           blocks={blocks}

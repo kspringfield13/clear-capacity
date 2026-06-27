@@ -142,6 +142,51 @@ export function scoreForecastAccuracy(predictedPct: number, actualPct: number): 
   };
 }
 
+/**
+ * Rolling personal baselines for the headline capacity metrics. `week_count` is how
+ * many prior-week snapshots fed the medians; each metric is the median over the most
+ * recent `BASELINE_WINDOW_WEEKS` of them (or `null` when there is no history). Lets the
+ * UI read this week's numbers against the user's own norm instead of an absolute scale.
+ */
+export interface CapacityBaselines {
+  week_count: number;
+  reactive_pct: number | null;
+  meeting_pct: number | null;
+  context_switch_score: number | null;
+  reliable_new_work_capacity_pct: number | null;
+}
+
+const BASELINE_WINDOW_WEEKS = 6;
+
+function median(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((left, right) => left - right);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+}
+
+/**
+ * Compute rolling medians for the headline capacity metrics over the most recent
+ * `BASELINE_WINDOW_WEEKS` snapshots in `history`. Pure and domain-typed (no persistence
+ * types) so it stays unit-testable. Input is sorted by `week_id` defensively; pass
+ * prior-week snapshots ONLY — exclude the week being compared so it doesn't pull its own
+ * median toward itself.
+ */
+export function computeCapacityBaselines(history: WeeklyCapacitySnapshot[]): CapacityBaselines {
+  const window = [...history]
+    .sort((left, right) => left.week_id.localeCompare(right.week_id))
+    .slice(-BASELINE_WINDOW_WEEKS);
+  return {
+    week_count: window.length,
+    reactive_pct: median(window.map((snapshot) => snapshot.reactive_pct)),
+    meeting_pct: median(window.map((snapshot) => snapshot.meeting_pct)),
+    context_switch_score: median(window.map((snapshot) => snapshot.context_switch_score)),
+    reliable_new_work_capacity_pct: median(
+      window.map((snapshot) => snapshot.reliable_new_work_capacity_pct)
+    )
+  };
+}
+
 export function generateWeeklyNarrative(snapshot: WeeklyCapacitySnapshot): WeeklyNarrative {
   const reactiveDominant = snapshot.reactive_pct > snapshot.planned_pct * 0.7;
   const denseMeetings = snapshot.meeting_pct >= 18;

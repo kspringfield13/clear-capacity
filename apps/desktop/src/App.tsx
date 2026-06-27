@@ -816,6 +816,7 @@ export function App() {
         activeWindowSamples={activeWindowSamples}
         activeWindowSessions={activeWindowSessions}
         snapshot={snapshot}
+        snapshotHistory={snapshotHistory}
         onConfirm={confirmBlock}
         onExclude={excludeBlock}
         onRelabel={updateBlock}
