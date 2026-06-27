@@ -21,7 +21,6 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
-- [ ] **Live-capture panel title runs into its subtitle** — in `components/ledger/ActivityCapturePanel.tsx` (lines 41–44) the `<summary>`'s first `<div>` stacks two bare `<span>`s with no separator, so the Ledger renders the title and subtitle run together as one string ("Live local capture" + "Foreground app/window metadata only" → "…captureForeground…") in both the wide and 420px layouts. Give that wrapping `<div>` `display: flex; flex-direction: column` and style the subtitle span muted (`var(--text-subtle)`, ~12px) so the bold title sits above the subtitle — mirror the stacked `.capture-stat` label/value pattern already in the same panel. `styles.css` (+ a className on the subtitle span) only.
 - [ ] **Collapsed live-capture panel gives no "expandable" affordance** — `.activity-capture-panel summary::-webkit-details-marker { display: none }` in `styles.css` (~line 1515) strips the disclosure triangle, so the "Live local capture" row reads as a static card and users don't discover the capture stats inside. The sibling `.activity-heatmap` disclosure keeps its default ▶ marker and clearly reads as expandable (visible on the Ledger). Restore a caret affordance on the capture-panel `<summary>` (a rotating `ChevronRight` in `ActivityCapturePanel.tsx`, or drop the marker-hiding rule) to match the heatmap. `ActivityCapturePanel.tsx` + `styles.css`.
 
 ### Intelligence Engine
@@ -45,6 +44,8 @@ _Reference pattern: persisted `forecastHistory` + `scoreForecastAccuracy` (PR #1
 
 ## Done
 _Prior entries live in git history and merged PRs._
+
+- [x] **Live-capture panel title runs into its subtitle** (2026-06-27) — wrapped the `<summary>`'s heading `<div>` in `.capture-panel-heading` (`display: flex; flex-direction: column; gap: 2px; min-width: 0`) and gave the subtitle span `.capture-panel-subtitle` (12px, `var(--text-subtle)`) in `ActivityCapturePanel.tsx` + `styles.css`, so the bold "Live local capture" title now sits above the muted subtitle instead of running together. `min-width: 0` lets the heading shrink so the action group isn't pushed off at 420px. Build green; passed self-review.
 
 - [x] **Multi-week snapshot history store** (2026-06-27) — added a persisted `snapshotHistory: PersistedSnapshotRecord[]` (one record per ISO `week_id`, latest wins, cap 24) mirroring `forecastHistory`. `services/localStore.ts`: new `PersistedSnapshotRecord` type, field on `PersistedAppState`, `parseSnapshotHistory` guard wired into both read paths. `hooks/usePersistence.ts`: field + effect dep. `App.tsx`: state, hydrate (async load + initializer), reset, and an upsert `useEffect` keyed on the live `snapshot` (JSON-equality dedup, skips demo/empty-blocks). `services/demoData.ts`: seeded 3 prior demo weeks so the store showcases history. Read/consumer side (baselines, trend chips) deliberately deferred to the dependent tasks. Build green; passed self-review.
 
