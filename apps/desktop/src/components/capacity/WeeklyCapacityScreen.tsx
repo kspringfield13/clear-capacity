@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
-import { BarChart3, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowDown, ArrowUp, BarChart3, ChevronLeft, ChevronRight, Minus } from "lucide-react";
 import type { WorkBlock } from "../../../../../packages/domain/src/models";
-import { computeWeeklyCapacitySnapshot } from "../../../../../packages/inference/src/capacity";
+import type { PersistedSnapshotRecord } from "../../services/localStore";
+import { computeWeeklyCapacitySnapshot, computeCapacityBaselines } from "../../../../../packages/inference/src/capacity";
 import { categoryColors } from "../../../../../packages/domain/src/taxonomy";
 import { pct } from "../../lib/format";
 import { addDays, getCurrentIsoWeekId, getBusinessWeekRangeLabel } from "../../lib/date";
@@ -11,13 +12,30 @@ import { StackedBar } from "../common/StackedBar";
 import { BarLine } from "../common/BarLine";
 import { RiskRow } from "../common/RiskRow";
 
+// The headline metrics shown against the user's own rolling baseline. `scale` lifts the
+// 0–1 context-switch index onto the same /100 scale the RiskRow uses so its delta reads
+// in points like the percentages; `betterWhen` only drives the chip's color/arrow tone.
+const BASELINE_METRICS: Array<{
+  key: "reliable_new_work_capacity_pct" | "reactive_pct" | "meeting_pct" | "context_switch_score";
+  label: string;
+  scale: number;
+  betterWhen: "higher" | "lower";
+}> = [
+  { key: "reliable_new_work_capacity_pct", label: "Reliable capacity", scale: 1, betterWhen: "higher" },
+  { key: "reactive_pct", label: "Reactive load", scale: 1, betterWhen: "lower" },
+  { key: "meeting_pct", label: "Meeting density", scale: 1, betterWhen: "lower" },
+  { key: "context_switch_score", label: "Context switching", scale: 100, betterWhen: "lower" },
+];
+
 export function WeeklyCapacityScreen({
   snapshot: currentSnapshot,
+  snapshotHistory,
   weekRangeLabel,
   hasWorkBlocks,
   blocks,
 }: {
   snapshot: ReturnType<typeof computeWeeklyCapacitySnapshot>;
+  snapshotHistory: PersistedSnapshotRecord[];
   weekRangeLabel: string;
   hasWorkBlocks: boolean;
   blocks: WorkBlock[];
@@ -58,6 +76,34 @@ export function WeeklyCapacityScreen({
     const total = snapshot.category_allocation.reduce((acc, item) => acc + item.value, 0);
     return Math.max(0, 100 - total);
   }, [snapshot]);
+
+  // Rolling personal baselines from the weeks strictly before the one in view, so each
+  // headline number reads against the user's own norm rather than an absolute scale.
+  const baselines = useMemo(() => {
+    const prior = snapshotHistory
+      .filter((record) => record.week_id < snapshot.week_id)
+      .map((record) => record.snapshot);
+    return computeCapacityBaselines(prior);
+  }, [snapshotHistory, snapshot.week_id]);
+
+  const baselineChips = useMemo(() => {
+    if (baselines.week_count < 2) return [];
+    return BASELINE_METRICS.flatMap((metric) => {
+      const baseline = baselines[metric.key];
+      if (baseline === null) return [];
+      const current = Math.round(snapshot[metric.key] * metric.scale);
+      const median = Math.round(baseline * metric.scale);
+      const delta = current - median;
+      const direction = delta > 0 ? "up" : delta < 0 ? "down" : "flat";
+      const tone =
+        delta === 0
+          ? "flat"
+          : (delta > 0) === (metric.betterWhen === "higher")
+            ? "good"
+            : "bad";
+      return [{ ...metric, current, median, delta, direction, tone }];
+    });
+  }, [baselines, snapshot]);
 
   if (!hasWorkBlocks) {
     return (
@@ -129,6 +175,37 @@ export function WeeklyCapacityScreen({
         <MetricCard label="Reactive load" value={snapshot.reactive_pct} helper="Unplanned support and interruption work" />
         <MetricCard label="Reliable new work" value={snapshot.reliable_new_work_capacity_pct} helper="Forecast for next week" showRing />
       </div>
+
+      {baselineChips.length > 0 && (isCurrentWeek || viewedBlocks.length > 0) && (
+        <section className="baseline-chips" aria-label={`Selected week versus your ${baselines.week_count}-week baseline`}>
+          <span className="baseline-chips-label">vs your {baselines.week_count}-wk median</span>
+          <div className="baseline-chip-row">
+            {baselineChips.map((chip) => {
+              const Icon = chip.direction === "up" ? ArrowUp : chip.direction === "down" ? ArrowDown : Minus;
+              const signed = `${chip.delta > 0 ? "+" : ""}${chip.delta}`;
+              return (
+                <span
+                  key={chip.key}
+                  className="baseline-chip"
+                  data-tone={chip.tone}
+                  title={`${chip.label}: ${chip.current} this week vs your ${baselines.week_count}-week median of ${chip.median}`}
+                >
+                  <span className="baseline-chip-metric">{chip.label}</span>
+                  <span className="baseline-chip-delta">
+                    <Icon size={12} aria-hidden />
+                    {chip.direction === "flat" ? "0" : signed}
+                  </span>
+                  <span className="sr-only">
+                    {chip.direction === "flat"
+                      ? `matches your ${baselines.week_count}-week median of ${chip.median}`
+                      : `${Math.abs(chip.delta)} ${chip.direction === "up" ? "above" : "below"} your ${baselines.week_count}-week median of ${chip.median}`}
+                  </span>
+                </span>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {!isCurrentWeek && viewedBlocks.length === 0 && (
         <EmptyState

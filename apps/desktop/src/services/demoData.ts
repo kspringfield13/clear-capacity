@@ -45,8 +45,8 @@ function demoSnapshot(week: string, overrides: Partial<WeeklyCapacitySnapshot>):
     recurring_pct: 24,
     reliable_new_work_capacity_pct: 28,
     carryover_risk_pct: 18,
-    wip_load_score: 52,
-    context_switch_score: 44,
+    wip_load_score: 0.52,
+    context_switch_score: 0.44,
     summary_confidence: 0.82,
     category_allocation: [],
     work_mode_allocation: [],
@@ -267,9 +267,9 @@ export function createDemoState(reference = new Date()): PersistedAppState {
   // personal baselines have history to read in demo mode (the live current-week
   // snapshot is computed from the seeded blocks).
   const snapshotHistory: PersistedSnapshotRecord[] = [
-    { week_id: weekId(addMinutes(now, -30_240)), computed_at: addMinutes(now, -30_240).toISOString(), snapshot: demoSnapshot(weekId(addMinutes(now, -30_240)), { reliable_new_work_capacity_pct: 33, reactive_pct: 16, meeting_pct: 19, context_switch_score: 38 }) },
-    { week_id: weekId(addMinutes(now, -20_160)), computed_at: addMinutes(now, -20_160).toISOString(), snapshot: demoSnapshot(weekId(addMinutes(now, -20_160)), { reliable_new_work_capacity_pct: 26, reactive_pct: 24, meeting_pct: 25, context_switch_score: 49 }) },
-    { week_id: weekId(addMinutes(now, -10_080)), computed_at: addMinutes(now, -10_080).toISOString(), snapshot: demoSnapshot(weekId(addMinutes(now, -10_080)), { reliable_new_work_capacity_pct: 29, reactive_pct: 21, meeting_pct: 22, context_switch_score: 45 }) }
+    { week_id: weekId(addMinutes(now, -30_240)), computed_at: addMinutes(now, -30_240).toISOString(), snapshot: demoSnapshot(weekId(addMinutes(now, -30_240)), { reliable_new_work_capacity_pct: 33, reactive_pct: 16, meeting_pct: 19, context_switch_score: 0.38 }) },
+    { week_id: weekId(addMinutes(now, -20_160)), computed_at: addMinutes(now, -20_160).toISOString(), snapshot: demoSnapshot(weekId(addMinutes(now, -20_160)), { reliable_new_work_capacity_pct: 26, reactive_pct: 24, meeting_pct: 25, context_switch_score: 0.49 }) },
+    { week_id: weekId(addMinutes(now, -10_080)), computed_at: addMinutes(now, -10_080).toISOString(), snapshot: demoSnapshot(weekId(addMinutes(now, -10_080)), { reliable_new_work_capacity_pct: 29, reactive_pct: 21, meeting_pct: 22, context_switch_score: 0.45 }) }
   ];
 
   const managerSummary = "This week centered on the capacity model, executive dashboard, and recurring operating metrics. Two unplanned investigations displaced some planned analysis, while fixed meetings and reporting consumed a meaningful share of the week. The current model indicates 24% reliable capacity for new planned work next week, provided the warehouse access blocker clears and protected focus time remains intact. Two lower-confidence blocks should be reviewed before this summary is shared.";

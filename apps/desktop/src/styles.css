@@ -2705,6 +2705,78 @@ select {
   margin-bottom: 10px;
 }
 
+.baseline-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: -2px 0 14px;
+}
+
+.baseline-chips-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-subtle);
+}
+
+.baseline-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.baseline-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.baseline-chip-metric {
+  color: var(--text-muted);
+}
+
+.baseline-chip-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.baseline-chip-delta svg {
+  flex-shrink: 0;
+}
+
+.baseline-chip[data-tone="good"] {
+  background: var(--green-soft);
+  border-color: transparent;
+}
+
+.baseline-chip[data-tone="good"] .baseline-chip-delta {
+  color: var(--success);
+}
+
+.baseline-chip[data-tone="bad"] {
+  background: var(--red-soft);
+  border-color: transparent;
+}
+
+.baseline-chip[data-tone="bad"] .baseline-chip-delta {
+  color: var(--danger);
+}
+
+.baseline-chip[data-tone="flat"] .baseline-chip-delta {
+  color: var(--text-subtle);
+}
+
 .metric-card {
   display: grid;
   gap: 4px;
