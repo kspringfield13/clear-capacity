@@ -7513,7 +7513,8 @@ html[data-theme="dark"] .agent-active .pause-button:hover {
   background: var(--surface);
 }
 
-.activity-heatmap .eyebrow {
+.activity-heatmap summary {
+  cursor: pointer;
   margin: 0;
 }
 
