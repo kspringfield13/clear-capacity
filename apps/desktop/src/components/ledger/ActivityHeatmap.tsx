@@ -57,10 +57,10 @@ export function ActivityHeatmap({ sessions }: { sessions: ActivitySession[] }) {
 
   if (daysWithActivity < 2) {
     return (
-      <section className="activity-heatmap">
-        <p className="eyebrow">7-day activity pattern</p>
+      <details className="activity-heatmap">
+        <summary>7-day activity pattern</summary>
         <p className="heatmap-sparse-caption">Limited activity so far — the pattern fills in as you keep tracking.</p>
-      </section>
+      </details>
     );
   }
 
@@ -70,8 +70,8 @@ export function ActivityHeatmap({ sessions }: { sessions: ActivitySession[] }) {
   const peakMin = Math.round(max);
 
   return (
-    <section className="activity-heatmap">
-      <p className="eyebrow">7-day activity pattern</p>
+    <details className="activity-heatmap">
+      <summary>7-day activity pattern</summary>
       <div
         className="heatmap-grid"
         role="group"
@@ -119,6 +119,6 @@ export function ActivityHeatmap({ sessions }: { sessions: ActivitySession[] }) {
         ))}
         <span className="heatmap-legend-label">More</span>
       </div>
-    </section>
+    </details>
   );
 }
