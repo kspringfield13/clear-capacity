@@ -6654,9 +6654,9 @@ html[data-theme="dark"] .risk-track span[data-severity="high"] { background: #fb
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   min-height: 210px;
-  padding: 8px 2px;
+  padding: 16px 2px 8px;
 }
 
 .starter-heading {
