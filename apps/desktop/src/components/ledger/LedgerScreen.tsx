@@ -61,7 +61,11 @@ export function LedgerScreen({
       )
     : blocks;
 
-  const current = blocks[7] ?? blocks[0];
+  const current = blocks.length > 0
+    ? blocks.reduce((latest, block) =>
+        block.end_time > latest.end_time ? block : latest
+      )
+    : undefined;
   return (
     <section className="screen ledger-screen">
       <div className="screen-header compact">
