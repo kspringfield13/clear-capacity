@@ -21,7 +21,6 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
-- [ ] **Agent empty-conversation state floats in dead space** — with no messages, `.agent-starters` (`apps/desktop/src/styles.css` line ~6652) is `flex: 1 1 auto; justify-content: center`, so the "Start with an outcome" cards are vertically centered in the entire conversation void. Verified on the Agent screen (wide and 420px): a large blank band sits between the briefing card and the starters, and again above the composer, making the screen read as half-empty. Anchor the empty state near the top instead (e.g. `justify-content: flex-start` scoped under `.agent-chat-container.is-empty`, or a fixed modest top gap) so the prompts sit just below the briefing. `styles.css` only.
 
 ### Intelligence Engine
 _Reference pattern: persisted `forecastHistory` + `scoreForecastAccuracy` (PR #19) — mirror it for retained-history work._
@@ -46,6 +45,7 @@ _Reference pattern: persisted `forecastHistory` + `scoreForecastAccuracy` (PR #1
 ## Done
 _Prior entries live in git history and merged PRs._
 
+- [x] **Agent empty-conversation state floats in dead space** (2026-06-27) — changed `justify-content: center` → `justify-content: flex-start` on `.agent-starters` in `styles.css`; starter cards now anchor near the top instead of floating in the middle of the empty conversation void.
 - [x] **BlockCard relabel selects have field-name aria-labels** (2026-06-27) — verified already present in `components/ledger/BlockCard.tsx`; all three relabel `<select>`s carry static `aria-label`s ("Work category" / "Planned status" / "Work mode") alongside the value `title`.
 - [x] **EmptyState descriptive aria-labels** (2026-06-27) — verified in `components/common/EmptyState.tsx`; optional `ariaLabel` prop renders `aria-label={ariaLabel ?? title}` on the `<section className="empty-state">`.
 - [x] **ReviewCopilotPanel contextual aria-labels** (2026-06-27) — verified in `components/review/ReviewCopilotPanel.tsx`; the Apply/Dismiss buttons include the suggestion title in each `aria-label` (PR #58).
