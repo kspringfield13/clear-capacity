@@ -1506,6 +1506,14 @@ h3 {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
 }
 
+.activity-capture-panel summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--text);
+  user-select: none;
+}
+
 .ledger-screen,
 .review-screen,
 .capacity-screen,
@@ -1580,9 +1588,7 @@ h3 {
 }
 
 .ledger-screen .activity-capture-panel {
-  flex: 0 1 auto;
-  max-height: 270px;
-  overflow: hidden;
+  flex: 0 0 auto;
 }
 
 .ledger-screen .activity-capture-panel .session-list {
@@ -5701,10 +5707,8 @@ html[data-theme="dark"] .risk-track span[data-severity="high"] { background: #fb
 .ledger-screen .activity-capture-panel {
   flex: 0 0 auto;
   gap: 10px;
-  max-height: none;
   margin-bottom: 10px;
   padding: 12px 14px;
-  overflow: visible;
 }
 
 .ledger-screen .activity-capture-panel .section-title {

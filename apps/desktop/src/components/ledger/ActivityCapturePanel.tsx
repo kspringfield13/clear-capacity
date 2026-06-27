@@ -36,12 +36,10 @@ export function ActivityCapturePanel({
   const latestSessionSummaries = summarizeRecentSessions(activeWindowSessions);
 
   return (
-    <section className="activity-capture-panel">
+    <details className="activity-capture-panel">
+      <summary>Live local capture</summary>
       <div className="section-title">
-        <div>
-          <h2>Live local capture</h2>
-          <span>{paused ? "Paused" : "Foreground app/window metadata only"}</span>
-        </div>
+        <span>{paused ? "Paused" : "Foreground app/window metadata only"}</span>
         <div className="capture-actions">
           <button
             className="secondary-action"
@@ -116,6 +114,6 @@ export function ActivityCapturePanel({
           ))}
         </div>
       )}
-    </section>
+    </details>
   );
 }
