@@ -1,13 +1,17 @@
-import { TrendingUp } from "lucide-react";
+import { useMemo } from "react";
+import { ArrowRight, Scale, TrendingUp } from "lucide-react";
+import type { UserCorrection } from "../../../../../packages/domain/src/models";
 import type { PersistedForecastRecord, ForecastAccuracyReview } from "../../services/localStore";
+import { analyzeCorrections } from "../../../../../packages/inference/src/capacity";
 import type { computeWeeklyCapacitySnapshot } from "../../../../../packages/inference/src/capacity";
-import { pct } from "../../lib/format";
+import { fieldLabel, humanizeCorrectionValue, pct } from "../../lib/format";
 import { EmptyState } from "../common/EmptyState";
 import { ForecastAgentPanel } from "./ForecastAgentPanel";
 
 export function ForecastScreen({
   snapshot,
   nextWeekRangeLabel,
+  corrections,
   generatedForecast,
   forecastAccuracy,
   forecastStatus,
@@ -17,6 +21,7 @@ export function ForecastScreen({
 }: {
   snapshot: ReturnType<typeof computeWeeklyCapacitySnapshot>;
   nextWeekRangeLabel: string;
+  corrections: UserCorrection[];
   generatedForecast: PersistedForecastRecord | null;
   forecastAccuracy: ForecastAccuracyReview | null;
   forecastStatus: "idle" | "generating" | "error";
@@ -24,6 +29,9 @@ export function ForecastScreen({
   onGenerateForecast: () => void;
   hasWorkBlocks: boolean;
 }) {
+  // Close the correction feedback loop: surface systematic mislabels the user keeps fixing so
+  // the forecast can be read with the model's known blind spots in mind. No retraining.
+  const biasAnalysis = useMemo(() => analyzeCorrections(corrections), [corrections]);
   if (!hasWorkBlocks) {
     return (
       <section className="screen forecast-screen">
@@ -54,6 +62,36 @@ export function ForecastScreen({
           </p>
         </div>
       </div>
+      {biasAnalysis.biases.length > 0 && (
+        <section className="model-bias-note" aria-label="Model bias from your corrections">
+          <div className="model-bias-header">
+            <Scale size={16} aria-hidden className="model-bias-icon" />
+            <div>
+              <strong>Model bias from your corrections</strong>
+              <p>
+                You've repeatedly re-labeled the same things, so the model likely mislabels these the
+                same way again — weigh the forecast accordingly until the pattern clears.
+              </p>
+            </div>
+          </div>
+          <ul className="model-bias-list">
+            {biasAnalysis.biases.map((bias) => (
+              <li key={`${bias.field}-${bias.from_value}-${bias.to_value}`}>
+                <span className="model-bias-field">{fieldLabel(bias.field)}</span>
+                <span className="model-bias-change">
+                  <span className="model-bias-from">{humanizeCorrectionValue(bias.field, bias.from_value)}</span>
+                  <ArrowRight size={12} aria-hidden />
+                  <span className="model-bias-to">{humanizeCorrectionValue(bias.field, bias.to_value)}</span>
+                </span>
+                <span className="model-bias-count" title={`Corrected ${bias.count} times`}>
+                  ×{bias.count}
+                  <span className="sr-only"> corrections of this label</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <ForecastAgentPanel
         generatedForecast={generatedForecast}
         forecastAccuracy={forecastAccuracy}

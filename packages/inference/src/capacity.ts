@@ -1,4 +1,5 @@
 import type {
+  UserCorrection,
   WeeklyCapacitySnapshot,
   WeeklyNarrative,
   WorkBlock,
@@ -184,6 +185,75 @@ export function computeCapacityBaselines(history: WeeklyCapacitySnapshot[]): Cap
     reliable_new_work_capacity_pct: median(
       window.map((snapshot) => snapshot.reliable_new_work_capacity_pct)
     )
+  };
+}
+
+/**
+ * A systematic mislabel surfaced from the user's correction history: the same field was
+ * re-labeled from `from_value` to `to_value` at least `SYSTEMATIC_CORRECTION_THRESHOLD`
+ * times, which suggests a repeatable bias in the model's labeling for that pattern.
+ */
+export interface CorrectionBias {
+  field: UserCorrection["field"];
+  from_value: string;
+  to_value: string;
+  count: number;
+}
+
+export interface CorrectionBiasAnalysis {
+  total_corrections: number;
+  /** Corrections eligible for bias detection (label fields with a real value change). */
+  label_correction_count: number;
+  /** Systematic from→to patterns, sorted by count descending. Empty when none reach the threshold. */
+  biases: CorrectionBias[];
+}
+
+// Fields where a from→to edit represents a repeatable classification mislabel. Free-text and
+// timestamp edits are excluded — they don't form a meaningful directional bias signal.
+const BIAS_LABEL_FIELDS: ReadonlySet<UserCorrection["field"]> = new Set([
+  "category",
+  "mode",
+  "planned_status",
+  "stakeholder_group",
+  "blocker_flag"
+]);
+
+const SYSTEMATIC_CORRECTION_THRESHOLD = 3;
+
+/**
+ * Surface systematic mislabels from the user's correction history so the model's blind spots
+ * are visible — no retraining, this just closes the feedback loop. A bias is any
+ * `(field, old_value → new_value)` pattern repeated at least `SYSTEMATIC_CORRECTION_THRESHOLD`
+ * times across the label fields (e.g. category X→Y corrected ≥3×, or planned→unplanned drift).
+ * Pure and domain-typed (no persistence/frontend types) so it stays unit-testable.
+ */
+export function analyzeCorrections(corrections: UserCorrection[]): CorrectionBiasAnalysis {
+  const counts = new Map<string, CorrectionBias>();
+  let labelCount = 0;
+  for (const correction of corrections) {
+    if (!BIAS_LABEL_FIELDS.has(correction.field)) continue;
+    if (correction.old_value === correction.new_value) continue;
+    labelCount += 1;
+    const key = `${correction.field} ${correction.old_value} ${correction.new_value}`;
+    const existing = counts.get(key);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      counts.set(key, {
+        field: correction.field,
+        from_value: correction.old_value,
+        to_value: correction.new_value,
+        count: 1
+      });
+    }
+  }
+  const biases = [...counts.values()]
+    .filter((bias) => bias.count >= SYSTEMATIC_CORRECTION_THRESHOLD)
+    .sort((left, right) => right.count - left.count);
+  return {
+    total_corrections: corrections.length,
+    label_correction_count: labelCount,
+    biases
   };
 }
 
