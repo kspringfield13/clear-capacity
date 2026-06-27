@@ -52,10 +52,10 @@ export function ForecastAgentPanel({
       )
     : 0;
 
-  // When the likely value sits near either end, the absolutely-positioned center
-  // label collides with the Conservative/Optimistic end labels. The Likely value is
-  // still shown in the summary card above and in the range's aria-label, so we hide
-  // the redundant inline label rather than overlap. ~12% margin keeps the marker clear.
+  // When the marker sits near either end, the centered "Likely · X%" label collides
+  // with the edge-anchored Conservative/Optimistic labels. In that case the likely value
+  // is ~equal to the nearest end (and is still shown in the summary cards + range aria-label),
+  // so hide the inline center label rather than overlapping the end one.
   const showLikelyLabel = likelyLeft > 12 && likelyLeft < 88;
 
   return (
