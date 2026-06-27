@@ -7402,15 +7402,13 @@ html[data-theme="dark"] .agent-active .pause-button:hover {
   }
 
   .briefing-metrics > div:last-child {
-    display: none;
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--border);
+    border-left: 0;
   }
 
   .starter-grid {
     grid-template-columns: 1fr;
-  }
-
-  .starter-grid > button:nth-child(n + 3) {
-    display: none;
   }
 
   .agent-message.user {
