@@ -21,6 +21,8 @@ _(none)_
 ## Next
 
 ### UI & UX Polish
+- [ ] **Live-capture panel title runs into its subtitle** — in `components/ledger/ActivityCapturePanel.tsx` (lines 41–44) the `<summary>`'s first `<div>` stacks two bare `<span>`s with no separator, so the Ledger renders the title and subtitle run together as one string ("Live local capture" + "Foreground app/window metadata only" → "…captureForeground…") in both the wide and 420px layouts. Give that wrapping `<div>` `display: flex; flex-direction: column` and style the subtitle span muted (`var(--text-subtle)`, ~12px) so the bold title sits above the subtitle — mirror the stacked `.capture-stat` label/value pattern already in the same panel. `styles.css` (+ a className on the subtitle span) only.
+- [ ] **Collapsed live-capture panel gives no "expandable" affordance** — `.activity-capture-panel summary::-webkit-details-marker { display: none }` in `styles.css` (~line 1515) strips the disclosure triangle, so the "Live local capture" row reads as a static card and users don't discover the capture stats inside. The sibling `.activity-heatmap` disclosure keeps its default ▶ marker and clearly reads as expandable (visible on the Ledger). Restore a caret affordance on the capture-panel `<summary>` (a rotating `ChevronRight` in `ActivityCapturePanel.tsx`, or drop the marker-hiding rule) to match the heatmap. `ActivityCapturePanel.tsx` + `styles.css`.
 
 ### Intelligence Engine
 _Reference pattern: persisted `forecastHistory` + `scoreForecastAccuracy` (PR #19) — mirror it for retained-history work._
@@ -57,10 +59,6 @@ _Prior entries live in git history and merged PRs._
 - [x] **BlockCard relabel selects have field-name aria-labels** (2026-06-27) — verified already present in `components/ledger/BlockCard.tsx`; all three relabel `<select>`s carry static `aria-label`s ("Work category" / "Planned status" / "Work mode") alongside the value `title`.
 - [x] **EmptyState descriptive aria-labels** (2026-06-27) — verified in `components/common/EmptyState.tsx`; optional `ariaLabel` prop renders `aria-label={ariaLabel ?? title}` on the `<section className="empty-state">`.
 - [x] **ReviewCopilotPanel contextual aria-labels** (2026-06-27) — verified in `components/review/ReviewCopilotPanel.tsx`; the Apply/Dismiss buttons include the suggestion title in each `aria-label` (PR #58).
-- [x] **AppShell / CompactWidget snapshot type** (2026-06-27) — verified `snapshot: WeeklyCapacitySnapshot` in both `components/shell/AppShell.tsx` and `components/compact/CompactWidget.tsx`, replacing `snapshot: any` (PR #59).
-- [x] **Agent compact view silently hides the Outlook metric and half the starter cards** (2026-06-27) — removed `display: none` hiding rules in `@media (max-width: 600px)`; third briefing-metric now spans full-width (`grid-column: 1 / -1` + `border-top`), all four starter cards now visible via existing single-column grid. `styles.css` only.
-- [x] **Forecast scenario cards are cramped two-up on narrow screens** (2026-06-27) — added `.forecast-summary` to the `grid-template-columns: 1fr` rule in the `@media (max-width: 600px)` block in `styles.css`; four cards now stack single-column at ≤600px.
-- [x] **Agent empty-conversation state floats in dead space** (2026-06-27) — changed `.agent-starters` from `flex: 1 1 auto; justify-content: center` to `flex: 0 0 auto; justify-content: flex-start`; removed artificial `min-height: 210px`; cards now anchor just below briefing instead of centering in the void. `styles.css` only.
 
 ---
 
