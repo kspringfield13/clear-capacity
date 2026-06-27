@@ -1,0 +1,54 @@
+name: Auto-merge Claude PRs
+
+# Builds every PR opened from an autonomous routine branch (claude/*) and, if
+# the build is green, marks it ready and squash-merges it — so the scheduled
+# improve/curator routines land on main hands-free without manual PR review.
+#
+# The build IS the gate: if `npm run build` fails, the merge steps never run and
+# the PR stays open for a human to look at. Uses the Actions GITHUB_TOKEN, which
+# is independent of the Claude GitHub App's permissions.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: automerge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-merge:
+    # Only the autonomous routine branches; human PRs are untouched.
+    if: startsWith(github.head_ref, 'claude/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (type-check + bundle)
+        run: npm run build
+
+      - name: Mark ready and squash-merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          # Routine PRs are created as drafts; a draft can't be merged.
+          gh pr ready "$PR"
+          gh pr merge "$PR" --squash --delete-branch
