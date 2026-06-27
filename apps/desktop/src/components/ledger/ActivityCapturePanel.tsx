@@ -38,9 +38,9 @@ export function ActivityCapturePanel({
   return (
     <details className="activity-capture-panel">
       <summary className="section-title">
-        <div>
+        <div className="capture-panel-heading">
           <span className="capture-panel-title">Live local capture</span>
-          <span>{paused ? "Paused" : "Foreground app/window metadata only"}</span>
+          <span className="capture-panel-subtitle">{paused ? "Paused" : "Foreground app/window metadata only"}</span>
         </div>
         <div className="capture-actions">
           <button
