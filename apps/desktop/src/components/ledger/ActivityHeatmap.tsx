@@ -57,7 +57,7 @@ export function ActivityHeatmap({ sessions }: { sessions: ActivitySession[] }) {
 
   if (daysWithActivity < 2) {
     return (
-      <details className="activity-heatmap">
+      <details className="activity-heatmap" open>
         <summary>7-day activity pattern</summary>
         <p className="heatmap-sparse-caption">Limited activity so far — the pattern fills in as you keep tracking.</p>
       </details>
