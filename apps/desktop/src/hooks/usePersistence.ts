@@ -10,7 +10,7 @@ import type {
   VisualContextInsight,
   AIConfig
 } from "../../../../packages/domain/src/models";
-import type { PersistedForecastRecord, PersistedNarrativeRecord } from "../services/localStore";
+import type { PersistedForecastRecord, PersistedNarrativeRecord, PersistedSnapshotRecord } from "../services/localStore";
 
 interface PersistableState {
   blocks: WorkBlock[];
@@ -21,6 +21,7 @@ interface PersistableState {
   reviewSuggestions: ReviewCopilotSuggestion[];
   generatedForecast: PersistedForecastRecord | null;
   forecastHistory: PersistedForecastRecord[];
+  snapshotHistory: PersistedSnapshotRecord[];
   visualContextEnabled: boolean;
   visualContextInsights: VisualContextInsight[];
   managerSummaryText: string | null;
@@ -49,6 +50,7 @@ export function usePersistence(state: PersistableState) {
     persistData.reviewSuggestions,
     persistData.generatedForecast,
     persistData.forecastHistory,
+    persistData.snapshotHistory,
     persistData.visualContextEnabled,
     persistData.visualContextInsights,
     persistData.managerSummaryText,

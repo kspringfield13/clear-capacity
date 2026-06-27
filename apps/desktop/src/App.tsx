@@ -17,7 +17,7 @@ import {
   writePersistedState,
   writeThemePreference
 } from "./services/localStore";
-import type { AppTheme, PersistedAppState, PersistedForecastRecord, PersistedNarrativeRecord } from "./services/localStore";
+import type { AppTheme, PersistedAppState, PersistedForecastRecord, PersistedNarrativeRecord, PersistedSnapshotRecord } from "./services/localStore";
 import { createDemoState } from "./services/demoData";
 import {
   addDays,
@@ -74,6 +74,7 @@ export function App() {
         setAuditEvents(data.auditEvents ?? []);
         setGeneratedForecast(data.generatedForecast ?? null);
         setForecastHistory(data.forecastHistory ?? []);
+        setSnapshotHistory(data.snapshotHistory ?? []);
         setVisualContextEnabled(data.visualContextEnabled ?? false);
         setVisualContextInsights(data.visualContextInsights ?? []);
         setAiConfig(data.aiConfig ?? null);
@@ -101,6 +102,9 @@ export function App() {
   );
   const [forecastHistory, setForecastHistory] = useState<PersistedForecastRecord[]>(
     () => persistedSnapshot?.forecastHistory ?? []
+  );
+  const [snapshotHistory, setSnapshotHistory] = useState<PersistedSnapshotRecord[]>(
+    () => persistedSnapshot?.snapshotHistory ?? []
   );
   const [visualContextEnabled, setVisualContextEnabled] = useState<boolean>(
     () => persistedSnapshot?.visualContextEnabled ?? false
@@ -172,6 +176,7 @@ export function App() {
     reviewSuggestions,
     generatedForecast,
     forecastHistory,
+    snapshotHistory,
     visualContextEnabled,
     visualContextInsights,
     aiConfig,
@@ -211,6 +216,28 @@ export function App() {
     toolbarStatus,
     forecastAccuracy,
   } = derived;
+
+  // Retain the latest computed snapshot per ISO week so cross-week trends and
+  // personal baselines have history to read. Mirrors `forecastHistory`: one record
+  // per week_id (latest wins), capped to the most recent 24 weeks. Once the ISO
+  // week rolls over the prior week's last snapshot stops updating and stays frozen.
+  useEffect(() => {
+    if (isDemoMode || blocks.length === 0) return;
+    setSnapshotHistory((current) => {
+      const existing = current.find((entry) => entry.week_id === snapshot.week_id);
+      if (existing && JSON.stringify(existing.snapshot) === JSON.stringify(snapshot)) {
+        return current;
+      }
+      const record: PersistedSnapshotRecord = {
+        week_id: snapshot.week_id,
+        snapshot,
+        computed_at: new Date().toISOString(),
+      };
+      return [...current.filter((entry) => entry.week_id !== snapshot.week_id), record]
+        .sort((left, right) => left.week_id.localeCompare(right.week_id))
+        .slice(-24);
+    });
+  }, [snapshot, blocks.length, isDemoMode]);
 
   const { classificationStatus, classificationError, classifyActiveWindowSessions, resetClassification } =
     useClassification({
@@ -653,6 +680,7 @@ export function App() {
     setReviewSuggestions([]);
     setGeneratedForecast(null);
     setForecastHistory([]);
+    setSnapshotHistory([]);
     setVisualContextEnabled(true);
     setVisualContextInsights([]);
     setVisualContextAttemptedSessionIds([]);

@@ -5,9 +5,10 @@ import type {
   ReviewCopilotSuggestion,
   UserCorrection,
   VisualContextInsight,
+  WeeklyCapacitySnapshot,
   WorkBlock
 } from "../../../../packages/domain/src/models";
-import type { PersistedAppState } from "./localStore";
+import type { PersistedAppState, PersistedSnapshotRecord } from "./localStore";
 import { humanizeCorrectionValue } from "../lib/format";
 
 function addMinutes(date: Date, minutes: number) {
@@ -28,6 +29,29 @@ function weekId(reference: Date) {
   const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
   const week = Math.ceil(((date.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
   return `${date.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
+}
+
+function demoSnapshot(week: string, overrides: Partial<WeeklyCapacitySnapshot>): WeeklyCapacitySnapshot {
+  return {
+    week_id: week,
+    capacity_baseline_pct: 100,
+    allocated_pct: 92,
+    deep_work_pct: 38,
+    fragmented_work_pct: 18,
+    meeting_pct: 22,
+    reactive_pct: 20,
+    planned_pct: 58,
+    blocked_pct: 6,
+    recurring_pct: 24,
+    reliable_new_work_capacity_pct: 28,
+    carryover_risk_pct: 18,
+    wip_load_score: 52,
+    context_switch_score: 44,
+    summary_confidence: 0.82,
+    category_allocation: [],
+    work_mode_allocation: [],
+    ...overrides
+  };
 }
 
 function at(start: Date, day: number, minute: number) {
@@ -239,6 +263,15 @@ export function createDemoState(reference = new Date()): PersistedAppState {
     audit("privacy_resume", addMinutes(now, -10), "Tracking resumed", "Active-window sampling resumed locally", "privacy_control", "local_only")
   ];
 
+  // Three prior completed weeks of retained snapshots so cross-week trends and
+  // personal baselines have history to read in demo mode (the live current-week
+  // snapshot is computed from the seeded blocks).
+  const snapshotHistory: PersistedSnapshotRecord[] = [
+    { week_id: weekId(addMinutes(now, -30_240)), computed_at: addMinutes(now, -30_240).toISOString(), snapshot: demoSnapshot(weekId(addMinutes(now, -30_240)), { reliable_new_work_capacity_pct: 33, reactive_pct: 16, meeting_pct: 19, context_switch_score: 38 }) },
+    { week_id: weekId(addMinutes(now, -20_160)), computed_at: addMinutes(now, -20_160).toISOString(), snapshot: demoSnapshot(weekId(addMinutes(now, -20_160)), { reliable_new_work_capacity_pct: 26, reactive_pct: 24, meeting_pct: 25, context_switch_score: 49 }) },
+    { week_id: weekId(addMinutes(now, -10_080)), computed_at: addMinutes(now, -10_080).toISOString(), snapshot: demoSnapshot(weekId(addMinutes(now, -10_080)), { reliable_new_work_capacity_pct: 29, reactive_pct: 21, meeting_pct: 22, context_switch_score: 45 }) }
+  ];
+
   const managerSummary = "This week centered on the capacity model, executive dashboard, and recurring operating metrics. Two unplanned investigations displaced some planned analysis, while fixed meetings and reporting consumed a meaningful share of the week. The current model indicates 24% reliable capacity for new planned work next week, provided the warehouse access blocker clears and protected focus time remains intact. Two lower-confidence blocks should be reviewed before this summary is shared.";
 
   return {
@@ -274,6 +307,7 @@ export function createDemoState(reference = new Date()): PersistedAppState {
         }
       }
     ],
+    snapshotHistory,
     generatedNarrative: {
       generated_at: generatedAt.toISOString(), generated_for_date: now.toISOString().slice(0, 10),
       trigger: "manual", model: "OpenAI narrative", prompt_version: "clear-capacity-weekly-narrative-v2",

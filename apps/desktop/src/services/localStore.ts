@@ -6,6 +6,7 @@ import type {
   OutlookCalendarEvent,
   ReviewCopilotSuggestion,
   VisualContextInsight,
+  WeeklyCapacitySnapshot,
   WeeklyNarrative,
   UserCorrection,
   WorkBlock,
@@ -39,6 +40,18 @@ export interface PersistedForecastRecord {
 }
 
 /**
+ * A computed weekly snapshot retained under its ISO `week_id`. One record per week
+ * (latest computation wins); the trail enables cross-week trends and personal
+ * baselines. Mirrors `PersistedForecastRecord` so UI/inference can type against it
+ * without importing storage internals.
+ */
+export interface PersistedSnapshotRecord {
+  week_id: string;
+  snapshot: WeeklyCapacitySnapshot;
+  computed_at: string;
+}
+
+/**
  * A past forecast paired with how it scored once its target week arrived. Assembled
  * in `useDerived` from `forecastHistory` + the live snapshot; kept here next to
  * `PersistedForecastRecord` so UI components type against it without importing
@@ -63,6 +76,7 @@ export interface PersistedAppState {
   reviewSuggestions: ReviewCopilotSuggestion[];
   generatedForecast: PersistedForecastRecord | null;
   forecastHistory: PersistedForecastRecord[];
+  snapshotHistory: PersistedSnapshotRecord[];
   visualContextEnabled: boolean;
   visualContextInsights: VisualContextInsight[];
   managerSummaryText: string | null;
@@ -81,6 +95,14 @@ function parseForecastHistory(value: unknown): PersistedForecastRecord[] {
   return value.filter(
     (entry): entry is PersistedForecastRecord =>
       isRecord(entry) && isRecord(entry.forecast) && typeof entry.generated_for_week === "string"
+  );
+}
+
+function parseSnapshotHistory(value: unknown): PersistedSnapshotRecord[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (entry): entry is PersistedSnapshotRecord =>
+      isRecord(entry) && isRecord(entry.snapshot) && typeof entry.week_id === "string"
   );
 }
 
@@ -116,6 +138,7 @@ export async function readPersistedState(): Promise<PersistedAppState | null> {
         reviewSuggestions: Array.isArray(parsed.reviewSuggestions) ? (parsed.reviewSuggestions as ReviewCopilotSuggestion[]) : [],
         generatedForecast: isRecord(parsed.generatedForecast) && isRecord(parsed.generatedForecast.forecast) ? (parsed.generatedForecast as unknown as PersistedForecastRecord) : null,
         forecastHistory: parseForecastHistory(parsed.forecastHistory),
+        snapshotHistory: parseSnapshotHistory(parsed.snapshotHistory),
         visualContextEnabled: typeof parsed.visualContextEnabled === "boolean" ? parsed.visualContextEnabled : false,
         visualContextInsights: Array.isArray(parsed.visualContextInsights) ? (parsed.visualContextInsights as VisualContextInsight[]) : [],
         managerSummaryText: typeof parsed.managerSummaryText === "string" ? parsed.managerSummaryText : null,
@@ -152,6 +175,7 @@ export async function readPersistedState(): Promise<PersistedAppState | null> {
           ? (parsed.generatedForecast as unknown as PersistedForecastRecord)
           : null,
       forecastHistory: parseForecastHistory(parsed.forecastHistory),
+      snapshotHistory: parseSnapshotHistory(parsed.snapshotHistory),
       visualContextEnabled:
         typeof parsed.visualContextEnabled === "boolean" ? parsed.visualContextEnabled : false,
       visualContextInsights: Array.isArray(parsed.visualContextInsights)
