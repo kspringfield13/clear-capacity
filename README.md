@@ -29,6 +29,7 @@ Analyst workload is often split across planned projects, recurring reporting, me
 - conversational agent for asking questions about your workload and capacity
 - optional OpenAI-assisted classification, review suggestions, forecasts, and narratives
 - optional screenshot-derived visual context with an explicit opt-in toggle
+- local data export (JSON or CSV) and a user-controlled retention window
 - browser-local persistence for prototype data
 
 ## App Navigation
@@ -38,7 +39,7 @@ The app is organized into four primary sections, each with focused sub-views:
 - **Today** — the daily review queue. Confirm, relabel, or exclude inferred work blocks, with an opt-in Review Copilot that suggests cleanup actions you approve before they apply.
 - **Week** — `Capacity` (the explainable weekly allocation model and risk modifiers), `Forecast` (an AI projection of next week's reliable capacity with scenarios, constraints, and recommendations), and `Summary` (an editable analyst or manager narrative).
 - **Agent** — a conversational view to ask questions about your workload, plan, and understand the capacity model.
-- **History** — `Activity` (the live work ledger and capture timeline), `Corrections` (a searchable log of every label, category, project, and planned-status edit), and `Audit` (the filterable trail of all local signals, inferences, and privacy events).
+- **History** — `Activity` (the live work ledger and capture timeline), `Corrections` (a searchable log of every label, category, project, and planned-status edit), `Audit` (the filterable trail of all local signals, inferences, and privacy events), and `Flagged` (a review queue for visual captures flagged as potentially sensitive, with a per-item discard control).
 
 ## Privacy Model
 
@@ -174,7 +175,7 @@ apps/desktop/
 packages/
   domain/src/                Shared workload and audit models
   inference/src/             Capacity calculation and session grouping
-  integrations/src/calendar Outlook .ics parsing
+  integrations/src/          Outlook .ics, git-log, and generic raw-event import parsers
 ```
 
 ## Validation
