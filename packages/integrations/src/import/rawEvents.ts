@@ -13,7 +13,7 @@ import { capacityPctFromSpan, stableHash } from "../internal/normalize";
 /**
  * Generic activity-source import.
  *
- * `SourceType` reserves `slack` / `git` / `browser` / `task` alongside the
+ * `SourceType` reserves `chat` / `git` / `browser` / `task` alongside the
  * wired `window` + `calendar`, but the app only had bespoke mappers for the
  * latter two. This module is the source-agnostic alternative: a new source
  * emits a JSON file of {@link RawEventImport} records and {@link importRawEvents}
@@ -128,14 +128,18 @@ const SOURCE_DEFAULTS: Record<SourceType, SourceDefaults> = {
     confidence: 0.5,
     label: "browser"
   },
-  slack: {
+  // Generic workplace-chat signal. The specific vendor (Slack / Microsoft
+  // Teams / Webex) rides on a per-message `provider` field, not a dedicated
+  // SourceType — orgs standardize on one chat app, so the reactive-work signal
+  // is vendor-uniform. See `chat/chatExport.ts`.
+  chat: {
     category: "Ad hoc stakeholder requests",
     mode: "Reactive",
     planned_status: "unplanned",
-    stakeholder_group: "Slack",
-    project_fallback: "Messaging",
+    stakeholder_group: "Workplace chat",
+    project_fallback: "Reactive messaging",
     confidence: 0.55,
-    label: "Slack"
+    label: "workplace chat"
   },
   task: {
     category: "Planned analysis / project work",
