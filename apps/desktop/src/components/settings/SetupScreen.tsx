@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   ChevronRight,
   Download,
+  ExternalLink,
   Eye,
   FileText,
   LoaderCircle,
@@ -152,6 +153,8 @@ export function SetupScreen({
   );
   const [isTesting, setIsTesting] = useState(false);
   const selectedPreset = getAIProviderPreset(draftConfig.provider);
+  const modelSuggestions =
+    selectedPreset.modelSuggestions ?? (selectedPreset.model ? [selectedPreset.model] : []);
   const isDirty = !aiConfig || JSON.stringify(draftConfig) !== JSON.stringify(aiConfig);
 
   const updateDraftConfig = (patch: Partial<AIConfig>) => {
@@ -557,7 +560,20 @@ export function SetupScreen({
           <div className="ai-provider">
             <div className="ai-provider-header">
               <strong>AI Provider</strong>
-              <small>API keys and endpoints are stored locally only.</small>
+              <div className="ai-provider-meta">
+                <small>API keys and endpoints are stored locally only.</small>
+                {selectedPreset.docsUrl && (
+                  <a
+                    className="ai-provider-docs"
+                    href={selectedPreset.docsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <ExternalLink size={12} aria-hidden />
+                    <span>{selectedPreset.label} model docs</span>
+                  </a>
+                )}
+              </div>
             </div>
 
             <div className="ai-form">
@@ -595,6 +611,7 @@ export function SetupScreen({
                   value={draftConfig.baseUrl || ""}
                   onChange={(e) => updateDraftConfig({ baseUrl: e.target.value || undefined })}
                 />
+                <small>{selectedPreset.baseUrlNote}</small>
               </div>
 
               <div className="ai-field">
@@ -607,6 +624,22 @@ export function SetupScreen({
                   onChange={(e) => updateDraftConfig({ model: e.target.value })}
                 />
                 <small>{selectedPreset.modelNote}</small>
+                {modelSuggestions.length > 0 && (
+                  <div className="ai-model-suggestions">
+                    <span className="ai-model-suggestions-label">Recommended</span>
+                    {modelSuggestions.map((suggestion) => (
+                      <button
+                        key={suggestion}
+                        type="button"
+                        className="ai-model-chip"
+                        aria-pressed={draftConfig.model === suggestion}
+                        onClick={() => updateDraftConfig({ model: suggestion })}
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="ai-field">
@@ -618,6 +651,7 @@ export function SetupScreen({
                   value={draftConfig.visionModel || ""}
                   onChange={(e) => updateDraftConfig({ visionModel: e.target.value || undefined })}
                 />
+                <small>{selectedPreset.visionNote}</small>
               </div>
             </div>
 

@@ -1352,6 +1352,33 @@ h3 {
   font-size: 11px;
 }
 
+.ai-provider-meta {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.ai-provider-docs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--info);
+  font-size: 11px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.ai-provider-docs:hover {
+  text-decoration: underline;
+}
+
+.ai-provider-docs svg {
+  position: relative;
+  top: 1px;
+  flex: 0 0 auto;
+}
+
 .ai-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1382,6 +1409,45 @@ h3 {
 .ai-field > small {
   display: block;
   margin-top: 5px;
+}
+
+.ai-model-suggestions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.ai-model-suggestions-label {
+  color: var(--text-subtle);
+  font-size: 10px;
+  font-weight: 450;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ai-model-chip {
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+
+.ai-model-chip:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.ai-model-chip[aria-pressed="true"] {
+  border-color: var(--border-strong);
+  background: var(--surface-muted);
+  color: var(--text);
 }
 
 .ai-field select,
