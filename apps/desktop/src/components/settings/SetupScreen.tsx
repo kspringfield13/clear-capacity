@@ -362,11 +362,18 @@ export function SetupScreen({
         </button>
       </section>
 
+      <div className="settings-section-heading">
+        <div>
+          <h2>Notifications</h2>
+          <span>Turn menu-bar alerts on or off, and choose which workload signals notify you.</span>
+        </div>
+      </div>
+
       <section className="settings-row">
         <div className="settings-row-icon"><BellRing size={18} /></div>
         <div>
           <h2>Proactive alerts</h2>
-          <p>Get a menu-bar notification when your reliable capacity runs low or carryover risk climbs. Alerts use capacity metrics only — never window titles or app names — and are capped at {MAX_PROACTIVE_ALERTS_PER_DAY} per day.</p>
+          <p>Get a menu-bar notification when your reliable capacity runs low or carryover risk climbs. Alerts use capacity metrics only — never window titles or app names — and are capped at {MAX_PROACTIVE_ALERTS_PER_DAY} per day. Turn everything off with this switch, or fine-tune individual alerts below.</p>
         </div>
         <div className="settings-row-status">
           <strong>{proactiveAlertSettings.enabled ? "On" : "Off"}</strong>
