@@ -80,7 +80,10 @@ export function ForecastScreen({
             {biasAnalysis.biases.map((bias) => (
               <li key={`${bias.field}-${bias.from_value}-${bias.to_value}`}>
                 <span className="model-bias-field">{fieldLabel(bias.field)}</span>
-                <span className="model-bias-change">
+                <span
+                  className="model-bias-change"
+                  title={`${humanizeCorrectionValue(bias.field, bias.from_value)} → ${humanizeCorrectionValue(bias.field, bias.to_value)}`}
+                >
                   <span className="model-bias-from">{humanizeCorrectionValue(bias.field, bias.from_value)}</span>
                   <ArrowRight size={12} aria-hidden />
                   <span className="model-bias-to">{humanizeCorrectionValue(bias.field, bias.to_value)}</span>
