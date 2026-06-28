@@ -74,6 +74,7 @@ export type AuditEventType =
   | "privacy_pause"
   | "privacy_resume"
   | "retention_policy"
+  | "proactive_alert"
   | "onboarding";
 
 export interface AuditEvent {

@@ -1,6 +1,7 @@
-import { Monitor, Check, ChevronRight, Play, Pause, X } from "lucide-react";
+import { Monitor, Check, ChevronRight, Play, Pause, X, AlertTriangle } from "lucide-react";
 import type { ActiveWindowSample, ActivitySession, WeeklyCapacitySnapshot, WorkBlock } from "../../../../../packages/domain/src/models";
 import type { Screen } from "../../lib/types";
+import type { ProactiveAlert } from "../../lib/proactiveAlerts";
 import { getLocalDateKey } from "../../lib/date";
 import { pct } from "../../lib/format";
 
@@ -13,7 +14,9 @@ export function CompactWidget({
   onPauseChange,
   onOpenScreen,
   onConfirm,
-  onExclude
+  onExclude,
+  proactiveAlert,
+  onDismissProactiveAlert
 }: {
   paused: boolean;
   activeWindowSamples: ActiveWindowSample[];
@@ -24,6 +27,8 @@ export function CompactWidget({
   onOpenScreen: (screen: Screen) => void;
   onConfirm: (blockId: string) => void;
   onExclude: (blockId: string) => void;
+  proactiveAlert: ProactiveAlert | null;
+  onDismissProactiveAlert: () => void;
 }) {
   const latestSample = activeWindowSamples[activeWindowSamples.length - 1];
   const latestSession = activeWindowSessions[0];
@@ -43,6 +48,28 @@ export function CompactWidget({
           <strong>{paused ? "Tracking paused" : "Tracking"}</strong>
         </div>
       </header>
+
+      {proactiveAlert && (
+        <section className={`quick-alert is-${proactiveAlert.severity}`} role="alert">
+          <AlertTriangle size={16} />
+          <button
+            type="button"
+            className="quick-alert-body"
+            onClick={() => onOpenScreen(proactiveAlert.action)}
+          >
+            <strong>{proactiveAlert.title}</strong>
+            <small>{proactiveAlert.body}</small>
+          </button>
+          <button
+            type="button"
+            className="quick-alert-dismiss"
+            aria-label="Dismiss alert"
+            onClick={onDismissProactiveAlert}
+          >
+            <X size={14} />
+          </button>
+        </section>
+      )}
 
       <section className="quick-current">
         <span>Current activity</span>

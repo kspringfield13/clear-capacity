@@ -12,6 +12,12 @@ import type {
   WorkBlock,
   AIConfig
 } from "../../../../packages/domain/src/models";
+import {
+  DEFAULT_PROACTIVE_ALERT_SETTINGS,
+  EMPTY_PROACTIVE_ALERT_RUNTIME,
+  type ProactiveAlertRuntime,
+  type ProactiveAlertSettings,
+} from "../lib/proactiveAlerts";
 
 const STORE_FILE = "clear-capacity.store";
 const STATE_KEY = "appState";
@@ -88,6 +94,10 @@ export interface PersistedAppState {
   retentionDays: number | null;
   /** Whether the user dismissed the first-run getting-started card. */
   onboardingDismissed: boolean;
+  /** Opt-in configuration for proactive menu-bar alerts. */
+  proactiveAlertSettings: ProactiveAlertSettings;
+  /** Throttle/dedup bookkeeping for proactive OS notifications. */
+  proactiveAlertRuntime: ProactiveAlertRuntime;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -96,6 +106,34 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function parseRetentionDays(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function parseProactiveAlertSettings(value: unknown): ProactiveAlertSettings {
+  if (!isRecord(value)) return { ...DEFAULT_PROACTIVE_ALERT_SETTINGS };
+  return {
+    enabled: typeof value.enabled === "boolean" ? value.enabled : DEFAULT_PROACTIVE_ALERT_SETTINGS.enabled,
+    capacityGuardrailEnabled:
+      typeof value.capacityGuardrailEnabled === "boolean"
+        ? value.capacityGuardrailEnabled
+        : DEFAULT_PROACTIVE_ALERT_SETTINGS.capacityGuardrailEnabled,
+    capacityThresholdPct:
+      typeof value.capacityThresholdPct === "number" && Number.isFinite(value.capacityThresholdPct)
+        ? value.capacityThresholdPct
+        : DEFAULT_PROACTIVE_ALERT_SETTINGS.capacityThresholdPct,
+  };
+}
+
+function parseProactiveAlertRuntime(value: unknown): ProactiveAlertRuntime {
+  if (!isRecord(value)) return { ...EMPTY_PROACTIVE_ALERT_RUNTIME };
+  return {
+    lastFiredSignatureByRule: isRecord(value.lastFiredSignatureByRule)
+      ? (value.lastFiredSignatureByRule as Record<string, string>)
+      : {},
+    lastFiredAt: typeof value.lastFiredAt === "string" ? value.lastFiredAt : null,
+    firedCountByDate: isRecord(value.firedCountByDate)
+      ? (value.firedCountByDate as Record<string, number>)
+      : {},
+  };
 }
 
 function parseForecastHistory(value: unknown): PersistedForecastRecord[] {
@@ -155,7 +193,9 @@ export async function readPersistedState(): Promise<PersistedAppState | null> {
         paused: typeof parsed.paused === "boolean" ? parsed.paused : true,
         aiConfig: isRecord(parsed.aiConfig) ? (parsed.aiConfig as unknown as AIConfig) : null,
         retentionDays: parseRetentionDays(parsed.retentionDays),
-        onboardingDismissed: typeof parsed.onboardingDismissed === "boolean" ? parsed.onboardingDismissed : false
+        onboardingDismissed: typeof parsed.onboardingDismissed === "boolean" ? parsed.onboardingDismissed : false,
+        proactiveAlertSettings: parseProactiveAlertSettings(parsed.proactiveAlertSettings),
+        proactiveAlertRuntime: parseProactiveAlertRuntime(parsed.proactiveAlertRuntime)
       };
     }
     const data = await store.get<unknown>(STATE_KEY);
@@ -202,7 +242,9 @@ export async function readPersistedState(): Promise<PersistedAppState | null> {
       paused: typeof parsed.paused === "boolean" ? parsed.paused : true,
       aiConfig: isRecord(parsed.aiConfig) ? (parsed.aiConfig as unknown as AIConfig) : null,
       retentionDays: parseRetentionDays(parsed.retentionDays),
-      onboardingDismissed: typeof parsed.onboardingDismissed === "boolean" ? parsed.onboardingDismissed : false
+      onboardingDismissed: typeof parsed.onboardingDismissed === "boolean" ? parsed.onboardingDismissed : false,
+      proactiveAlertSettings: parseProactiveAlertSettings(parsed.proactiveAlertSettings),
+      proactiveAlertRuntime: parseProactiveAlertRuntime(parsed.proactiveAlertRuntime)
     };
   } catch {
     return null;

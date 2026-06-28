@@ -37,6 +37,13 @@ import { useReviewCopilot } from "./hooks/useReviewCopilot";
 import { useForecastAgent } from "./hooks/useForecastAgent";
 import { useNarrativeGeneration } from "./hooks/useNarrativeGeneration";
 import { useVisualContext } from "./hooks/useVisualContext";
+import { useProactiveAlerts } from "./hooks/useProactiveAlerts";
+import {
+  DEFAULT_PROACTIVE_ALERT_SETTINGS,
+  EMPTY_PROACTIVE_ALERT_RUNTIME,
+  type ProactiveAlertRuntime,
+  type ProactiveAlertSettings,
+} from "./lib/proactiveAlerts";
 import { screenLabels } from "./lib/ui";
 import {
   MAX_VISUAL_CONTEXT_CAPTURES_PER_DAY,
@@ -84,6 +91,8 @@ export function App() {
         setManagerSummaryText(data.managerSummaryText ?? null);
         setGeneratedNarrative(data.generatedNarrative ?? null);
         setLastNarrativeAutoRunDate(data.lastNarrativeAutoRunDate ?? null);
+        setProactiveAlertSettings(data.proactiveAlertSettings ?? DEFAULT_PROACTIVE_ALERT_SETTINGS);
+        setProactiveAlertRuntime(data.proactiveAlertRuntime ?? EMPTY_PROACTIVE_ALERT_RUNTIME);
       }
     }).catch(() => {});
   }, [isDemoMode]);
@@ -132,6 +141,12 @@ export function App() {
   );
   const [lastNarrativeAutoRunDate, setLastNarrativeAutoRunDate] = useState<string | null>(
     () => persistedSnapshot?.lastNarrativeAutoRunDate ?? null
+  );
+  const [proactiveAlertSettings, setProactiveAlertSettings] = useState<ProactiveAlertSettings>(
+    () => persistedSnapshot?.proactiveAlertSettings ?? DEFAULT_PROACTIVE_ALERT_SETTINGS
+  );
+  const [proactiveAlertRuntime, setProactiveAlertRuntime] = useState<ProactiveAlertRuntime>(
+    () => persistedSnapshot?.proactiveAlertRuntime ?? EMPTY_PROACTIVE_ALERT_RUNTIME
   );
   const [visualContextAttemptedSessionIds, setVisualContextAttemptedSessionIds] = useState<string[]>([]);
   const [importError, setImportError] = useState<string | null>(null);
@@ -195,6 +210,8 @@ export function App() {
     paused,
     retentionDays,
     onboardingDismissed,
+    proactiveAlertSettings,
+    proactiveAlertRuntime,
     isDemoMode,
   });
 
@@ -340,6 +357,43 @@ export function App() {
     setVisualContextInsights,
     setAuditEvents,
   });
+
+  const { activeAlert: proactiveAlert, dismissAlert: dismissProactiveAlert } = useProactiveAlerts({
+    isDemoMode,
+    snapshot,
+    hasWorkBlocks: blocks.length > 0,
+    settings: proactiveAlertSettings,
+    runtime: proactiveAlertRuntime,
+    setRuntime: setProactiveAlertRuntime,
+    setAuditEvents,
+  });
+
+  // User-initiated proactive-alert config change. A flip of the master toggle is a
+  // discrete consent action, logged once (mirrors changeRetentionDays).
+  function changeProactiveAlertSettings(next: ProactiveAlertSettings) {
+    const previous = proactiveAlertSettings;
+    setProactiveAlertSettings(next);
+    if (isDemoMode || previous.enabled === next.enabled) return;
+    setAuditEvents((current) => [
+      ...current,
+      createAuditEvent({
+        type: "proactive_alert",
+        source: "proactive_alerts",
+        title: next.enabled ? "Proactive alerts enabled" : "Proactive alerts disabled",
+        summary: next.enabled
+          ? "Menu-bar capacity alerts were turned on by the user."
+          : "Menu-bar capacity alerts were turned off by the user.",
+        privacy_level: "local_only",
+        details: {
+          enabled: next.enabled,
+          capacity_guardrail_enabled: next.capacityGuardrailEnabled,
+          capacity_threshold_pct: next.capacityThresholdPct,
+          stored_locally: true,
+          sent_to_cloud: false
+        }
+      })
+    ].slice(-1000));
+  }
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -791,6 +845,8 @@ export function App() {
     setManagerSummaryText(null);
     setGeneratedNarrative(null);
     setLastNarrativeAutoRunDate(null);
+    setProactiveAlertSettings(DEFAULT_PROACTIVE_ALERT_SETTINGS);
+    setProactiveAlertRuntime(EMPTY_PROACTIVE_ALERT_RUNTIME);
     resetNarrative();
     resetClassification();
     resetReviewCopilot();
@@ -954,6 +1010,10 @@ export function App() {
         setAiConfig={setAiConfig}
         retentionDays={retentionDays}
         setRetentionDays={changeRetentionDays}
+        proactiveAlert={proactiveAlert}
+        onDismissProactiveAlert={dismissProactiveAlert}
+        proactiveAlertSettings={proactiveAlertSettings}
+        onProactiveAlertSettingsChange={changeProactiveAlertSettings}
         classificationStatus={classificationStatus}
         classificationError={classificationError}
         visualContextStatus={visualContextStatus}

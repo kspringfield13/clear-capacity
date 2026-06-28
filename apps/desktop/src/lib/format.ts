@@ -123,6 +123,7 @@ export function auditTypeLabel(type: AuditEventType) {
     narrative_generation: "Narrative",
     work_block_classification: "Classifier",
     review_copilot: "Copilot",
+    proactive_alert: "Alert",
     forecast_agent: "Forecast",
     visual_context: "Visual",
     privacy_pause: "Privacy",

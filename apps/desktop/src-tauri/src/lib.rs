@@ -1526,6 +1526,7 @@ pub fn run() {
         .manage(ActivityCaptureState {
             paused: activity_capture_paused.clone(),
         })
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .invoke_handler(tauri::generate_handler![
