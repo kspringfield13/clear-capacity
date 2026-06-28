@@ -41,9 +41,11 @@ import { useProactiveAlerts } from "./hooks/useProactiveAlerts";
 import {
   DEFAULT_PROACTIVE_ALERT_SETTINGS,
   EMPTY_PROACTIVE_ALERT_RUNTIME,
+  type ProactiveAlertData,
   type ProactiveAlertRuntime,
   type ProactiveAlertSettings,
 } from "./lib/proactiveAlerts";
+import { useTrayStatus } from "./hooks/useTrayStatus";
 import { screenLabels } from "./lib/ui";
 import {
   MAX_VISUAL_CONTEXT_CAPTURES_PER_DAY,
@@ -358,14 +360,47 @@ export function App() {
     setAuditEvents,
   });
 
+  // Workload-derived inputs for the proactive-alert rules — all local, all
+  // metrics/counts. Time-of-day fields are injected by the hook at eval time.
+  const proactiveAlertData = useMemo<ProactiveAlertData>(() => {
+    const tomorrowKey = getLocalDateKey(addDays(new Date(), 1));
+    let tomorrowMeetingHours = 0;
+    let tomorrowMeetingCount = 0;
+    for (const event of calendarEvents) {
+      if (getLocalDateKey(new Date(event.start_time)) !== tomorrowKey) continue;
+      const hours = (new Date(event.end_time).getTime() - new Date(event.start_time).getTime()) / 3_600_000;
+      if (Number.isFinite(hours) && hours > 0) {
+        tomorrowMeetingHours += hours;
+        tomorrowMeetingCount += 1;
+      }
+    }
+    return {
+      snapshot,
+      hasWorkBlocks: blocks.length > 0,
+      unverifiedCount: reviewQueue.length,
+      tomorrowMeetingHours,
+      tomorrowMeetingCount,
+      weeklyArtifacts: generatedNarrative ? { signature: currentWeekId } : null,
+    };
+  }, [snapshot, blocks.length, reviewQueue.length, calendarEvents, generatedNarrative, currentWeekId]);
+
   const { activeAlert: proactiveAlert, dismissAlert: dismissProactiveAlert } = useProactiveAlerts({
     isDemoMode,
-    snapshot,
-    hasWorkBlocks: blocks.length > 0,
+    data: proactiveAlertData,
     settings: proactiveAlertSettings,
     runtime: proactiveAlertRuntime,
     setRuntime: setProactiveAlertRuntime,
     setAuditEvents,
+  });
+
+  // Mirror a privacy-safe status line (counts/percent only) into the tray tooltip
+  // so the menu bar communicates ambiently without an interruptive notification.
+  useTrayStatus({
+    isDemoMode,
+    paused,
+    hasWorkBlocks: blocks.length > 0,
+    reviewCount: reviewQueue.length,
+    reliableCapacityPct: snapshot.reliable_new_work_capacity_pct,
   });
 
   // User-initiated proactive-alert config change. A flip of the master toggle is a

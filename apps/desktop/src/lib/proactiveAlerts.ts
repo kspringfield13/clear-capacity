@@ -35,16 +35,38 @@ export interface ProactiveAlertSettings {
   capacityGuardrailEnabled: boolean;
   /** Reliable-new-work-capacity floor (%) that trips the guardrail. */
   capacityThresholdPct: number;
+  /** Per-rule toggle: nudge to clear the review queue before end of day. */
+  endOfDayReviewEnabled: boolean;
+  /** Per-rule toggle: warn the day before a meeting-heavy day. */
+  heavyDayAheadEnabled: boolean;
+  /** Per-rule toggle: flag when the weekly summary/forecast are ready to review. */
+  weeklyArtifactsEnabled: boolean;
+  /** Per-rule toggle: nudge when context-switching is high. */
+  fragmentationEnabled: boolean;
 }
 
 export const DEFAULT_PROACTIVE_ALERT_SETTINGS: ProactiveAlertSettings = {
   enabled: false,
   capacityGuardrailEnabled: true,
   capacityThresholdPct: 10,
+  endOfDayReviewEnabled: true,
+  heavyDayAheadEnabled: true,
+  weeklyArtifactsEnabled: true,
+  fragmentationEnabled: true,
 };
 
 /** Carryover-risk ceiling (%) that also trips the guardrail, independent of capacity. */
 export const CARRYOVER_RISK_ALERT_THRESHOLD_PCT = 35;
+/** Local hour (0-23) from which the end-of-day review nudge may fire. */
+export const END_OF_DAY_HOUR = 16;
+/** Minimum unverified blocks before the end-of-day review nudge fires. */
+export const END_OF_DAY_MIN_UNVERIFIED = 3;
+/** Meeting hours on the next day that trip the heavy-day-ahead warning. */
+export const HEAVY_DAY_MEETING_HOURS = 4;
+/** Context-switch score (0-1) at/above which the fragmentation nudge fires. */
+export const FRAGMENTATION_SCORE_THRESHOLD = 0.6;
+/** Earliest weekday (0=Sun..6=Sat) the weekly-artifacts nudge fires — Thursday. */
+export const WEEKLY_ARTIFACTS_MIN_DOW = 4;
 
 export interface ProactiveAlertRuntime {
   /** Last fired signature per rule — prevents re-firing the same condition. */
@@ -61,9 +83,32 @@ export const EMPTY_PROACTIVE_ALERT_RUNTIME: ProactiveAlertRuntime = {
   firedCountByDate: {},
 };
 
-export interface ProactiveAlertInput {
+/**
+ * Workload-derived inputs the rules read. Assembled by the caller (App) from the
+ * current snapshot, ledger, and calendar — all local, all metrics/counts. The
+ * time-dependent fields are injected separately by the engine hook at eval time
+ * so clock-based rules see the real "now" between renders.
+ */
+export interface ProactiveAlertData {
   snapshot: WeeklyCapacitySnapshot;
   hasWorkBlocks: boolean;
+  /** Count of unverified work blocks awaiting review. */
+  unverifiedCount: number;
+  /** Meeting hours scheduled for the next calendar day. */
+  tomorrowMeetingHours: number;
+  /** Meeting count scheduled for the next calendar day. */
+  tomorrowMeetingCount: number;
+  /** Present (with a stable signature) when weekly artifacts are ready to review. */
+  weeklyArtifacts: { signature: string } | null;
+}
+
+export interface ProactiveAlertInput extends ProactiveAlertData {
+  /** Local hour, 0-23. */
+  nowHour: number;
+  /** Local day of week, 0=Sun..6=Sat. */
+  nowDow: number;
+  /** Local date key for "today" (signature scoping). */
+  todayKey: string;
 }
 
 type ProactiveAlertRule = (
@@ -103,12 +148,91 @@ const capacityGuardrailRule: ProactiveAlertRule = (input, settings) => {
   };
 };
 
-const RULES: ProactiveAlertRule[] = [capacityGuardrailRule];
+// Warn the day before a meeting-heavy day so a focus block can be protected.
+const heavyDayAheadRule: ProactiveAlertRule = (input) => {
+  if (input.tomorrowMeetingHours < HEAVY_DAY_MEETING_HOURS) return null;
+  const hours = Math.round(input.tomorrowMeetingHours);
+  const count = input.tomorrowMeetingCount;
+  return {
+    id: "heavy-day-ahead",
+    rule_id: "heavy-day-ahead",
+    severity: "warning",
+    title: "Heavy meeting day ahead",
+    body: `Tomorrow has about ${hours}h of meetings across ${count} event${count === 1 ? "" : "s"}. Protect a focus block before it fills up.`,
+    action: "weekly",
+    // Scoped to today: one warning per day about the upcoming day.
+    signature: `heavyday:${input.todayKey}:${bucket(input.tomorrowMeetingHours, 1)}`,
+  };
+};
+
+// Nudge when context-switching is high so reactive work can be batched.
+const fragmentationRule: ProactiveAlertRule = (input) => {
+  const score = input.snapshot.context_switch_score;
+  if (score < FRAGMENTATION_SCORE_THRESHOLD) return null;
+  return {
+    id: "fragmentation",
+    rule_id: "fragmentation",
+    severity: "warning",
+    title: "Context-switching is high",
+    body: `Your context-switch score is ${Math.round(score * 100)}%. Consider batching reactive work into a single focus block.`,
+    action: "weekly",
+    signature: `frag:${input.snapshot.week_id}:${bucket(score * 100, 10)}`,
+  };
+};
+
+// Remind to clear the review queue before wrapping up for the day.
+const endOfDayReviewRule: ProactiveAlertRule = (input) => {
+  if (input.nowHour < END_OF_DAY_HOUR) return null;
+  if (input.unverifiedCount < END_OF_DAY_MIN_UNVERIFIED) return null;
+  const count = input.unverifiedCount;
+  return {
+    id: "end-of-day-review",
+    rule_id: "end-of-day-review",
+    severity: "info",
+    title: "Review before you wrap up",
+    body: `${count} work block${count === 1 ? "" : "s"} still need review. A quick pass keeps this week's capacity accurate.`,
+    action: "daily",
+    // One nudge per day regardless of how the count drifts.
+    signature: `eod:${input.todayKey}`,
+  };
+};
+
+// Surface the generated weekly summary/forecast for review before sharing.
+const weeklyArtifactsRule: ProactiveAlertRule = (input) => {
+  if (!input.weeklyArtifacts) return null;
+  if (input.nowDow < WEEKLY_ARTIFACTS_MIN_DOW) return null;
+  return {
+    id: "weekly-artifacts",
+    rule_id: "weekly-artifacts",
+    severity: "info",
+    title: "Weekly summary ready",
+    body: "Your weekly summary and forecast are ready to review before you share them.",
+    action: "narrative",
+    signature: `artifacts:${input.weeklyArtifacts.signature}`,
+  };
+};
+
+// Order is priority: the first firing rule wins the single alert slot.
+const RULES: ProactiveAlertRule[] = [
+  capacityGuardrailRule,
+  heavyDayAheadRule,
+  fragmentationRule,
+  endOfDayReviewRule,
+  weeklyArtifactsRule,
+];
 
 function isRuleEnabled(ruleId: string, settings: ProactiveAlertSettings): boolean {
   switch (ruleId) {
     case "capacity-guardrail":
       return settings.capacityGuardrailEnabled;
+    case "heavy-day-ahead":
+      return settings.heavyDayAheadEnabled;
+    case "fragmentation":
+      return settings.fragmentationEnabled;
+    case "end-of-day-review":
+      return settings.endOfDayReviewEnabled;
+    case "weekly-artifacts":
+      return settings.weeklyArtifactsEnabled;
     default:
       return true;
   }

@@ -120,6 +120,22 @@ function parseProactiveAlertSettings(value: unknown): ProactiveAlertSettings {
       typeof value.capacityThresholdPct === "number" && Number.isFinite(value.capacityThresholdPct)
         ? value.capacityThresholdPct
         : DEFAULT_PROACTIVE_ALERT_SETTINGS.capacityThresholdPct,
+    endOfDayReviewEnabled:
+      typeof value.endOfDayReviewEnabled === "boolean"
+        ? value.endOfDayReviewEnabled
+        : DEFAULT_PROACTIVE_ALERT_SETTINGS.endOfDayReviewEnabled,
+    heavyDayAheadEnabled:
+      typeof value.heavyDayAheadEnabled === "boolean"
+        ? value.heavyDayAheadEnabled
+        : DEFAULT_PROACTIVE_ALERT_SETTINGS.heavyDayAheadEnabled,
+    weeklyArtifactsEnabled:
+      typeof value.weeklyArtifactsEnabled === "boolean"
+        ? value.weeklyArtifactsEnabled
+        : DEFAULT_PROACTIVE_ALERT_SETTINGS.weeklyArtifactsEnabled,
+    fragmentationEnabled:
+      typeof value.fragmentationEnabled === "boolean"
+        ? value.fragmentationEnabled
+        : DEFAULT_PROACTIVE_ALERT_SETTINGS.fragmentationEnabled,
   };
 }
 

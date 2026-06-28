@@ -14,7 +14,7 @@ use std::{
 use tauri::{
     image::Image,
     menu::{Menu, MenuItem, PredefinedMenuItem},
-    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    tray::{MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent},
     AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, State, WebviewUrl,
     WebviewWindowBuilder, WindowEvent, Wry,
 };
@@ -26,6 +26,10 @@ const COMPACT_WINDOW_RIGHT_MARGIN: i32 = 16;
 const COMPACT_WINDOW_TOP_OFFSET: i32 = 44;
 
 struct PauseMenuItem(MenuItem<Wry>);
+
+// Handle to the system tray so the frontend can refresh its tooltip with a
+// privacy-safe status line (counts/percentages only).
+struct TrayHandle(TrayIcon<Wry>);
 
 struct ActivityCaptureState {
     paused: Arc<AtomicBool>,
@@ -477,6 +481,11 @@ fn set_pause_menu_label(pause_item: State<'_, PauseMenuItem>, paused: bool) {
         "Pause Tracking"
     };
     let _ = pause_item.0.set_text(label);
+}
+
+#[tauri::command]
+fn set_tray_tooltip(tray: State<'_, TrayHandle>, tooltip: String) {
+    let _ = tray.0.set_tooltip(Some(tooltip));
 }
 
 #[tauri::command]
@@ -1454,7 +1463,7 @@ fn configure_tray(app: &tauri::App) -> tauri::Result<()> {
     let pause_tracking_for_menu = pause_tracking.clone();
     app.manage(PauseMenuItem(pause_tracking.clone()));
 
-    TrayIconBuilder::new()
+    let tray = TrayIconBuilder::new()
         .tooltip("ClearCapacity")
         .icon(icon)
         .icon_as_template(true)
@@ -1511,6 +1520,8 @@ fn configure_tray(app: &tauri::App) -> tauri::Result<()> {
         })
         .build(app)?;
 
+    app.manage(TrayHandle(tray));
+
     Ok(())
 }
 
@@ -1531,6 +1542,7 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .invoke_handler(tauri::generate_handler![
             set_pause_menu_label,
+            set_tray_tooltip,
             set_activity_capture_paused,
             generate_weekly_narrative_with_openai,
             classify_active_window_sessions_with_openai,
