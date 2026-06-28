@@ -222,6 +222,7 @@ export function App() {
     toolbarStatus,
     forecastAccuracy,
     forecastAccuracyTrend,
+    forecastTrackRecord,
   } = derived;
 
   // Retain the latest computed snapshot per ISO week so cross-week trends and
@@ -925,6 +926,7 @@ export function App() {
         generatedForecast={generatedForecast}
         forecastAccuracy={forecastAccuracy}
         forecastAccuracyTrend={forecastAccuracyTrend}
+        forecastTrackRecord={forecastTrackRecord}
         forecastStatus={forecastStatus}
         forecastError={forecastError}
         onGenerateForecast={() => void generateForecastAgent()}

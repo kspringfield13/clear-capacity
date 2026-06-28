@@ -1,5 +1,6 @@
 import type { WorkBlock, WorkCategory, UserCorrection } from "../../../../packages/domain/src/models";
 import type { AuditEventType } from "../../../../packages/domain/src/models";
+import type { ForecastAccuracyRating } from "../../../../packages/inference/src/capacity";
 
 export function formatTime(value: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -93,6 +94,24 @@ export function humanizeCorrectionValue(field: UserCorrection["field"], value: s
     if (!isNaN(date.getTime())) return formatTime(value);
   }
   return value;
+}
+
+const FORECAST_RATING_LABELS: Record<ForecastAccuracyRating, string> = {
+  on_target: "On target",
+  close: "Close",
+  off: "Off",
+};
+
+export function forecastRatingLabel(rating: ForecastAccuracyRating): string {
+  return FORECAST_RATING_LABELS[rating];
+}
+
+// Render an ISO week id ("2026-W26") as a readable label without date math, so the
+// forecast track record can title each row. Falls back to the raw id if it doesn't parse.
+export function formatIsoWeekLabel(weekId: string): string {
+  const match = /^(\d{4})-W(\d{2})$/.exec(weekId);
+  if (!match) return weekId;
+  return `Week ${Number(match[2])}, ${match[1]}`;
 }
 
 export function auditTypeLabel(type: AuditEventType) {

@@ -182,6 +182,30 @@ export function summarizeForecastAccuracy(
   };
 }
 
+/** A scored forecast keyed by the week it targeted, for the per-week track-record list. */
+export interface ForecastTrackRecordEntry extends ForecastAccuracy {
+  week_id: string;
+}
+
+/**
+ * Build a per-week predicted-vs-actual track record so the UI can list how every past forecast
+ * landed (rating chip + signed error) and the model can be audited over time. Each input pairs a
+ * past forecast's predicted reliable capacity with the capacity the model actually computed for
+ * the week it targeted (one entry per week). Pure and primitive-only like
+ * `summarizeForecastAccuracy`; reuses `scoreForecastAccuracy` so rounding/thresholds stay
+ * consistent with the single-week banner, and sorts newest week first for display.
+ */
+export function buildForecastTrackRecord(
+  scored: { week_id: string; predicted_pct: number; actual_pct: number }[]
+): ForecastTrackRecordEntry[] {
+  return [...scored]
+    .sort((left, right) => right.week_id.localeCompare(left.week_id))
+    .map((item) => ({
+      week_id: item.week_id,
+      ...scoreForecastAccuracy(item.predicted_pct, item.actual_pct)
+    }));
+}
+
 /**
  * Rolling personal baselines for the headline capacity metrics. `week_count` is how
  * many prior-week snapshots fed the medians; each metric is the median over the most

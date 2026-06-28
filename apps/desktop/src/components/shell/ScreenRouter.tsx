@@ -11,7 +11,7 @@ import type {
   AIConfig,
 } from "../../../../../packages/domain/src/models";
 import type { PersistedForecastRecord, PersistedNarrativeRecord, ForecastAccuracyReview, PersistedSnapshotRecord } from "../../services/localStore";
-import type { computeWeeklyCapacitySnapshot, generateWeeklyNarrative, ForecastAccuracyTrend } from "../../../../../packages/inference/src/capacity";
+import type { computeWeeklyCapacitySnapshot, generateWeeklyNarrative, ForecastAccuracyTrend, ForecastTrackRecordEntry } from "../../../../../packages/inference/src/capacity";
 
 import { CompactWidget } from "../compact/CompactWidget";
 import { SetupScreen } from "../settings/SetupScreen";
@@ -76,6 +76,7 @@ interface ScreenRouterProps {
   generatedForecast: PersistedForecastRecord | null;
   forecastAccuracy: ForecastAccuracyReview | null;
   forecastAccuracyTrend: ForecastAccuracyTrend | null;
+  forecastTrackRecord: ForecastTrackRecordEntry[];
   forecastStatus: "idle" | "generating" | "error";
   forecastError: string | null;
   onGenerateForecast: () => void;
@@ -139,6 +140,7 @@ export function ScreenRouter({
   generatedForecast,
   forecastAccuracy,
   forecastAccuracyTrend,
+  forecastTrackRecord,
   forecastStatus,
   forecastError,
   onGenerateForecast,
@@ -250,6 +252,7 @@ export function ScreenRouter({
           generatedForecast={generatedForecast}
           forecastAccuracy={forecastAccuracy}
           forecastAccuracyTrend={forecastAccuracyTrend}
+          forecastTrackRecord={forecastTrackRecord}
           forecastStatus={forecastStatus}
           forecastError={forecastError}
           onGenerateForecast={onGenerateForecast}
