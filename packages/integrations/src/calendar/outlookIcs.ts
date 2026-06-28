@@ -1,6 +1,5 @@
 import type { OutlookCalendarEvent, WorkBlock } from "../../../domain/src/models";
-
-const WEEKLY_BASELINE_MINUTES = 40 * 60;
+import { capacityPctFromSpan, stableHash } from "../internal/normalize";
 
 interface IcsEventRecord {
   uid: string;
@@ -82,14 +81,6 @@ function parseIcsDate(value: string) {
 function parseOrganizer(value: string) {
   const mailto = value.match(/mailto:([^;,\s]+)/i);
   return unescapeIcsText(mailto?.[1] ?? value);
-}
-
-function stableHash(value: string) {
-  let hash = 5381;
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash * 33) ^ value.charCodeAt(index);
-  }
-  return (hash >>> 0).toString(36);
 }
 
 function parseIcsEvent(lines: string[]): IcsEventRecord | null {
@@ -206,10 +197,7 @@ export function parseOutlookIcs(content: string, importedAt = new Date().toISOSt
 }
 
 function capacityPctFromEvent(event: OutlookCalendarEvent) {
-  const start = new Date(event.start_time);
-  const end = new Date(event.end_time);
-  const minutes = Math.max(0, (end.getTime() - start.getTime()) / 60_000);
-  return Math.max(0.25, Math.round((minutes / WEEKLY_BASELINE_MINUTES) * 100));
+  return capacityPctFromSpan(new Date(event.start_time), new Date(event.end_time));
 }
 
 export function outlookEventsToWorkBlocks(events: OutlookCalendarEvent[], weekId: string): WorkBlock[] {
