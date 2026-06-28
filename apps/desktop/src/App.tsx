@@ -38,6 +38,8 @@ import { useForecastAgent } from "./hooks/useForecastAgent";
 import { useNarrativeGeneration } from "./hooks/useNarrativeGeneration";
 import { useVisualContext } from "./hooks/useVisualContext";
 import { useProactiveAlerts } from "./hooks/useProactiveAlerts";
+import { useToasts } from "./hooks/useToasts";
+import { ToastProvider } from "./components/common/ToastContext";
 import {
   DEFAULT_PROACTIVE_ALERT_SETTINGS,
   EMPTY_PROACTIVE_ALERT_RUNTIME,
@@ -367,6 +369,51 @@ export function App() {
     setRuntime: setProactiveAlertRuntime,
     setAuditEvents,
   });
+
+  // Transient app-level feedback (success/error toasts). The queue lives here so app
+  // handlers can emit directly; descendant screens reach `pushToast` via ToastProvider.
+  const { toasts, pushToast, dismissToast } = useToasts();
+
+  // Surface the otherwise-silent AI failures as dismissible error toasts. Forecast and
+  // narrative carry a Retry action wired to their user-invoked generator. Visual context
+  // is deliberately info-only with NO Retry: capture is auto-triggered and rate-limited
+  // (opt-in, per-day cap, min gap), and the next qualifying session retries on its own —
+  // a manual retry would bypass those privacy gates. Each effect fires only when its error
+  // string changes, so a single failure raises exactly one toast (the ref guards repeats).
+  const lastForecastErrorRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (forecastError && forecastError !== lastForecastErrorRef.current) {
+      pushToast({
+        tone: "error",
+        message: `Forecast failed: ${forecastError}`,
+        action: { label: "Retry", onClick: () => void generateForecastAgent() },
+      });
+    }
+    lastForecastErrorRef.current = forecastError;
+  }, [forecastError]);
+
+  const lastNarrativeErrorRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (narrativeGenerationError && narrativeGenerationError !== lastNarrativeErrorRef.current) {
+      pushToast({
+        tone: "error",
+        message: `Narrative failed: ${narrativeGenerationError}`,
+        action: { label: "Retry", onClick: () => void regenerateNarrative("manual") },
+      });
+    }
+    lastNarrativeErrorRef.current = narrativeGenerationError;
+  }, [narrativeGenerationError]);
+
+  const lastVisualContextErrorRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (visualContextError && visualContextError !== lastVisualContextErrorRef.current) {
+      pushToast({
+        tone: "error",
+        message: `Visual context capture failed: ${visualContextError}`,
+      });
+    }
+    lastVisualContextErrorRef.current = visualContextError;
+  }, [visualContextError]);
 
   // User-initiated proactive-alert config change. A flip of the master toggle is a
   // discrete consent action, logged once (mirrors changeRetentionDays).
@@ -863,6 +910,7 @@ export function App() {
 
     reader.onerror = () => {
       setImportError("Could not read that Outlook export.");
+      pushToast({ tone: "error", message: "Could not read that Outlook export." });
     };
 
     reader.onload = () => {
@@ -872,6 +920,7 @@ export function App() {
 
         if (importedEvents.length === 0) {
           setImportError("No usable calendar events were found in that .ics file.");
+          pushToast({ tone: "error", message: "No usable calendar events were found in that .ics file." });
           return;
         }
 
@@ -919,8 +968,13 @@ export function App() {
             }
           })
         ].slice(-1000));
+        pushToast({
+          tone: "success",
+          message: `${importedEvents.length} event${importedEvents.length === 1 ? "" : "s"} imported`,
+        });
       } catch {
         setImportError("The .ics file could not be parsed.");
+        pushToast({ tone: "error", message: "The .ics file could not be parsed." });
       }
     };
 
@@ -963,6 +1017,7 @@ export function App() {
   });
 
   return (
+    <ToastProvider value={pushToast}>
     <AppShell
       active={active}
       setActive={setActive}
@@ -980,6 +1035,8 @@ export function App() {
       theme={theme}
       setTheme={setTheme}
       demoMode={isDemoMode}
+      toasts={toasts}
+      onDismissToast={dismissToast}
     >
       <ScreenRouter
         active={active}
@@ -1049,5 +1106,6 @@ export function App() {
         currentWeekRangeLabel={currentWeekRangeLabel}
       />
     </AppShell>
+    </ToastProvider>
   );
 }

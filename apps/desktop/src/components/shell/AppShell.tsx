@@ -4,6 +4,8 @@ import type { WeeklyCapacitySnapshot } from "../../../../../packages/domain/src/
 import type { AppToolbarAction, Screen } from "../../lib/types";
 import { AppToolbar } from "./AppToolbar";
 import { ContextNavigation } from "./ContextNavigation";
+import { ToastHost } from "../common/ToastHost";
+import type { Toast } from "../../hooks/useToasts";
 import { primarySectionForScreen } from "../../lib/ui";
 import { pct } from "../../lib/format";
 
@@ -24,6 +26,8 @@ export function AppShell({
   theme,
   setTheme,
   demoMode,
+  toasts,
+  onDismissToast,
   children
 }: {
   active: Screen;
@@ -42,6 +46,8 @@ export function AppShell({
   theme: "light" | "dark";
   setTheme: (value: "light" | "dark") => void;
   demoMode: boolean;
+  toasts: Toast[];
+  onDismissToast: (id: string) => void;
   children: ReactNode;
 }) {
   return (
@@ -132,6 +138,7 @@ export function AppShell({
         )}
         {children}
       </main>
+      <ToastHost toasts={toasts} onDismiss={onDismissToast} />
     </div>
   );
 }

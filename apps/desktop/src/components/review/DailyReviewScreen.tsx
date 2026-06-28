@@ -8,6 +8,7 @@ import { BlockCard } from "../ledger/BlockCard";
 import { EmptyState } from "../common/EmptyState";
 import { OnboardingCard, type OnboardingStep } from "../common/OnboardingCard";
 import { ReviewCopilotPanel } from "./ReviewCopilotPanel";
+import { useToast } from "../common/ToastContext";
 
 export function DailyReviewScreen({
   blocks,
@@ -40,8 +41,18 @@ export function DailyReviewScreen({
   onExclude: (blockId: string) => void;
   onRelabel: (blockId: string, field: keyof WorkBlock, value: WorkBlock[keyof WorkBlock]) => void;
 }) {
+  const pushToast = useToast();
   const reviewQueue = blocks.filter((block) => !block.user_verified);
   const verifiedCount = blocks.length - reviewQueue.length;
+
+  function confirmAll() {
+    const count = reviewQueue.length;
+    reviewQueue.forEach((block) => onConfirm(block.work_block_id));
+    pushToast({
+      tone: "success",
+      message: `Confirmed ${count} block${count === 1 ? "" : "s"}`,
+    });
+  }
 
   if (blocks.length === 0) {
     return (
@@ -104,7 +115,7 @@ export function DailyReviewScreen({
             <button
               className="primary-action"
               type="button"
-              onClick={() => reviewQueue.forEach((block) => onConfirm(block.work_block_id))}
+              onClick={confirmAll}
             >
               <Check size={18} />
               <span>Confirm all {reviewQueue.length}</span>

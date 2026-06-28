@@ -6,6 +6,7 @@ import { displaySafeNarrative, replaceIsoWeekIds } from "../../lib/date";
 import { formatAuditTime } from "../../lib/format";
 import { downloadTextFile } from "../../lib/dataExport";
 import { EmptyState } from "../common/EmptyState";
+import { useToast } from "../common/ToastContext";
 
 export function NarrativeScreen({
   narrative,
@@ -29,6 +30,7 @@ export function NarrativeScreen({
   onRegenerate: () => void;
 }) {
   const [copied, setCopied] = useState(false);
+  const pushToast = useToast();
   const displayNarrative = displaySafeNarrative(generatedNarrative?.narrative ?? narrative, weekRangeLabel);
   const generatedManagerText = `${displayNarrative.headline}\n\n${displayNarrative.manager_ready_summary}`;
   const managerText = replaceIsoWeekIds(managerSummaryText ?? generatedManagerText, weekRangeLabel);
@@ -167,6 +169,7 @@ export function NarrativeScreen({
               void navigator.clipboard?.writeText(markdownContent);
               setCopied(true);
               window.setTimeout(() => setCopied(false), 1400);
+              pushToast({ tone: "success", message: "Manager summary copied to clipboard" });
             }}
           >
             <ClipboardCopy size={18} />

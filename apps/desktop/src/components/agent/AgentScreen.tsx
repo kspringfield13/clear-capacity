@@ -29,6 +29,7 @@ import type {
   AIConfig,
 } from "../../../../../packages/domain/src/models";
 import type { AgentChatMessage } from "../../lib/types";
+import { useToast } from "../common/ToastContext";
 import { agentTools, AGENT_INSTRUCTIONS } from "../../services/agentTools";
 import type { tool as AiToolFn } from "ai";
 
@@ -85,6 +86,7 @@ export function AgentScreen({
   const [analysisStage, setAnalysisStage] = useState(0);
   const [expandedDetails, setExpandedDetails] = useState<Record<string, boolean>>({});
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const pushToast = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -453,6 +455,7 @@ export function AgentScreen({
     await navigator.clipboard.writeText(message.content);
     setCopiedMessageId(message.id);
     window.setTimeout(() => setCopiedMessageId(null), 1200);
+    pushToast({ tone: "success", message: "Response copied to clipboard" });
   }
 
   function loadEarlierMessages() {
