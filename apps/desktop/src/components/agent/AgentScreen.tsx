@@ -12,9 +12,11 @@ import {
   Database,
   Gauge,
   Paperclip,
+  RotateCcw,
   Send,
   ShieldCheck,
   Sparkles,
+  Square,
   Trash2,
   User,
 } from "lucide-react";
@@ -91,6 +93,7 @@ export function AgentScreen({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const topProjects = useMemo(() => {
     const totals = new Map<string, number>();
@@ -149,6 +152,18 @@ export function AgentScreen({
       prompt: "Explain what changed in my workload this week, especially planned versus reactive work.",
     },
   ];
+
+  // Static, snapshot-derived follow-up prompts shown beneath the latest settled reply.
+  // Reuses the handleSuggested path; the empty-state starterActions stay separate.
+  const followUpSuggestions = useMemo(() => {
+    const suggestions: string[] = [];
+    if (snapshot.reactive_pct >= 30) suggestions.push("Why is my reactive load this high?");
+    if (snapshot.carryover_risk_pct >= 30) suggestions.push("What's driving my carryover risk?");
+    if (snapshot.reliable_new_work_capacity_pct < 30) suggestions.push("How can I free up reliable capacity?");
+    suggestions.push("Plan around this");
+    suggestions.push("What should I focus on next?");
+    return suggestions.slice(0, 3);
+  }, [snapshot]);
 
   // Data context for tools (bound here)
   const context = {
@@ -277,8 +292,8 @@ export function AgentScreen({
     } as const;
   }
 
-  // Core send logic used by both typed input and suggested question chips.
-  // Uses streamText for live typewriter-like responses (Eve style).
+  // Appends a user turn, then runs the assistant turn over the new history.
+  // Used by both typed input and suggested question chips.
   async function sendMessage(messageText: string) {
     if (!messageText.trim() || isSending) return;
 
@@ -291,9 +306,21 @@ export function AgentScreen({
     const updated = [...messages, userMsg];
     setMessages(updated);
     setInput("");
+    await runAssistantTurn(updated);
+  }
+
+  // Streams an assistant reply for a conversation that already ends with a user turn.
+  // Uses streamText for live typewriter-like responses (Eve style). An AbortController is
+  // threaded into streamText so the Stop button can halt mid-stream and keep partial text.
+  async function runAssistantTurn(history: AgentChatMessage[]) {
     setIsSending(true);
     setIsStreaming(false);
     setStreamingMessageId(null);
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    // Drives the Rust fallback prompt below if the SDK + grounded paths both fail.
+    const latestUserQuestion = [...history].reverse().find((m) => m.role === "user")?.content ?? "";
 
     try {
       const sdkModel = await resolveAgentModel(aiConfig);
@@ -302,7 +329,7 @@ export function AgentScreen({
         const [{ streamText, tool: createTool }] = await Promise.all([import("ai")]);
         const boundTools = createBoundTools(context, createTool);
 
-        const historyForModel = updated
+        const historyForModel = history
           .filter((m) => m.role === "user" || m.role === "assistant")
           .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
 
@@ -313,6 +340,7 @@ export function AgentScreen({
           messages: historyForModel,
           tools: boundTools,
           maxSteps: 6,
+          abortSignal: controller.signal,
         });
 
         const assistantId = `asst-${Date.now()}`;
@@ -333,26 +361,32 @@ export function AgentScreen({
               prev.map((m) => (m.id === assistantId ? { ...m, content: streamed } : m))
             );
           }
-        } catch (streamErr: any) {
-          // Partial content + surface error gracefully
-          if (streamed.trim()) {
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === assistantId
-                  ? { ...m, content: streamed + "\n\n(Streaming interrupted)" }
-                  : m
-              )
-            );
-          } else {
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === assistantId
-                  ? { ...m, content: "I started analyzing your data with tools but the stream was interrupted." }
-                  : m
-              )
-            );
+        } catch {
+          // User pressed Stop: keep whatever streamed so far, surface no error.
+          if (controller.signal.aborted) {
+            finalizeAbortedStream(assistantId, streamed);
+            return;
           }
-          throw streamErr;
+          // Partial content + a retryable interruption marker. Don't rethrow — the
+          // Retry affordance on this message is the recovery path, so falling through
+          // to the outer Rust fallback (a second, redundant reply) is undesirable.
+          const interruptedContent = streamed.trim()
+            ? streamed + "\n\n(Streaming interrupted)"
+            : "I started analyzing your data with tools but the stream was interrupted.";
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId ? { ...m, content: interruptedContent, interrupted: true } : m
+            )
+          );
+          setIsStreaming(false);
+          setStreamingMessageId(null);
+          return;
+        }
+
+        // Stop pressed but the stream ended cleanly: keep partial text, no finalize.
+        if (controller.signal.aborted) {
+          finalizeAbortedStream(assistantId, streamed);
+          return;
         }
 
         // Guard against completely empty final output from the model
@@ -390,10 +424,14 @@ export function AgentScreen({
         }]);
       }
     } catch (e: any) {
+      // An abort that surfaced here (rather than inside the stream loop) is a user Stop,
+      // not a failure — don't run the fallback or surface an error. The finally block
+      // resets the streaming flags.
+      if (controller.signal.aborted) return;
       // Best effort fallback via the Rust path, then pure data
       try {
-        const historyStr = updated.map((m) => `${m.role}: ${m.content}`).join("\n");
-        const fallbackPrompt = `You are the ClearCapacity Agent focused only on capacity, workload and weekly focus. Use only the user's data. Conversation so far:\n${historyStr}\n\nLatest user question: ${messageText}`;
+        const historyStr = history.map((m) => `${m.role}: ${m.content}`).join("\n");
+        const fallbackPrompt = `You are the ClearCapacity Agent focused only on capacity, workload and weekly focus. Use only the user's data. Conversation so far:\n${historyStr}\n\nLatest user question: ${latestUserQuestion}`;
         const resp = await invoke<{ response?: string }>("chat_with_agent", {
           request: { prompt: fallbackPrompt, ai_config: aiConfig || undefined },
         });
@@ -420,6 +458,7 @@ export function AgentScreen({
       setIsSending(false);
       setIsStreaming(false);
       setStreamingMessageId(null);
+      abortControllerRef.current = null;
     }
   }
 
@@ -431,6 +470,34 @@ export function AgentScreen({
   function handleSuggested(question: string) {
     if (isSending) return;
     void sendMessage(question);
+  }
+
+  // Abort the active stream; the partial assistant message stays put, no error surfaced.
+  function stopGeneration() {
+    abortControllerRef.current?.abort();
+  }
+
+  // Settle a stream the user stopped: keep partial text, but drop an empty placeholder so
+  // it isn't persisted and replayed to the model as empty assistant content (some providers
+  // reject that) and doesn't render as a blank bubble.
+  function finalizeAbortedStream(assistantId: string, streamed: string) {
+    if (!streamed.trim()) {
+      setMessages((prev) => prev.filter((m) => m.id !== assistantId));
+    }
+    setIsStreaming(false);
+    setStreamingMessageId(null);
+  }
+
+  // Re-run the assistant turn for an interrupted reply by replaying the history up to
+  // (and including) the user turn that triggered it — dropping the failed reply first.
+  function retryMessage(assistantId: string) {
+    if (isSending) return;
+    const index = messages.findIndex((m) => m.id === assistantId);
+    if (index === -1) return;
+    const history = messages.slice(0, index);
+    if (!history.some((m) => m.role === "user")) return;
+    setMessages(history);
+    void runAssistantTurn(history);
   }
 
   function clearChat() {
@@ -592,6 +659,38 @@ export function AgentScreen({
                       <span>{m.analysisSummary}</span>
                     </div>
                   )}
+                  {!isCurrentStream && m.role === "assistant" && m.interrupted && (
+                    <div className="agent-retry-row">
+                      <button
+                        type="button"
+                        className="agent-retry-button"
+                        onClick={() => retryMessage(m.id)}
+                        disabled={isSending}
+                      >
+                        <RotateCcw size={13} /> Retry
+                      </button>
+                    </div>
+                  )}
+                  {!isCurrentStream &&
+                    m.role === "assistant" &&
+                    m.content &&
+                    !m.interrupted &&
+                    !isSending &&
+                    idx === visibleMessages.length - 1 &&
+                    followUpSuggestions.length > 0 && (
+                      <div className="agent-followups" aria-label="Suggested follow-up questions">
+                        {followUpSuggestions.map((question) => (
+                          <button
+                            key={question}
+                            type="button"
+                            className="agent-followup-chip"
+                            onClick={() => handleSuggested(question)}
+                          >
+                            {question} <ArrowRight size={12} />
+                          </button>
+                        ))}
+                      </div>
+                    )}
                 </div>
               </div>
             );
@@ -631,15 +730,26 @@ export function AgentScreen({
             disabled={isSending}
             rows={1}
           />
-          <button
-            className="agent-send"
-            onClick={handleSend}
-            disabled={!input.trim() || isSending}
-            title="Send"
-            aria-label="Send message"
-          >
-            <Send size={16} />
-          </button>
+          {isStreaming ? (
+            <button
+              className="agent-send agent-stop"
+              onClick={stopGeneration}
+              title="Stop generating"
+              aria-label="Stop generating"
+            >
+              <Square size={15} />
+            </button>
+          ) : (
+            <button
+              className="agent-send"
+              onClick={handleSend}
+              disabled={!input.trim() || isSending}
+              title="Send"
+              aria-label="Send message"
+            >
+              <Send size={16} />
+            </button>
+          )}
         </div>
         <div className="agent-composer-meta">
           <span><Gauge size={13} /> Using activity, calendar, blocks, and corrections</span>
