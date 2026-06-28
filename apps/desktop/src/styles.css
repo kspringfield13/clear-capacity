@@ -425,6 +425,13 @@ input {
   text-align: left;
 }
 
+/* Surfaced only in the reflowed narrow top bar (≤760px); on wider viewports the
+   dedicated `.settings-button` at the foot of the sidebar is the Settings affordance.
+   Compound selector beats the equal-specificity `.nav-item { display: grid }` above. */
+.nav-item.nav-item-settings {
+  display: none;
+}
+
 .nav-item > span,
 .nav-item > span strong,
 .nav-item > span small {
@@ -6804,6 +6811,10 @@ html[data-theme="dark"] .risk-track span[data-severity="high"] { background: #fb
     min-height: 40px;
   }
 
+  .nav-item.nav-item-settings {
+    display: grid;
+  }
+
   .nav-item > span {
     display: block;
   }
@@ -8016,7 +8027,9 @@ html[data-theme="dark"] .agent-active .pause-button:hover {
   }
 
   .agent-active .nav-list {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    /* Five items (incl. the narrow-only Settings entry) balance as 3+2 here, the
+       same as the non-agent reflow; repeat(4) would orphan Settings on its own row. */
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .agent-active .nav-item {

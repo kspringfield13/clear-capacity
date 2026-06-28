@@ -74,13 +74,17 @@ export function AppShell({
             { id: "today", label: "Today", description: "Review and current activity", screen: "daily" as const, icon: CalendarCheck },
             { id: "week", label: "Week", description: "Capacity and summary", screen: "weekly" as const, icon: BarChart3 },
             { id: "agent", label: "Agent", description: "Ask, plan, and understand", screen: "agent" as const, icon: Bot },
-            { id: "history", label: "History", description: "Ledger and audit trail", screen: "ledger" as const, icon: History }
+            { id: "history", label: "History", description: "Ledger and audit trail", screen: "ledger" as const, icon: History },
+            // Narrow-viewport-only: the dedicated `.settings-button` below is hidden at
+            // ≤760px, so surface Settings here too (CSS keeps it hidden on desktop).
+            { id: "setup", label: "Settings", description: "AI, calendar, retention", screen: "setup" as const, icon: Settings }
           ].map((item) => {
             const Icon = item.icon;
-            const selected = primarySectionForScreen(active) === item.id;
+            const isSettings = item.id === "setup";
+            const selected = isSettings ? active === "setup" : primarySectionForScreen(active) === item.id;
             return (
               <button
-                className={selected ? "nav-item is-active" : "nav-item"}
+                className={`nav-item${isSettings ? " nav-item-settings" : ""}${selected ? " is-active" : ""}`}
                 key={item.id}
                 onClick={() => setActive(item.screen)}
                 type="button"
