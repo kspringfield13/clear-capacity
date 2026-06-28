@@ -291,7 +291,6 @@ export function ScreenRouter({
           generatedForecast={generatedForecast}
           forecastAccuracy={forecastAccuracy}
           forecastAccuracyTrend={forecastAccuracyTrend}
-          forecastTrackRecord={forecastTrackRecord}
           forecastStatus={forecastStatus}
           forecastError={forecastError}
           onGenerateForecast={onGenerateForecast}

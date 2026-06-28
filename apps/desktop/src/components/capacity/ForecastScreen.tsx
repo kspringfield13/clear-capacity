@@ -4,11 +4,10 @@ import type { UserCorrection } from "../../../../../packages/domain/src/models";
 import type { Screen } from "../../lib/types";
 import type { PersistedForecastRecord, ForecastAccuracyReview } from "../../services/localStore";
 import { analyzeCorrections } from "../../../../../packages/inference/src/capacity";
-import type { computeWeeklyCapacitySnapshot, ForecastAccuracyTrend, ForecastTrackRecordEntry } from "../../../../../packages/inference/src/capacity";
+import type { computeWeeklyCapacitySnapshot, ForecastAccuracyTrend } from "../../../../../packages/inference/src/capacity";
 import { fieldLabel, humanizeCorrectionValue, pct } from "../../lib/format";
 import { EmptyState } from "../common/EmptyState";
 import { ForecastAgentPanel } from "./ForecastAgentPanel";
-import { ForecastTrackRecord } from "./ForecastTrackRecord";
 
 export function ForecastScreen({
   snapshot,
@@ -17,7 +16,6 @@ export function ForecastScreen({
   generatedForecast,
   forecastAccuracy,
   forecastAccuracyTrend,
-  forecastTrackRecord,
   forecastStatus,
   forecastError,
   onGenerateForecast,
@@ -31,7 +29,6 @@ export function ForecastScreen({
   generatedForecast: PersistedForecastRecord | null;
   forecastAccuracy: ForecastAccuracyReview | null;
   forecastAccuracyTrend: ForecastAccuracyTrend | null;
-  forecastTrackRecord: ForecastTrackRecordEntry[];
   forecastStatus: "idle" | "generating" | "error";
   forecastError: string | null;
   onGenerateForecast: () => void;
@@ -121,7 +118,6 @@ export function ForecastScreen({
         deterministicReliableCapacity={snapshot.reliable_new_work_capacity_pct}
         onGenerate={onGenerateForecast}
       />
-      <ForecastTrackRecord entries={forecastTrackRecord} />
     </section>
   );
 }
