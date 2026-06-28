@@ -1,6 +1,7 @@
 import { useMemo } from "react";
-import { ArrowRight, Scale, TrendingUp } from "lucide-react";
+import { ArrowRight, Scale, TrendingUp, Upload } from "lucide-react";
 import type { UserCorrection } from "../../../../../packages/domain/src/models";
+import type { Screen } from "../../lib/types";
 import type { PersistedForecastRecord, ForecastAccuracyReview } from "../../services/localStore";
 import { analyzeCorrections } from "../../../../../packages/inference/src/capacity";
 import type { computeWeeklyCapacitySnapshot, ForecastAccuracyTrend, ForecastTrackRecordEntry } from "../../../../../packages/inference/src/capacity";
@@ -21,9 +22,11 @@ export function ForecastScreen({
   forecastError,
   onGenerateForecast,
   hasWorkBlocks,
+  onOpenScreen,
 }: {
   snapshot: ReturnType<typeof computeWeeklyCapacitySnapshot>;
   nextWeekRangeLabel: string;
+  onOpenScreen: (screen: Screen) => void;
   corrections: UserCorrection[];
   generatedForecast: PersistedForecastRecord | null;
   forecastAccuracy: ForecastAccuracyReview | null;
@@ -50,7 +53,15 @@ export function ForecastScreen({
           icon={TrendingUp}
           title="Nothing to forecast."
           description="The Forecast Agent projects next week's reliable capacity from this week's work blocks. Import Outlook events or classify active-window sessions first, then generate a forecast."
-        />
+        >
+          <button className="primary-action" type="button" onClick={() => onOpenScreen("setup")}>
+            <Upload size={16} />
+            <span>Import calendar</span>
+          </button>
+          <button className="secondary-action" type="button" onClick={() => onOpenScreen("setup")}>
+            <span>Open Settings</span>
+          </button>
+        </EmptyState>
       </section>
     );
   }

@@ -4,7 +4,6 @@ import {
   AlertCircle,
   CalendarCheck,
   CalendarSync,
-  Check,
   CheckCircle2,
   ChevronRight,
   Download,
@@ -50,6 +49,7 @@ import {
   getAIProviderPreset,
   upgradeRetiredAppDefault
 } from "../../services/aiProviders";
+import { OnboardingCard, buildOnboardingSteps } from "../common/OnboardingCard";
 import { CALENDAR_PROVIDERS } from "../../../../../packages/integrations/src/calendar/calendarSource";
 
 // Automated (OAuth) calendar providers — disabled until the native connector
@@ -109,14 +109,13 @@ export function SetupScreen({
   retentionDays: number | null;
   setRetentionDays: (value: number | null) => void;
 }) {
-  const steps = [
-    { label: "Tracking active", done: !paused && activeWindowSamples.length > 0, hint: "Resume tracking above and wait for the first activity sample" },
-    { label: "Calendar imported", done: calendarEvents.length > 0, hint: "Import an .ics file in the Calendar section below" },
-    { label: "AI provider configured", done: Boolean(aiConfig?.apiKey), hint: "Set up in Advanced Settings below" },
-    { label: "First classification run", done: hasClassification, hint: "Run classification from the Weekly Capacity view" },
-  ];
-  const completedCount = steps.filter((s) => s.done).length;
-  const allDone = completedCount === steps.length;
+  const steps = buildOnboardingSteps({
+    trackingActive: !paused && activeWindowSamples.length > 0,
+    calendarImported: calendarEvents.length > 0,
+    aiConfigured: Boolean(aiConfig?.apiKey),
+    classified: hasClassification,
+  });
+  const allDone = steps.every((step) => step.done);
 
   const latestImport = calendarEvents.reduce<string | null>((latest, event) => {
     if (!latest || new Date(event.imported_at) > new Date(latest)) {
@@ -237,37 +236,7 @@ export function SetupScreen({
         </button>
       </div>
 
-      {!allDone && (
-        <section className="onboarding-checklist">
-          <div className="onboarding-checklist-header">
-            <strong>Getting started</strong>
-            <span>{completedCount}/{steps.length} complete</span>
-          </div>
-          <div
-            className="review-progress-track onboarding-progress-track"
-            role="progressbar"
-            aria-valuenow={Math.round((completedCount / steps.length) * 100)}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label="Getting started progress"
-          >
-            <div className="review-progress-fill" style={{ width: `${(completedCount / steps.length) * 100}%` }} />
-          </div>
-          <ol className="onboarding-steps">
-            {steps.map((step) => (
-              <li key={step.label} className={step.done ? "onboarding-step is-done" : "onboarding-step"}>
-                <span className="onboarding-step-icon">
-                  {step.done ? <Check size={13} /> : null}
-                </span>
-                <span>
-                  {step.label}
-                  {!step.done && <span className="onboarding-step-hint">{step.hint}</span>}
-                </span>
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
+      {!allDone && <OnboardingCard steps={steps} />}
 
       <section className="privacy-summary">
         <div className={paused ? "privacy-state is-paused" : "privacy-state"}>

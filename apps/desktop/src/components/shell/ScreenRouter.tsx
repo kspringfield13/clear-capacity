@@ -24,6 +24,7 @@ import { NarrativeScreen } from "../narrative/NarrativeScreen";
 import { AuditLogScreen } from "../audit/AuditLogScreen";
 import { SensitiveReviewScreen } from "../audit/SensitiveReviewScreen";
 import { AgentScreen } from "../agent/AgentScreen";
+import type { OnboardingStep } from "../common/OnboardingCard";
 
 interface ScreenRouterProps {
   active: Screen;
@@ -40,6 +41,10 @@ interface ScreenRouterProps {
   onExclude: (blockId: string) => void;
   onRelabel: (blockId: string, field: keyof WorkBlock, value: WorkBlock[keyof WorkBlock]) => void;
   onOpenScreen: (screen: Screen) => void;
+  // first-run onboarding
+  onboardingSteps: OnboardingStep[];
+  showOnboarding: boolean;
+  onDismissOnboarding: () => void;
   // setup screen
   visualContextEnabled: boolean;
   setVisualContextEnabled: (value: boolean) => void;
@@ -110,6 +115,9 @@ export function ScreenRouter({
   onExclude,
   onRelabel,
   onOpenScreen,
+  onboardingSteps,
+  showOnboarding,
+  onDismissOnboarding,
   visualContextEnabled,
   setVisualContextEnabled,
   visualContextInsights,
@@ -224,6 +232,10 @@ export function ScreenRouter({
       {active === "daily" && (
         <DailyReviewScreen
           blocks={blocks}
+          onboardingSteps={onboardingSteps}
+          showOnboarding={showOnboarding}
+          onDismissOnboarding={onDismissOnboarding}
+          onOpenScreen={onOpenScreen}
           reviewSuggestions={reviewSuggestions}
           reviewCopilotStatus={reviewCopilotStatus}
           reviewCopilotError={reviewCopilotError}
@@ -242,12 +254,17 @@ export function ScreenRouter({
           weekRangeLabel={weekRangeLabel}
           hasWorkBlocks={blocks.length > 0}
           blocks={blocks}
+          onboardingSteps={onboardingSteps}
+          showOnboarding={showOnboarding}
+          onDismissOnboarding={onDismissOnboarding}
+          onOpenScreen={onOpenScreen}
         />
       )}
       {active === "forecast" && (
         <ForecastScreen
           snapshot={snapshot}
           nextWeekRangeLabel={nextWeekRangeLabel}
+          onOpenScreen={onOpenScreen}
           corrections={corrections}
           generatedForecast={generatedForecast}
           forecastAccuracy={forecastAccuracy}

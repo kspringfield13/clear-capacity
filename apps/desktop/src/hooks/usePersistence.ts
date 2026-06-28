@@ -30,6 +30,7 @@ interface PersistableState {
   paused: boolean;
   aiConfig: AIConfig | null;
   retentionDays: number | null;
+  onboardingDismissed: boolean;
   isDemoMode: boolean;
 }
 
@@ -60,6 +61,7 @@ export function usePersistence(state: PersistableState) {
     persistData.paused,
     persistData.aiConfig,
     persistData.retentionDays,
+    persistData.onboardingDismissed,
     isDemoMode,
   ]);
 }

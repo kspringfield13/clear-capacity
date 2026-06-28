@@ -386,6 +386,7 @@ export function createDemoState(reference = new Date()): PersistedAppState {
     lastNarrativeAutoRunDate: now.toISOString().slice(0, 10),
     paused: false,
     aiConfig: null,
-    retentionDays: 30
+    retentionDays: 30,
+    onboardingDismissed: false
   };
 }
