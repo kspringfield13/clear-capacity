@@ -20,6 +20,7 @@ import { CorrectionsScreen } from "../review/CorrectionsScreen";
 import { DailyReviewScreen } from "../review/DailyReviewScreen";
 import { WeeklyCapacityScreen } from "../capacity/WeeklyCapacityScreen";
 import { ForecastScreen } from "../capacity/ForecastScreen";
+import { TrendsScreen } from "../capacity/TrendsScreen";
 import { NarrativeScreen } from "../narrative/NarrativeScreen";
 import { AuditLogScreen } from "../audit/AuditLogScreen";
 import { SensitiveReviewScreen } from "../audit/SensitiveReviewScreen";
@@ -289,6 +290,16 @@ export function ScreenRouter({
           forecastError={forecastError}
           onGenerateForecast={onGenerateForecast}
           hasWorkBlocks={blocks.length > 0}
+        />
+      )}
+      {active === "trends" && (
+        <TrendsScreen
+          snapshot={snapshot}
+          snapshotHistory={snapshotHistory}
+          forecastTrackRecord={forecastTrackRecord}
+          forecastAccuracyTrend={forecastAccuracyTrend}
+          hasWorkBlocks={blocks.length > 0}
+          onOpenScreen={onOpenScreen}
         />
       )}
       {active === "narrative" && (

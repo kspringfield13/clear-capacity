@@ -4,6 +4,7 @@ export const screenLabels: Record<string, string> = {
   daily: "Today",
   weekly: "Weekly Capacity",
   forecast: "Weekly Forecast",
+  trends: "Capacity Trends",
   narrative: "Weekly Summary",
   corrections: "Corrections",
   audit: "Audit History",
@@ -13,7 +14,7 @@ export const screenLabels: Record<string, string> = {
 
 export function primarySectionForScreen(screen: string): string | null {
   if (screen === "daily") return "today";
-  if (screen === "weekly" || screen === "forecast" || screen === "narrative") return "week";
+  if (screen === "weekly" || screen === "forecast" || screen === "trends" || screen === "narrative") return "week";
   if (screen === "ledger" || screen === "corrections" || screen === "audit" || screen === "sensitive") return "history";
   if (screen === "agent") return "agent";
   return null;
@@ -24,6 +25,7 @@ export function sectionViews(section: string | null) {
     return [
       { id: "weekly" as const, label: "Capacity" },
       { id: "forecast" as const, label: "Forecast" },
+      { id: "trends" as const, label: "Trends" },
       { id: "narrative" as const, label: "Summary" }
     ];
   }
