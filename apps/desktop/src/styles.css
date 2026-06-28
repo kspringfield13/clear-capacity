@@ -6739,6 +6739,16 @@ html[data-theme="dark"] .risk-track span[data-severity="high"] { background: #fb
   .corrections-list li .correction-change {
     flex: 0 1 auto;
     max-width: 100%;
+    flex-wrap: wrap;
+  }
+
+  /* Flex children default to min-width: auto (content size), which defeats the
+     ellipsis on long category labels and forces the change line wider than the
+     list. Allow the old/new segments to shrink so they wrap or ellipsize
+     instead of clipping off the right edge at narrow widths. */
+  .corrections-list li .correction-old,
+  .corrections-list li .correction-new {
+    min-width: 0;
   }
 
   .corrections-list li time {
