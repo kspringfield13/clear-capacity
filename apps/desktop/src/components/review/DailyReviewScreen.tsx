@@ -1,10 +1,14 @@
+import { useMemo } from "react";
 import { Check, CalendarCheck, Sparkles, Upload } from "lucide-react";
 import type {
   WorkBlock,
-  ReviewCopilotSuggestion
+  ReviewCopilotSuggestion,
+  UserCorrection
 } from "../../../../../packages/domain/src/models";
+import { analyzeCorrections } from "../../../../../packages/inference/src/capacity";
 import type { Screen } from "../../lib/types";
 import type { PushToast } from "../../hooks/useToasts";
+import { learnedLabelsForBlock } from "../../lib/learnedLabels";
 import { BlockCard } from "../ledger/BlockCard";
 import { EmptyState } from "../common/EmptyState";
 import { OnboardingCard, type OnboardingStep } from "../common/OnboardingCard";
@@ -25,6 +29,7 @@ export function DailyReviewScreen({
   onConfirm,
   onExclude,
   onRelabel,
+  corrections,
   pushToast
 }: {
   blocks: WorkBlock[];
@@ -41,10 +46,15 @@ export function DailyReviewScreen({
   onConfirm: (blockId: string) => void;
   onExclude: (blockId: string) => void;
   onRelabel: (blockId: string, field: keyof WorkBlock, value: WorkBlock[keyof WorkBlock]) => void;
+  corrections: UserCorrection[];
   pushToast: PushToast;
 }) {
   const reviewQueue = blocks.filter((block) => !block.user_verified);
   const verifiedCount = blocks.length - reviewQueue.length;
+
+  // Systematic relabels the user makes; used to flag blocks whose draft labels were
+  // pre-applied from these learned preferences.
+  const correctionBiases = useMemo(() => analyzeCorrections(corrections).biases, [corrections]);
 
   if (blocks.length === 0) {
     return (
@@ -154,6 +164,7 @@ export function DailyReviewScreen({
               onConfirm={onConfirm}
               onExclude={onExclude}
               onRelabel={onRelabel}
+              learnedLabels={learnedLabelsForBlock(block, correctionBiases)}
             />
           ))}
         </div>

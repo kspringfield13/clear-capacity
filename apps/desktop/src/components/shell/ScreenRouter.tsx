@@ -265,6 +265,7 @@ export function ScreenRouter({
           onConfirm={onConfirm}
           onExclude={onExclude}
           onRelabel={onRelabel}
+          corrections={corrections}
           pushToast={pushToast}
         />
       )}
