@@ -158,7 +158,8 @@ function normalizeLabel(value: unknown): string | null {
 /**
  * Parse a metadata-only chat export into message records. Accepts an array, a
  * `{ messages: [...] }` (or `{ events: [...] }`) wrapper, or the JSON string of
- * either (throws `SyntaxError` on malformed JSON, matching `JSON.parse`).
+ * either. An empty/whitespace string is treated as "no data" (returns `[]`); a
+ * non-empty but malformed string throws `SyntaxError`, matching `JSON.parse`.
  * Messages missing a valid `timestamp` or a recognized `provider` are dropped,
  * mirroring the lenient handling in `parseGitLog` / `parseOutlookIcs`.
  *
@@ -168,7 +169,8 @@ function normalizeLabel(value: unknown): string | null {
 export function parseChatExport(
   content: string | unknown[] | { messages?: unknown[] }
 ): ChatMessageRecord[] {
-  const data = typeof content === "string" ? JSON.parse(content) : content;
+  const data =
+    typeof content === "string" ? (content.trim() ? JSON.parse(content) : []) : content;
   let rows: unknown[] = [];
   if (Array.isArray(data)) {
     rows = data;
