@@ -2937,6 +2937,18 @@ select {
   color: var(--text-subtle);
 }
 
+.forecast-accuracy-trend {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-subtle);
+}
+
+.forecast-accuracy-trend strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
 .forecast-list strong {
   color: var(--text);
   font-size: 13px;
