@@ -1,5 +1,6 @@
 import { Sparkles } from "lucide-react";
 import type { ReviewCopilotSuggestion } from "../../../../../packages/domain/src/models";
+import { InlineError } from "../common/InlineError";
 
 export function ReviewCopilotPanel({
   suggestions,
@@ -31,12 +32,7 @@ export function ReviewCopilotPanel({
         <strong>Suggested cleanup</strong>
         <span className="copilot-inline-sub">AI-proposed — you approve every change.</span>
       </div>
-      {error && (
-        <div className="error-row">
-          <p className="copilot-error">{error}</p>
-          <button type="button" className="error-retry" onClick={onGenerate}>Try again</button>
-        </div>
-      )}
+      {error && <InlineError message={error} onRetry={onGenerate} />}
       {isGenerating && suggestions.length === 0 ? (
         <div className="copilot-skeleton">
           {[0, 1, 2].map((i) => (

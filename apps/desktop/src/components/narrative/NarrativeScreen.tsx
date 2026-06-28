@@ -7,6 +7,7 @@ import { formatAuditTime } from "../../lib/format";
 import { downloadTextFile } from "../../lib/dataExport";
 import type { PushToast } from "../../hooks/useToasts";
 import { EmptyState } from "../common/EmptyState";
+import { InlineError } from "../common/InlineError";
 
 export function NarrativeScreen({
   narrative,
@@ -121,12 +122,7 @@ export function NarrativeScreen({
                 <span>Generate Narrative</span>
               </button>
             </EmptyState>
-            {generationError && (
-              <div className="error-row">
-                <p className="narrative-error">{generationError}</p>
-                <button type="button" className="error-retry" onClick={onRegenerate}>Try again</button>
-              </div>
-            )}
+            {generationError && <InlineError message={generationError} onRetry={onRegenerate} />}
           </>
         )}
       </section>
@@ -178,12 +174,7 @@ export function NarrativeScreen({
           </button>
         </div>
       </div>
-      {generationError && (
-        <div className="error-row">
-          <p className="narrative-error">{generationError}</p>
-          <button type="button" className="error-retry" onClick={onRegenerate}>Try again</button>
-        </div>
-      )}
+      {generationError && <InlineError message={generationError} onRetry={onRegenerate} />}
 
       <div className="narrative-layout">
         <section className="narrative-panel analyst-narrative">
