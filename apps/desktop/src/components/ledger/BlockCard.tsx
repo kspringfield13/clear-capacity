@@ -152,11 +152,26 @@ export function BlockCard({
       </div>
       <details className="evidence">
         <summary>Why this estimate?</summary>
-        <ul>
-          {block.evidence.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ul>
+        {block.evidence.length > 0 && (
+          <ul>
+            {block.evidence.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        )}
+        {block.derived_from.length > 0 && (
+          <div className="evidence-derived">
+            <p className="evidence-derived-label">Derived from</p>
+            <ul className="evidence-derived-list">
+              {block.derived_from.map((source) => (
+                <li key={source}><code>{source}</code></li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {block.evidence.length === 0 && block.derived_from.length === 0 && (
+          <p className="evidence-empty">No inference detail recorded for this block.</p>
+        )}
       </details>
       <div className="block-actions">
         <button type="button" className="block-confirm" onClick={() => onConfirm(block.work_block_id)}>
