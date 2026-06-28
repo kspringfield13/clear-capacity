@@ -6589,6 +6589,24 @@ html[data-theme="dark"] .risk-track span[data-severity="high"] { background: #fb
   .current-block {
     align-items: flex-start;
   }
+
+  /* Corrections rows stack on narrow screens so the old → new change (the most
+     important part of each entry) stays fully visible instead of being clipped
+     off the right edge of the scroll container. */
+  .corrections-list li {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .corrections-list li .correction-change {
+    flex: 0 1 auto;
+    max-width: 100%;
+  }
+
+  .corrections-list li time {
+    margin-left: 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
