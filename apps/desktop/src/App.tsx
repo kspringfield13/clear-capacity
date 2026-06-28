@@ -199,6 +199,7 @@ export function App() {
     calendarEvents,
     generatedNarrative,
     forecastHistory,
+    snapshotHistory,
     managerSummaryText,
     currentWeekId,
     currentWeekRangeLabel,
@@ -215,6 +216,7 @@ export function App() {
     reviewQueue,
     toolbarStatus,
     forecastAccuracy,
+    forecastAccuracyTrend,
   } = derived;
 
   // Retain the latest computed snapshot per ISO week so cross-week trends and
@@ -847,6 +849,7 @@ export function App() {
         nextWeekRangeLabel={nextWeekRangeLabel}
         generatedForecast={generatedForecast}
         forecastAccuracy={forecastAccuracy}
+        forecastAccuracyTrend={forecastAccuracyTrend}
         forecastStatus={forecastStatus}
         forecastError={forecastError}
         onGenerateForecast={() => void generateForecastAgent()}

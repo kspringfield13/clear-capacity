@@ -1,5 +1,6 @@
 import { RefreshCw, Target, TrendingUp } from "lucide-react";
 import type { ForecastAccuracyReview, PersistedForecastRecord } from "../../services/localStore"; // note: may adjust
+import type { ForecastAccuracyTrend } from "../../../../../packages/inference/src/capacity";
 import { pct } from "../../lib/format";
 import { formatAuditTime } from "../../lib/format";
 import { ForecastList } from "../common/ForecastList";
@@ -21,6 +22,7 @@ function scenarioLikelyPct(conservative: number, likely: number, optimistic: num
 export function ForecastAgentPanel({
   generatedForecast,
   forecastAccuracy,
+  forecastAccuracyTrend,
   nextWeekRangeLabel,
   status,
   error,
@@ -29,6 +31,7 @@ export function ForecastAgentPanel({
 }: {
   generatedForecast: PersistedForecastRecord | null;
   forecastAccuracy: ForecastAccuracyReview | null;
+  forecastAccuracyTrend: ForecastAccuracyTrend | null;
   nextWeekRangeLabel: string;
   status: "idle" | "generating" | "error";
   error: string | null;
@@ -97,6 +100,11 @@ export function ForecastAgentPanel({
             </p>
           </div>
         </div>
+      )}
+      {forecastAccuracyTrend && forecastAccuracyTrend.week_count >= 2 && (
+        <p className="forecast-accuracy-trend">
+          Forecasts have averaged <strong>±{forecastAccuracyTrend.mean_abs_error_pts} pts</strong> over the last {forecastAccuracyTrend.week_count} weeks.
+        </p>
       )}
       {error && (
         <div className="error-row">

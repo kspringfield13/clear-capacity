@@ -3,7 +3,7 @@ import { ArrowRight, Scale, TrendingUp } from "lucide-react";
 import type { UserCorrection } from "../../../../../packages/domain/src/models";
 import type { PersistedForecastRecord, ForecastAccuracyReview } from "../../services/localStore";
 import { analyzeCorrections } from "../../../../../packages/inference/src/capacity";
-import type { computeWeeklyCapacitySnapshot } from "../../../../../packages/inference/src/capacity";
+import type { computeWeeklyCapacitySnapshot, ForecastAccuracyTrend } from "../../../../../packages/inference/src/capacity";
 import { fieldLabel, humanizeCorrectionValue, pct } from "../../lib/format";
 import { EmptyState } from "../common/EmptyState";
 import { ForecastAgentPanel } from "./ForecastAgentPanel";
@@ -14,6 +14,7 @@ export function ForecastScreen({
   corrections,
   generatedForecast,
   forecastAccuracy,
+  forecastAccuracyTrend,
   forecastStatus,
   forecastError,
   onGenerateForecast,
@@ -24,6 +25,7 @@ export function ForecastScreen({
   corrections: UserCorrection[];
   generatedForecast: PersistedForecastRecord | null;
   forecastAccuracy: ForecastAccuracyReview | null;
+  forecastAccuracyTrend: ForecastAccuracyTrend | null;
   forecastStatus: "idle" | "generating" | "error";
   forecastError: string | null;
   onGenerateForecast: () => void;
@@ -95,6 +97,7 @@ export function ForecastScreen({
       <ForecastAgentPanel
         generatedForecast={generatedForecast}
         forecastAccuracy={forecastAccuracy}
+        forecastAccuracyTrend={forecastAccuracyTrend}
         nextWeekRangeLabel={nextWeekRangeLabel}
         status={forecastStatus}
         error={forecastError}

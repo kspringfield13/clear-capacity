@@ -1,12 +1,13 @@
 import { useMemo } from "react";
-import { computeWeeklyCapacitySnapshot, generateWeeklyNarrative, scoreForecastAccuracy } from "../../../../packages/inference/src/capacity";
+import { computeWeeklyCapacitySnapshot, generateWeeklyNarrative, scoreForecastAccuracy, summarizeForecastAccuracy } from "../../../../packages/inference/src/capacity";
+import type { ForecastAccuracyTrend } from "../../../../packages/inference/src/capacity";
 import { sessionizeActiveWindowSamples } from "../../../../packages/inference/src/sessionizer/activeWindow";
 import type {
   WorkBlock,
   ActiveWindowSample,
   OutlookCalendarEvent,
 } from "../../../../packages/domain/src/models";
-import type { PersistedNarrativeRecord, PersistedForecastRecord, ForecastAccuracyReview } from "../services/localStore";
+import type { PersistedNarrativeRecord, PersistedForecastRecord, PersistedSnapshotRecord, ForecastAccuracyReview } from "../services/localStore";
 import { getLocalDateKey, replaceIsoWeekIds } from "../lib/date";
 import { pct } from "../lib/format";
 
@@ -16,6 +17,7 @@ interface UseDerivedParams {
   calendarEvents: OutlookCalendarEvent[];
   generatedNarrative: PersistedNarrativeRecord | null;
   forecastHistory: PersistedForecastRecord[];
+  snapshotHistory: PersistedSnapshotRecord[];
   managerSummaryText: string | null;
   currentWeekId: string;
   currentWeekRangeLabel: string;
@@ -29,6 +31,7 @@ export function useDerived(params: UseDerivedParams) {
     calendarEvents,
     generatedNarrative,
     forecastHistory,
+    snapshotHistory,
     managerSummaryText,
     currentWeekId,
     currentWeekRangeLabel,
@@ -55,6 +58,37 @@ export function useDerived(params: UseDerivedParams) {
       ),
     };
   }, [forecastHistory, currentWeekId, snapshot.reliable_new_work_capacity_pct]);
+
+  // Aggregate every past forecast we can score (predicted vs the capacity the model actually
+  // computed for that week) into a rolling mean-absolute-error, so the latest forecast can be
+  // read against the model's own track record. Actuals come from the retained per-week snapshots,
+  // with the live snapshot preferred for the current week. One scored entry per target week
+  // (latest forecast wins), mirroring the single-week accuracy banner above.
+  const forecastAccuracyTrend = useMemo<ForecastAccuracyTrend | null>(() => {
+    const actualByWeek = new Map<string, number>();
+    for (const record of snapshotHistory) {
+      actualByWeek.set(record.week_id, record.snapshot.reliable_new_work_capacity_pct);
+    }
+    actualByWeek.set(currentWeekId, snapshot.reliable_new_work_capacity_pct);
+
+    const latestForecastByWeek = new Map<string, PersistedForecastRecord>();
+    for (const entry of forecastHistory) {
+      const existing = latestForecastByWeek.get(entry.generated_for_week);
+      if (!existing || entry.generated_at.localeCompare(existing.generated_at) > 0) {
+        latestForecastByWeek.set(entry.generated_for_week, entry);
+      }
+    }
+
+    const scored = [...latestForecastByWeek.values()]
+      .filter((entry) => actualByWeek.has(entry.generated_for_week))
+      .map((entry) => ({
+        week_id: entry.generated_for_week,
+        predicted_pct: entry.forecast.reliable_new_work_capacity_pct,
+        actual_pct: actualByWeek.get(entry.generated_for_week) as number,
+      }));
+
+    return summarizeForecastAccuracy(scored);
+  }, [forecastHistory, snapshotHistory, currentWeekId, snapshot.reliable_new_work_capacity_pct]);
 
   const narrative = useMemo(
     () => generateWeeklyNarrative(snapshot),
@@ -99,5 +133,6 @@ export function useDerived(params: UseDerivedParams) {
     reviewQueue,
     toolbarStatus,
     forecastAccuracy,
+    forecastAccuracyTrend,
   };
 }

@@ -144,6 +144,45 @@ export function scoreForecastAccuracy(predictedPct: number, actualPct: number): 
 }
 
 /**
+ * A rolling track record of how far past forecasts have landed from the model's eventual
+ * computation, so the UI can frame the latest forecast with evidence ("forecasts have
+ * averaged ±N pts over the last K weeks"). `week_count` is how many scored forecasts fed
+ * the average.
+ */
+export interface ForecastAccuracyTrend {
+  week_count: number;
+  mean_abs_error_pts: number; // mean absolute point error over the window
+}
+
+const ACCURACY_TREND_WINDOW_WEEKS = 8;
+
+/**
+ * Roll the most recent scored forecasts into a single mean-absolute-error. Each input pairs a
+ * past forecast's predicted reliable capacity with the capacity the model actually computed for
+ * the week it targeted (keyed by `week_id`, one entry per week). Pure and primitive-only like
+ * `scoreForecastAccuracy`: it reuses that helper for the per-week error so rounding/thresholds
+ * stay consistent, sorts by `week_id` defensively, and averages the most recent
+ * `ACCURACY_TREND_WINDOW_WEEKS`. Returns `null` when there is nothing scored so the caller can
+ * hide the line.
+ */
+export function summarizeForecastAccuracy(
+  scored: { week_id: string; predicted_pct: number; actual_pct: number }[]
+): ForecastAccuracyTrend | null {
+  if (scored.length === 0) return null;
+  const window = [...scored]
+    .sort((left, right) => left.week_id.localeCompare(right.week_id))
+    .slice(-ACCURACY_TREND_WINDOW_WEEKS);
+  const totalError = window.reduce(
+    (sum, item) => sum + scoreForecastAccuracy(item.predicted_pct, item.actual_pct).error_pts,
+    0
+  );
+  return {
+    week_count: window.length,
+    mean_abs_error_pts: roundPct(totalError / window.length)
+  };
+}
+
+/**
  * Rolling personal baselines for the headline capacity metrics. `week_count` is how
  * many prior-week snapshots fed the medians; each metric is the median over the most
  * recent `BASELINE_WINDOW_WEEKS` of them (or `null` when there is no history). Lets the
