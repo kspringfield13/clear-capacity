@@ -8092,6 +8092,96 @@ html[data-theme="light"] .agent-message.user .agent-bubble {
   filter: brightness(1.04);
 }
 
+.agent-send.agent-stop {
+  border-color: var(--border-strong);
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: none;
+}
+
+.agent-send.agent-stop:hover {
+  transform: translateY(-1px);
+  background: var(--hover-background);
+  filter: none;
+}
+
+.agent-send.agent-stop svg {
+  fill: currentColor;
+}
+
+/* Stream-recovery Retry affordance on an interrupted assistant reply */
+.agent-retry-row {
+  margin-top: 8px;
+}
+
+.agent-retry-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  color: var(--text);
+  background: var(--surface);
+  font-size: 11px;
+  font-weight: 500;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.agent-retry-button:hover:not(:disabled) {
+  background: var(--hover-background);
+  border-color: var(--agent-accent);
+}
+
+.agent-retry-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Context-aware follow-up chips beneath the latest settled reply */
+.agent-followups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+  animation: agent-followup-in 200ms ease;
+}
+
+.agent-followup-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 11px;
+  border: 1px solid var(--agent-accent-border);
+  border-radius: 999px;
+  color: var(--text);
+  background: var(--agent-accent-soft);
+  font-size: 11px;
+  font-weight: 500;
+  transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+}
+
+.agent-followup-chip:hover {
+  transform: translateY(-1px);
+  border-color: var(--agent-accent);
+  background: color-mix(in srgb, var(--agent-accent) 18%, transparent);
+}
+
+.agent-followup-chip svg {
+  color: var(--agent-accent);
+}
+
+@keyframes agent-followup-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .agent-composer-meta {
   display: flex;
   align-items: center;
