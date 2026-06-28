@@ -328,33 +328,33 @@ export function createDemoState(reference = new Date()): PersistedAppState {
     },
     forecastHistory: [
       {
-        // Targets a snapshot two weeks back (actual 26) — predicted 22, off by 4.
+        // Targets a snapshot two weeks back (actual 26) — predicted 24, off by 2 → "On target".
         generated_at: addMinutes(now, -30_240 - 31).toISOString(), generated_for_week: weekId(addMinutes(now, -20_160)),
         trigger: "manual", model: "OpenAI forecast agent", prompt_version: "clear-capacity-forecast-agent-v1",
         forecast: {
-          forecast_week_label: "That week", reliable_new_work_capacity_pct: 22, confidence: 0.8,
+          forecast_week_label: "That week", reliable_new_work_capacity_pct: 24, confidence: 0.8,
           headline: "Recurring load looks heavy; protect one focus block.",
           summary_text: "An earlier projection retained so the forecast can be scored against what actually materialized.",
           key_constraints: ["Recurring reporting baseline", "Standing meeting cadence"],
           risk_flags: ["Reactive requests may displace planned analysis"],
           recommended_actions: ["Reserve a focus block", "Batch ad hoc requests"],
           assumptions: ["No new production incident", "Meeting cadence stays stable"],
-          optimistic_capacity_pct: 30, likely_capacity_pct: 22, conservative_capacity_pct: 13
+          optimistic_capacity_pct: 30, likely_capacity_pct: 24, conservative_capacity_pct: 13
         }
       },
       {
-        // Targets last week's snapshot (actual 29) — predicted 33, off by 4.
+        // Targets last week's snapshot (actual 29) — predicted 15, off by 14 → "Off".
         generated_at: addMinutes(now, -20_160 - 31).toISOString(), generated_for_week: weekId(addMinutes(now, -10_080)),
         trigger: "manual", model: "OpenAI forecast agent", prompt_version: "clear-capacity-forecast-agent-v1",
         forecast: {
-          forecast_week_label: "That week", reliable_new_work_capacity_pct: 33, confidence: 0.82,
+          forecast_week_label: "That week", reliable_new_work_capacity_pct: 15, confidence: 0.82,
           headline: "Two new analyses are realistic if the access blocker clears.",
           summary_text: "An earlier projection retained so the forecast can be scored against what actually materialized.",
           key_constraints: ["Recurring reporting baseline", "One access dependency"],
           risk_flags: ["Blocked attribution work could carry over"],
           recommended_actions: ["Resolve access early", "Reserve two focus blocks"],
           assumptions: ["Access restored by Tuesday", "Meeting cadence stays stable"],
-          optimistic_capacity_pct: 41, likely_capacity_pct: 33, conservative_capacity_pct: 23
+          optimistic_capacity_pct: 23, likely_capacity_pct: 15, conservative_capacity_pct: 9
         }
       },
       {

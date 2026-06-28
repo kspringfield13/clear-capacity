@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { computeWeeklyCapacitySnapshot, generateWeeklyNarrative, scoreForecastAccuracy, summarizeForecastAccuracy } from "../../../../packages/inference/src/capacity";
-import type { ForecastAccuracyTrend } from "../../../../packages/inference/src/capacity";
+import { buildForecastTrackRecord, computeWeeklyCapacitySnapshot, generateWeeklyNarrative, scoreForecastAccuracy, summarizeForecastAccuracy } from "../../../../packages/inference/src/capacity";
+import type { ForecastAccuracyTrend, ForecastTrackRecordEntry } from "../../../../packages/inference/src/capacity";
 import { sessionizeActiveWindowSamples } from "../../../../packages/inference/src/sessionizer/activeWindow";
 import type {
   WorkBlock,
@@ -59,12 +59,12 @@ export function useDerived(params: UseDerivedParams) {
     };
   }, [forecastHistory, currentWeekId, snapshot.reliable_new_work_capacity_pct]);
 
-  // Aggregate every past forecast we can score (predicted vs the capacity the model actually
-  // computed for that week) into a rolling mean-absolute-error, so the latest forecast can be
-  // read against the model's own track record. Actuals come from the retained per-week snapshots,
-  // with the live snapshot preferred for the current week. One scored entry per target week
-  // (latest forecast wins), mirroring the single-week accuracy banner above.
-  const forecastAccuracyTrend = useMemo<ForecastAccuracyTrend | null>(() => {
+  // Pair every past forecast we can score with the capacity the model actually computed for the
+  // week it targeted. Actuals come from the retained per-week snapshots, with the live snapshot
+  // preferred for the current week. One scored entry per target week (latest forecast wins),
+  // mirroring the single-week accuracy banner above. Feeds both the rolling trend and the
+  // per-week track-record list.
+  const scoredForecasts = useMemo(() => {
     const actualByWeek = new Map<string, number>();
     for (const record of snapshotHistory) {
       actualByWeek.set(record.week_id, record.snapshot.reliable_new_work_capacity_pct);
@@ -79,16 +79,27 @@ export function useDerived(params: UseDerivedParams) {
       }
     }
 
-    const scored = [...latestForecastByWeek.values()]
+    return [...latestForecastByWeek.values()]
       .filter((entry) => actualByWeek.has(entry.generated_for_week))
       .map((entry) => ({
         week_id: entry.generated_for_week,
         predicted_pct: entry.forecast.reliable_new_work_capacity_pct,
         actual_pct: actualByWeek.get(entry.generated_for_week) as number,
       }));
-
-    return summarizeForecastAccuracy(scored);
   }, [forecastHistory, snapshotHistory, currentWeekId, snapshot.reliable_new_work_capacity_pct]);
+
+  // Roll the scored forecasts into a single mean-absolute-error so the latest forecast can be
+  // read against the model's own track record.
+  const forecastAccuracyTrend = useMemo<ForecastAccuracyTrend | null>(
+    () => summarizeForecastAccuracy(scoredForecasts),
+    [scoredForecasts]
+  );
+
+  // Per-week predicted-vs-actual list (newest first) so the model can be audited over time.
+  const forecastTrackRecord = useMemo<ForecastTrackRecordEntry[]>(
+    () => buildForecastTrackRecord(scoredForecasts),
+    [scoredForecasts]
+  );
 
   const narrative = useMemo(
     () => generateWeeklyNarrative(snapshot),
@@ -134,5 +145,6 @@ export function useDerived(params: UseDerivedParams) {
     toolbarStatus,
     forecastAccuracy,
     forecastAccuracyTrend,
+    forecastTrackRecord,
   };
 }

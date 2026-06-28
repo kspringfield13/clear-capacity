@@ -1,16 +1,10 @@
 import { RefreshCw, Target, TrendingUp } from "lucide-react";
 import type { ForecastAccuracyReview, PersistedForecastRecord } from "../../services/localStore"; // note: may adjust
 import type { ForecastAccuracyTrend } from "../../../../../packages/inference/src/capacity";
-import { pct } from "../../lib/format";
+import { forecastRatingLabel, pct } from "../../lib/format";
 import { formatAuditTime } from "../../lib/format";
 import { ForecastList } from "../common/ForecastList";
 import { EmptyState } from "../common/EmptyState";
-
-const ACCURACY_RATING_LABEL: Record<ForecastAccuracyReview["rating"], string> = {
-  on_target: "On target",
-  close: "Close",
-  off: "Off",
-};
 
 function scenarioLikelyPct(conservative: number, likely: number, optimistic: number): number {
   const spread = optimistic - conservative;
@@ -85,7 +79,7 @@ export function ForecastAgentPanel({
           </span>
           <div className="forecast-accuracy-body">
             <p className="forecast-accuracy-headline">
-              <span className="forecast-accuracy-rating">{ACCURACY_RATING_LABEL[forecastAccuracy.rating]}</span>
+              <span className="forecast-accuracy-rating">{forecastRatingLabel(forecastAccuracy.rating)}</span>
               {" — last week's forecast for this week predicted "}
               <strong>{pct(forecastAccuracy.predicted_pct)}</strong>
               {" reliable capacity; the model now computes "}
