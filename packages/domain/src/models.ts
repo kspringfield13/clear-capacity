@@ -72,7 +72,8 @@ export type AuditEventType =
   | "forecast_agent"
   | "visual_context"
   | "privacy_pause"
-  | "privacy_resume";
+  | "privacy_resume"
+  | "retention_policy";
 
 export interface AuditEvent {
   event_id: string;

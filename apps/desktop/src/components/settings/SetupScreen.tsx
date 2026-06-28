@@ -7,7 +7,9 @@ import {
   Check,
   CheckCircle2,
   ChevronRight,
+  Download,
   Eye,
+  FileText,
   LoaderCircle,
   Lock,
   Monitor,
@@ -18,19 +20,30 @@ import {
   Save,
   Settings,
   ShieldCheck,
+  Timer,
   Upload
 } from "lucide-react";
 import type {
   ActiveWindowSample,
   ActivitySession,
+  AuditEvent,
   OutlookCalendarEvent,
   VisualContextInsight,
+  WorkBlock,
   AIConfig,
   AIProvider
 } from "../../../../../packages/domain/src/models";
 import { getLocalDateKey } from "../../lib/date";
 import { formatAuditTime } from "../../lib/format";
 import { MAX_VISUAL_CONTEXT_CAPTURES_PER_DAY } from "../../lib/constants";
+import {
+  downloadTextFile,
+  exportFilename,
+  exportMimeType,
+  serializeAuditTrail,
+  serializeWorkLedger,
+  type ExportFormat
+} from "../../lib/dataExport";
 import {
   AI_PROVIDER_PRESETS,
   createDefaultAIConfig,
@@ -43,6 +56,9 @@ import { CALENDAR_PROVIDERS } from "../../../../../packages/integrations/src/cal
 // lands (see packages/integrations/src/calendar/calendarSource.ts). The .ics
 // file-import source stays available via the "Outlook calendar" row above.
 const OAUTH_CALENDAR_PROVIDERS = CALENDAR_PROVIDERS.filter((provider) => provider.connection === "oauth");
+
+// Retention windows (in days) offered for auto-expiring stored activity samples.
+const RETENTION_OPTIONS = [7, 14, 30, 90] as const;
 
 interface TestConnectionResponse {
   provider: string;
@@ -69,6 +85,10 @@ export function SetupScreen({
   aiConfig,
   setAiConfig,
   hasClassification,
+  blocks,
+  auditEvents,
+  retentionDays,
+  setRetentionDays,
 }: {
   paused: boolean;
   setPaused: (value: boolean) => void;
@@ -84,6 +104,10 @@ export function SetupScreen({
   aiConfig: AIConfig | null;
   setAiConfig: (config: AIConfig | null) => void;
   hasClassification: boolean;
+  blocks: WorkBlock[];
+  auditEvents: AuditEvent[];
+  retentionDays: number | null;
+  setRetentionDays: (value: number | null) => void;
 }) {
   const steps = [
     { label: "Tracking active", done: !paused && activeWindowSamples.length > 0, hint: "Resume tracking above and wait for the first activity sample" },
@@ -177,6 +201,26 @@ export function SetupScreen({
     } finally {
       setIsTesting(false);
     }
+  };
+
+  const exportLedger = (format: ExportFormat) => {
+    downloadTextFile(
+      exportFilename("work-ledger", format),
+      serializeWorkLedger(blocks, format),
+      exportMimeType(format)
+    );
+  };
+
+  const exportAudit = (format: ExportFormat) => {
+    downloadTextFile(
+      exportFilename("audit-trail", format),
+      serializeAuditTrail(auditEvents, format),
+      exportMimeType(format)
+    );
+  };
+
+  const onRetentionChange = (value: string) => {
+    setRetentionDays(value === "off" ? null : Number(value));
   };
 
   return (
@@ -330,6 +374,106 @@ export function SetupScreen({
         <button className={visualContextEnabled ? "settings-control is-on" : "settings-control"} type="button" onClick={() => setVisualContextEnabled(!visualContextEnabled)}>
           {visualContextEnabled ? "Disable Visual Context" : "Enable Visual Context"}
         </button>
+      </section>
+
+      <div className="settings-section-heading">
+        <div>
+          <h2>Data control</h2>
+          <span>Your ledger stays local. Export it, or set how long raw activity samples are kept.</span>
+        </div>
+      </div>
+
+      <section className="settings-row">
+        <div className="settings-row-icon"><Timer size={18} /></div>
+        <div>
+          <h2>Activity retention</h2>
+          <p>Automatically delete stored active-window samples older than the window you choose. Sessions and work blocks already derived from them are kept — only the raw samples expire.</p>
+        </div>
+        <div className="settings-row-status">
+          <strong>{activeWindowSamples.length} samples stored</strong>
+          <span>{retentionDays === null ? "Kept until you reset" : `Auto-expire after ${retentionDays} days`}</span>
+        </div>
+        <div className="data-export-options">
+          <label className="sr-only" htmlFor="retention-window">Activity retention window</label>
+          <select
+            id="retention-window"
+            value={retentionDays === null ? "off" : String(retentionDays)}
+            onChange={(event) => onRetentionChange(event.target.value)}
+          >
+            <option value="off">Keep all samples</option>
+            {RETENTION_OPTIONS.map((days) => (
+              <option key={days} value={days}>Last {days} days</option>
+            ))}
+          </select>
+        </div>
+      </section>
+
+      <section className="settings-row">
+        <div className="settings-row-icon"><Download size={18} /></div>
+        <div>
+          <h2>Export work ledger</h2>
+          <p>Download every classified work block as JSON or CSV. The file is saved locally — nothing leaves this Mac.</p>
+        </div>
+        <div className="settings-row-status">
+          <strong>{blocks.length} work blocks</strong>
+          <span>{blocks.length === 0 ? "Nothing to export yet" : "JSON keeps full detail"}</span>
+        </div>
+        <div className="data-export-options">
+          <button
+            className="settings-control"
+            type="button"
+            disabled={blocks.length === 0}
+            onClick={() => exportLedger("json")}
+            aria-label="Export work ledger as JSON"
+          >
+            <Download size={15} />
+            <span>JSON</span>
+          </button>
+          <button
+            className="settings-control"
+            type="button"
+            disabled={blocks.length === 0}
+            onClick={() => exportLedger("csv")}
+            aria-label="Export work ledger as CSV"
+          >
+            <Download size={15} />
+            <span>CSV</span>
+          </button>
+        </div>
+      </section>
+
+      <section className="settings-row">
+        <div className="settings-row-icon"><FileText size={18} /></div>
+        <div>
+          <h2>Export audit trail</h2>
+          <p>Download the full explainability log — every classification, correction, and privacy action — as JSON or CSV.</p>
+        </div>
+        <div className="settings-row-status">
+          <strong>{auditEvents.length} audit events</strong>
+          <span>{auditEvents.length === 0 ? "Nothing to export yet" : "Stored locally only"}</span>
+        </div>
+        <div className="data-export-options">
+          <button
+            className="settings-control"
+            type="button"
+            disabled={auditEvents.length === 0}
+            onClick={() => exportAudit("json")}
+            aria-label="Export audit trail as JSON"
+          >
+            <Download size={15} />
+            <span>JSON</span>
+          </button>
+          <button
+            className="settings-control"
+            type="button"
+            disabled={auditEvents.length === 0}
+            onClick={() => exportAudit("csv")}
+            aria-label="Export audit trail as CSV"
+          >
+            <Download size={15} />
+            <span>CSV</span>
+          </button>
+        </div>
       </section>
 
       <details className="advanced-settings">
