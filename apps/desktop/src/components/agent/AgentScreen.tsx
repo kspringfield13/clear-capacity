@@ -29,6 +29,7 @@ import type {
   AIConfig,
 } from "../../../../../packages/domain/src/models";
 import type { AgentChatMessage } from "../../lib/types";
+import type { PushToast } from "../../hooks/useToasts";
 import { agentTools, AGENT_INSTRUCTIONS } from "../../services/agentTools";
 import type { tool as AiToolFn } from "ai";
 
@@ -49,6 +50,7 @@ interface AgentScreenProps {
   todayKey: string;
   currentWeekRangeLabel: string;
   aiConfig: AIConfig | null;
+  pushToast: PushToast;
 }
 
 export function AgentScreen({
@@ -61,6 +63,7 @@ export function AgentScreen({
   todayKey,
   currentWeekRangeLabel,
   aiConfig,
+  pushToast,
 }: AgentScreenProps) {
   const [messages, setMessages] = useState<AgentChatMessage[]>(() => {
     try {
@@ -453,6 +456,7 @@ export function AgentScreen({
     await navigator.clipboard.writeText(message.content);
     setCopiedMessageId(message.id);
     window.setTimeout(() => setCopiedMessageId(null), 1200);
+    pushToast({ tone: "success", message: "Copied to clipboard" });
   }
 
   function loadEarlierMessages() {

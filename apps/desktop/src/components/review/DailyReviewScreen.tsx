@@ -4,6 +4,7 @@ import type {
   ReviewCopilotSuggestion
 } from "../../../../../packages/domain/src/models";
 import type { Screen } from "../../lib/types";
+import type { PushToast } from "../../hooks/useToasts";
 import { BlockCard } from "../ledger/BlockCard";
 import { EmptyState } from "../common/EmptyState";
 import { OnboardingCard, type OnboardingStep } from "../common/OnboardingCard";
@@ -23,7 +24,8 @@ export function DailyReviewScreen({
   onDismissReviewSuggestion,
   onConfirm,
   onExclude,
-  onRelabel
+  onRelabel,
+  pushToast
 }: {
   blocks: WorkBlock[];
   onboardingSteps: OnboardingStep[];
@@ -39,6 +41,7 @@ export function DailyReviewScreen({
   onConfirm: (blockId: string) => void;
   onExclude: (blockId: string) => void;
   onRelabel: (blockId: string, field: keyof WorkBlock, value: WorkBlock[keyof WorkBlock]) => void;
+  pushToast: PushToast;
 }) {
   const reviewQueue = blocks.filter((block) => !block.user_verified);
   const verifiedCount = blocks.length - reviewQueue.length;
@@ -104,7 +107,14 @@ export function DailyReviewScreen({
             <button
               className="primary-action"
               type="button"
-              onClick={() => reviewQueue.forEach((block) => onConfirm(block.work_block_id))}
+              onClick={() => {
+                const count = reviewQueue.length;
+                reviewQueue.forEach((block) => onConfirm(block.work_block_id));
+                pushToast({
+                  tone: "success",
+                  message: `${count} block${count === 1 ? "" : "s"} confirmed`,
+                });
+              }}
             >
               <Check size={18} />
               <span>Confirm all {reviewQueue.length}</span>
