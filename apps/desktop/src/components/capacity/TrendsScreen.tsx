@@ -133,7 +133,9 @@ export function TrendsScreen({
           <p className="screen-subhead">
             Allocated, reactive, deep-work, and reliable new-work capacity, week over week.
             {forecastAccuracyTrend
-              ? ` Forecasts have averaged ${forecastAccuracyTrend.mean_abs_error_pts} pts of error over the last ${forecastAccuracyTrend.week_count}.`
+              ? ` Forecasts have averaged ${forecastAccuracyTrend.mean_abs_error_pts} pts of error over the last ${forecastAccuracyTrend.week_count} ${
+                  forecastAccuracyTrend.week_count === 1 ? "week" : "weeks"
+                }.`
               : ""}
           </p>
         </div>
