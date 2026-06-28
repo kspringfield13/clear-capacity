@@ -6,8 +6,14 @@ import type {
   WorkBlock
 } from "../../../../packages/domain/src/models";
 import { plannedStatuses, workCategories, workModes } from "../../../../packages/domain/src/taxonomy";
+import { analyzeCorrections } from "../../../../packages/inference/src/capacity";
 
-export const WORK_BLOCK_CLASSIFIER_PROMPT_VERSION = "clear-capacity-work-block-classifier-v2";
+export const WORK_BLOCK_CLASSIFIER_PROMPT_VERSION = "clear-capacity-work-block-classifier-v3";
+
+// How many systematic biases to surface as few-shot relabel hints. The analysis
+// already sorts by frequency and applies a repeat threshold, so the top handful are
+// the strongest, most reliable patterns.
+const MAX_LEARNED_LABEL_HINTS = 8;
 
 function sortByStartTime<T extends { start_time: string }>(items: T[]) {
   return [...items].sort((left, right) => new Date(left.start_time).getTime() - new Date(right.start_time).getTime());
@@ -100,6 +106,20 @@ export function buildWorkBlockClassifierPrompt({
   const recentCorrections = [...corrections]
     .sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime())
     .slice(0, 40);
+
+  // Distill the user's correction history into the strongest systematic relabels and
+  // present them as explicit pre-apply hints. These carry only taxonomy/label values
+  // (category, mode, planned status, stakeholder, blocker) — never titles or app names.
+  const learnedLabelCorrections = analyzeCorrections(corrections)
+    .biases.slice(0, MAX_LEARNED_LABEL_HINTS)
+    .map((bias) => ({
+      field: bias.field,
+      relabel_from: bias.from_value,
+      relabel_to: bias.to_value,
+      times_corrected: bias.count,
+      instruction: `The user consistently relabels ${bias.field} "${bias.from_value}" as "${bias.to_value}" (${bias.count}×). When a session's evidence fits this pattern, assign "${bias.to_value}" directly and note the learned preference in the evidence.`,
+    }));
+
   const context = {
     product: "ClearCapacity",
     prompt_version: WORK_BLOCK_CLASSIFIER_PROMPT_VERSION,
@@ -135,7 +155,10 @@ export function buildWorkBlockClassifierPrompt({
     existing_work_blocks: sortByStartTime(existingBlocks).map(summarizeExistingBlock),
     outlook_calendar_context: sortByStartTime(calendarEvents).map(summarizeCalendarEvent),
     recent_user_corrections: recentCorrections.map(summarizeCorrection),
+    learned_label_corrections: learnedLabelCorrections,
     output_rules: {
+      learned_label_corrections:
+        "learned_label_corrections lists relabels the user makes repeatedly. When a session's evidence would otherwise yield a `relabel_from` value, prefer the matching `relabel_to` value for that field and cite the learned preference in evidence. Only apply when the evidence genuinely fits — never override clear contradicting evidence.",
       session_ids:
         "Every output work block must copy exact session_id values from input_sessions. Never invent or rewrite an ID. Use each session at most once.",
       title:

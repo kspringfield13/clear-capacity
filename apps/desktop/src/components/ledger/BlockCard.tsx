@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Check, Clock, X } from "lucide-react";
+import { Check, Clock, GraduationCap, X } from "lucide-react";
 import type { WorkBlock, WorkCategory, PlannedStatus, WorkMode } from "../../../../../packages/domain/src/models";
 import { workCategories, plannedStatuses, workModes } from "../../../../../packages/domain/src/taxonomy";
-import { formatRange, pct, plannedStatusLabel } from "../../lib/format";
+import { fieldLabel, formatRange, humanizeCorrectionValue, pct, plannedStatusLabel } from "../../lib/format";
+import type { LearnedLabelMatch } from "../../lib/learnedLabels";
 import { ConfidenceChip } from "../common/ConfidenceChip";
 
 function toLocalTimeInput(isoString: string): string {
@@ -21,12 +22,14 @@ export function BlockCard({
   block,
   onConfirm,
   onExclude,
-  onRelabel
+  onRelabel,
+  learnedLabels = []
 }: {
   block: WorkBlock;
   onConfirm: (blockId: string) => void;
   onExclude: (blockId: string) => void;
   onRelabel: (blockId: string, field: keyof WorkBlock, value: WorkBlock[keyof WorkBlock]) => void;
+  learnedLabels?: LearnedLabelMatch[];
 }) {
   const [editingTime, setEditingTime] = useState(false);
   const [draftStart, setDraftStart] = useState("");
@@ -122,6 +125,17 @@ export function BlockCard({
           <ConfidenceChip value={block.confidence} />
         </div>
       </div>
+      {learnedLabels.length > 0 && (
+        <div
+          className="block-learned-note"
+          title={`Pre-applied from labels you repeatedly correct: ${learnedLabels
+            .map((match) => `${fieldLabel(match.field)} → ${humanizeCorrectionValue(match.field, match.to_value)}`)
+            .join(", ")}`}
+        >
+          <GraduationCap size={13} aria-hidden />
+          <span>Learned from your edits</span>
+        </div>
+      )}
       <div className="block-main">
         <div>
           <h3 title={block.project_name}>{block.project_name}</h3>
