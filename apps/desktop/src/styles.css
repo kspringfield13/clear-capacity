@@ -7933,6 +7933,63 @@ html[data-theme="light"] .agent-message.user .agent-bubble {
   color: var(--agent-accent-strong);
 }
 
+.agent-retry-row {
+  margin-top: 8px;
+}
+
+.agent-retry-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 11px;
+  border: 1px solid var(--agent-accent-border);
+  border-radius: 8px;
+  color: var(--agent-accent-strong);
+  background: var(--agent-accent-soft);
+  font-size: 11px;
+  font-weight: 560;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+}
+
+.agent-retry-button:hover:not(:disabled) {
+  border-color: var(--agent-accent);
+  background: color-mix(in srgb, var(--agent-accent-soft) 70%, var(--surface));
+  color: var(--text);
+}
+
+.agent-retry-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.agent-followups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-left: 38px;
+}
+
+.agent-followup-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  background: var(--control-background);
+  font-size: 11px;
+  text-align: left;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+}
+
+.agent-followup-chip:hover {
+  border-color: var(--agent-accent-border);
+  color: var(--text);
+  background: var(--agent-accent-soft);
+}
+
 .agent-progress {
   width: min(100%, 570px);
   margin-left: 38px;
@@ -8090,6 +8147,20 @@ html[data-theme="light"] .agent-message.user .agent-bubble {
   transform: translateY(-1px);
   background: linear-gradient(145deg, #7690ff, #4c6ada);
   filter: brightness(1.04);
+}
+
+.agent-send.agent-stop {
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: none;
+}
+
+.agent-send.agent-stop:hover:not(:disabled) {
+  transform: none;
+  border-color: var(--agent-accent-border);
+  background: var(--hover-background);
+  filter: none;
 }
 
 .agent-composer-meta {

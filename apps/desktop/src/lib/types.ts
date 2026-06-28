@@ -18,4 +18,6 @@ export interface AgentChatMessage {
   content: string;
   createdAt?: string;
   analysisSummary?: string;
+  /** Set when a stream was interrupted by an error so the UI can offer a Retry. */
+  interrupted?: boolean;
 }

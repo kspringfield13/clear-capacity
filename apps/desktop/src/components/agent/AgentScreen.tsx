@@ -12,9 +12,11 @@ import {
   Database,
   Gauge,
   Paperclip,
+  RefreshCw,
   Send,
   ShieldCheck,
   Sparkles,
+  Square,
   Trash2,
   User,
 } from "lucide-react";
@@ -91,6 +93,7 @@ export function AgentScreen({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const topProjects = useMemo(() => {
     const totals = new Map<string, number>();
@@ -225,6 +228,17 @@ export function AgentScreen({
     [messages, visibleMessageCount]
   );
 
+  // Static follow-up prompts derived from the live snapshot, surfaced once a reply settles.
+  const followUpPrompts = useMemo(() => {
+    const prompts: string[] = [];
+    if (snapshot.reactive_pct >= 30) prompts.push("Why is my reactive load so high?");
+    if (snapshot.carryover_risk_pct >= 30) prompts.push("What's driving my carryover risk?");
+    if (snapshot.reliable_new_work_capacity_pct < 30) prompts.push("How do I free up more reliable capacity?");
+    prompts.push("Plan around this capacity.");
+    prompts.push("What should I focus on next?");
+    return [...new Set(prompts)].slice(0, 3);
+  }, [snapshot]);
+
   // Helper: resolve a Vercel AI SDK model from aiConfig for direct + local tool execution.
   // Follows Eve agent patterns (defineTool + instructions + generateText loop) but embedded
   // inside the app so tools can close over live app state (blocks, snapshot, etc).
@@ -289,7 +303,7 @@ export function AgentScreen({
       createdAt: new Date().toISOString(),
     };
     const updated = [...messages, userMsg];
-    setMessages(updated);
+    setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setIsSending(true);
     setIsStreaming(false);
@@ -303,8 +317,12 @@ export function AgentScreen({
         const boundTools = createBoundTools(context, createTool);
 
         const historyForModel = updated
-          .filter((m) => m.role === "user" || m.role === "assistant")
+          .filter((m) => (m.role === "user" || m.role === "assistant") && !m.interrupted)
           .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
+
+        // Allow the user to stop generation mid-stream (Stop button → controller.abort()).
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
 
         // Start streaming immediately (model will invoke tools behind the scenes as needed)
         const { textStream } = await streamText({
@@ -313,9 +331,20 @@ export function AgentScreen({
           messages: historyForModel,
           tools: boundTools,
           maxSteps: 6,
+          abortSignal: controller.signal,
         });
 
         const assistantId = `asst-${Date.now()}`;
+        const reviewSummary = `Reviewed ${blocks.length} work blocks, ${activeWindowSessions.length} sessions, ${calendarEvents.length} calendar events, and ${corrections.length} corrections.`;
+        // Finalize a user-stopped stream: keep partial text (with the analysis note),
+        // or drop the placeholder entirely if nothing streamed yet — never a blank bubble.
+        const finalizeStoppedStream = () =>
+          setMessages((prev) =>
+            streamed.trim()
+              ? prev.map((m) => (m.id === assistantId ? { ...m, analysisSummary: reviewSummary } : m))
+              : prev.filter((m) => m.id !== assistantId)
+          );
+
         setMessages((prev) => [...prev, {
           id: assistantId,
           role: "assistant",
@@ -334,25 +363,33 @@ export function AgentScreen({
             );
           }
         } catch (streamErr: any) {
-          // Partial content + surface error gracefully
-          if (streamed.trim()) {
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === assistantId
-                  ? { ...m, content: streamed + "\n\n(Streaming interrupted)" }
-                  : m
-              )
-            );
-          } else {
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === assistantId
-                  ? { ...m, content: "I started analyzing your data with tools but the stream was interrupted." }
-                  : m
-              )
-            );
+          if (controller.signal.aborted) {
+            // User stopped generation — keep whatever streamed so far, surface no error.
+            finalizeStoppedStream();
+            return;
           }
-          throw streamErr;
+          // Genuine interruption — keep partial content and flag it so the UI can offer a Retry.
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId
+                ? {
+                    ...m,
+                    content: streamed.trim()
+                      ? streamed + "\n\n(Streaming interrupted)"
+                      : "I started analyzing your data with tools but the stream was interrupted.",
+                    interrupted: true,
+                  }
+                : m
+            )
+          );
+          return;
+        }
+
+        // Some providers end the stream cleanly on abort instead of throwing —
+        // keep the partial text and skip the empty-output substitution below.
+        if (controller.signal.aborted) {
+          finalizeStoppedStream();
+          return;
         }
 
         // Guard against completely empty final output from the model
@@ -365,10 +402,7 @@ export function AgentScreen({
 
         setMessages((prev) => prev.map((message) =>
           message.id === assistantId
-            ? {
-                ...message,
-                analysisSummary: `Reviewed ${blocks.length} work blocks, ${activeWindowSessions.length} sessions, ${calendarEvents.length} calendar events, and ${corrections.length} corrections.`,
-              }
+            ? { ...message, analysisSummary: reviewSummary }
             : message
         ));
         setIsStreaming(false);
@@ -417,6 +451,7 @@ export function AgentScreen({
         }]);
       }
     } finally {
+      abortControllerRef.current = null;
       setIsSending(false);
       setIsStreaming(false);
       setStreamingMessageId(null);
@@ -431,6 +466,32 @@ export function AgentScreen({
   function handleSuggested(question: string) {
     if (isSending) return;
     void sendMessage(question);
+  }
+
+  // Abort the in-flight stream; the partial assistant message is kept as-is.
+  function handleStop() {
+    abortControllerRef.current?.abort();
+  }
+
+  // Re-send the user turn that preceded an interrupted assistant message,
+  // dropping the failed pair first so the transcript doesn't accumulate dead turns.
+  function retryFromMessage(assistantId: string) {
+    if (isSending) return;
+    const index = messages.findIndex((m) => m.id === assistantId);
+    if (index < 0) return;
+    let userIndex = -1;
+    for (let i = index - 1; i >= 0; i -= 1) {
+      if (messages[i].role === "user") {
+        userIndex = i;
+        break;
+      }
+    }
+    if (userIndex < 0) return;
+    const prompt = messages[userIndex].content;
+    if (!prompt.trim()) return;
+    const failedUserId = messages[userIndex].id;
+    setMessages((prev) => prev.filter((m) => m.id !== assistantId && m.id !== failedUserId));
+    void sendMessage(prompt);
   }
 
   function clearChat() {
@@ -467,6 +528,15 @@ export function AgentScreen({
       if (container) container.scrollTop += container.scrollHeight - previousHeight;
     });
   }
+
+  const lastMessage = messages[messages.length - 1];
+  const showFollowUps =
+    !isSending &&
+    !isStreaming &&
+    lastMessage?.role === "assistant" &&
+    Boolean(lastMessage.content) &&
+    !lastMessage.interrupted &&
+    followUpPrompts.length > 0;
 
   const capacityTone = briefing.capacity >= 45 ? "steady" : briefing.capacity >= 25 ? "watch" : "risk";
   const riskLabel = briefing.carryoverRisk >= 50 ? "High carryover risk" : briefing.carryoverRisk >= 25 ? "Watch carryover" : "Low carryover risk";
@@ -592,10 +662,37 @@ export function AgentScreen({
                       <span>{m.analysisSummary}</span>
                     </div>
                   )}
+                  {m.interrupted && !isCurrentStream && (
+                    <div className="agent-retry-row">
+                      <button
+                        type="button"
+                        className="agent-retry-button"
+                        onClick={() => retryFromMessage(m.id)}
+                        disabled={isSending}
+                      >
+                        <RefreshCw size={13} /> Retry
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             );
           })}
+
+          {showFollowUps && (
+            <div className="agent-followups" aria-label="Suggested follow-up questions">
+              {followUpPrompts.map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  className="agent-followup-chip"
+                  onClick={() => handleSuggested(prompt)}
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          )}
 
           {isSending && !streamingMessageId && (
             <div className="agent-progress" role="status">
@@ -631,15 +728,27 @@ export function AgentScreen({
             disabled={isSending}
             rows={1}
           />
-          <button
-            className="agent-send"
-            onClick={handleSend}
-            disabled={!input.trim() || isSending}
-            title="Send"
-            aria-label="Send message"
-          >
-            <Send size={16} />
-          </button>
+          {isStreaming ? (
+            <button
+              className="agent-send agent-stop"
+              type="button"
+              onClick={handleStop}
+              title="Stop generating"
+              aria-label="Stop generating"
+            >
+              <Square size={15} />
+            </button>
+          ) : (
+            <button
+              className="agent-send"
+              onClick={handleSend}
+              disabled={!input.trim() || isSending}
+              title="Send"
+              aria-label="Send message"
+            >
+              <Send size={16} />
+            </button>
+          )}
         </div>
         <div className="agent-composer-meta">
           <span><Gauge size={13} /> Using activity, calendar, blocks, and corrections</span>
