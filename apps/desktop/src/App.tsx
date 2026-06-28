@@ -78,6 +78,7 @@ export function App() {
         setVisualContextEnabled(data.visualContextEnabled ?? false);
         setVisualContextInsights(data.visualContextInsights ?? []);
         setAiConfig(data.aiConfig ?? null);
+        setRetentionDays(data.retentionDays ?? null);
         setManagerSummaryText(data.managerSummaryText ?? null);
         setGeneratedNarrative(data.generatedNarrative ?? null);
         setLastNarrativeAutoRunDate(data.lastNarrativeAutoRunDate ?? null);
@@ -111,6 +112,9 @@ export function App() {
   );
   const [aiConfig, setAiConfig] = useState<AIConfig | null>(
     () => persistedSnapshot?.aiConfig ?? null
+  );
+  const [retentionDays, setRetentionDays] = useState<number | null>(
+    () => persistedSnapshot?.retentionDays ?? null
   );
   const [visualContextInsights, setVisualContextInsights] = useState<VisualContextInsight[]>(
     () => persistedSnapshot?.visualContextInsights ?? []
@@ -184,6 +188,7 @@ export function App() {
     generatedNarrative,
     lastNarrativeAutoRunDate,
     paused,
+    retentionDays,
     isDemoMode,
   });
 
@@ -240,6 +245,22 @@ export function App() {
         .slice(-24);
     });
   }, [snapshot, blocks.length, isDemoMode]);
+
+  // Retention policy: auto-expire raw active-window samples older than the
+  // user-chosen window (null = keep everything). Sessions and work blocks already
+  // derived from these samples are untouched — only the raw rows expire. The effect
+  // re-runs as samples accrue; the functional update returns the same reference
+  // when nothing crosses the cutoff, so this never loops. The discrete policy change
+  // is audited in `changeRetentionDays`; the per-sample expiry is not logged (it
+  // would flood the capped audit trail as samples continuously age past the cutoff).
+  useEffect(() => {
+    if (isDemoMode || retentionDays === null) return;
+    const cutoff = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
+    setActiveWindowSamples((current) => {
+      const kept = current.filter((sample) => new Date(sample.timestamp).getTime() >= cutoff);
+      return kept.length === current.length ? current : kept;
+    });
+  }, [isDemoMode, retentionDays, activeWindowSamples]);
 
   const { classificationStatus, classificationError, classifyActiveWindowSessions, resetClassification } =
     useClassification({
@@ -551,6 +572,30 @@ export function App() {
     ].slice(-1000));
   }
 
+  // User-initiated retention-window change. Logged once as a discrete privacy
+  // action (the background per-sample expiry deliberately stays unlogged).
+  function changeRetentionDays(value: number | null) {
+    setRetentionDays(value);
+    if (isDemoMode) return;
+    setAuditEvents((current) => [
+      ...current,
+      createAuditEvent({
+        type: "retention_policy",
+        source: "privacy_control",
+        title: "Activity retention updated",
+        summary: value === null
+          ? "Automatic sample expiry disabled — samples are kept until reset"
+          : `Active-window samples now auto-expire after ${value} days`,
+        privacy_level: "local_only",
+        details: {
+          retention_days: value,
+          stored_locally: true,
+          sent_to_cloud: false
+        }
+      })
+    ].slice(-1000));
+  }
+
   function addCorrection(correction: Omit<UserCorrection, "correction_id" | "timestamp">) {
     const timestamp = new Date().toISOString();
     const fullCorrection = {
@@ -712,6 +757,7 @@ export function App() {
     setVisualContextEnabled(true);
     setVisualContextInsights([]);
     setVisualContextAttemptedSessionIds([]);
+    setRetentionDays(null);
     setManagerSummaryText(null);
     setGeneratedNarrative(null);
     setLastNarrativeAutoRunDate(null);
@@ -859,6 +905,8 @@ export function App() {
         onImportOutlookIcs={importOutlookIcs}
         aiConfig={aiConfig}
         setAiConfig={setAiConfig}
+        retentionDays={retentionDays}
+        setRetentionDays={changeRetentionDays}
         classificationStatus={classificationStatus}
         classificationError={classificationError}
         visualContextStatus={visualContextStatus}

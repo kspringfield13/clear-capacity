@@ -4,6 +4,7 @@ import type { PersistedNarrativeRecord } from "../../services/localStore";
 import { generateWeeklyNarrative } from "../../../../../packages/inference/src/capacity";
 import { displaySafeNarrative, replaceIsoWeekIds } from "../../lib/date";
 import { formatAuditTime } from "../../lib/format";
+import { downloadTextFile } from "../../lib/dataExport";
 import { EmptyState } from "../common/EmptyState";
 
 export function NarrativeScreen({
@@ -40,13 +41,7 @@ export function NarrativeScreen({
   function handleDownload() {
     const header = `Capacity Narrative — ${weekRangeLabel}\n${"─".repeat(48)}\n\n`;
     const slug = weekRangeLabel.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
-    const blob = new Blob([header + managerText], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `capacity-narrative-${slug}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadTextFile(`capacity-narrative-${slug}.txt`, header + managerText, "text/plain");
   }
 
   if (!hasNarrativeEvidence) {

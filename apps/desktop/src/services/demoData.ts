@@ -385,6 +385,7 @@ export function createDemoState(reference = new Date()): PersistedAppState {
     },
     lastNarrativeAutoRunDate: now.toISOString().slice(0, 10),
     paused: false,
-    aiConfig: null
+    aiConfig: null,
+    retentionDays: 30
   };
 }

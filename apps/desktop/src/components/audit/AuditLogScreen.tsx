@@ -34,7 +34,10 @@ export function AuditLogScreen({ auditEvents }: { auditEvents: AuditEvent[] }) {
     copilot: (event) => event.type === "review_copilot",
     forecast: (event) => event.type === "forecast_agent",
     narrative: (event) => event.type === "narrative_generation",
-    privacy: (event) => event.type === "privacy_pause" || event.type === "privacy_resume"
+    privacy: (event) =>
+      event.type === "privacy_pause" ||
+      event.type === "privacy_resume" ||
+      event.type === "retention_policy"
   };
   const filteredEvents = auditEvents
     .filter((event) => filterMatches[filter](event))

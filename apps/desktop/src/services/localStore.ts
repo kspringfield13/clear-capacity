@@ -84,10 +84,16 @@ export interface PersistedAppState {
   lastNarrativeAutoRunDate: string | null;
   paused: boolean;
   aiConfig: AIConfig | null;
+  /** Auto-expiry window (days) for raw activity samples; null = keep everything. */
+  retentionDays: number | null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function parseRetentionDays(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : null;
 }
 
 function parseForecastHistory(value: unknown): PersistedForecastRecord[] {
@@ -145,7 +151,8 @@ export async function readPersistedState(): Promise<PersistedAppState | null> {
         generatedNarrative: isRecord(parsed.generatedNarrative) && isRecord(parsed.generatedNarrative.narrative) ? (parsed.generatedNarrative as unknown as PersistedNarrativeRecord) : null,
         lastNarrativeAutoRunDate: typeof parsed.lastNarrativeAutoRunDate === "string" ? parsed.lastNarrativeAutoRunDate : null,
         paused: typeof parsed.paused === "boolean" ? parsed.paused : true,
-        aiConfig: isRecord(parsed.aiConfig) ? (parsed.aiConfig as unknown as AIConfig) : null
+        aiConfig: isRecord(parsed.aiConfig) ? (parsed.aiConfig as unknown as AIConfig) : null,
+        retentionDays: parseRetentionDays(parsed.retentionDays)
       };
     }
     const data = await store.get<unknown>(STATE_KEY);
@@ -190,7 +197,8 @@ export async function readPersistedState(): Promise<PersistedAppState | null> {
       lastNarrativeAutoRunDate:
         typeof parsed.lastNarrativeAutoRunDate === "string" ? parsed.lastNarrativeAutoRunDate : null,
       paused: typeof parsed.paused === "boolean" ? parsed.paused : true,
-      aiConfig: isRecord(parsed.aiConfig) ? (parsed.aiConfig as unknown as AIConfig) : null
+      aiConfig: isRecord(parsed.aiConfig) ? (parsed.aiConfig as unknown as AIConfig) : null,
+      retentionDays: parseRetentionDays(parsed.retentionDays)
     };
   } catch {
     return null;

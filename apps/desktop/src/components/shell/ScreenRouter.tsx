@@ -51,6 +51,8 @@ interface ScreenRouterProps {
   onImportOutlookIcs: (file: File) => void;
   aiConfig: AIConfig | null;
   setAiConfig: (value: AIConfig | null) => void;
+  retentionDays: number | null;
+  setRetentionDays: (value: number | null) => void;
   // ledger screen
   classificationStatus: "idle" | "classifying" | "error";
   classificationError: string | null;
@@ -117,6 +119,8 @@ export function ScreenRouter({
   onImportOutlookIcs,
   aiConfig,
   setAiConfig,
+  retentionDays,
+  setRetentionDays,
   classificationStatus,
   classificationError,
   visualContextStatus,
@@ -184,6 +188,10 @@ export function ScreenRouter({
           aiConfig={aiConfig}
           setAiConfig={setAiConfig}
           hasClassification={blocks.length > 0}
+          blocks={blocks}
+          auditEvents={auditEvents}
+          retentionDays={retentionDays}
+          setRetentionDays={setRetentionDays}
         />
       )}
       {active === "ledger" && (

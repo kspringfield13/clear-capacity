@@ -107,7 +107,8 @@ export function auditTypeLabel(type: AuditEventType) {
     forecast_agent: "Forecast",
     visual_context: "Visual",
     privacy_pause: "Privacy",
-    privacy_resume: "Privacy"
+    privacy_resume: "Privacy",
+    retention_policy: "Privacy"
   };
 
   return labels[type];

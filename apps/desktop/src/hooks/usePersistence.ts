@@ -29,6 +29,7 @@ interface PersistableState {
   lastNarrativeAutoRunDate: string | null;
   paused: boolean;
   aiConfig: AIConfig | null;
+  retentionDays: number | null;
   isDemoMode: boolean;
 }
 
@@ -58,6 +59,7 @@ export function usePersistence(state: PersistableState) {
     persistData.lastNarrativeAutoRunDate,
     persistData.paused,
     persistData.aiConfig,
+    persistData.retentionDays,
     isDemoMode,
   ]);
 }
