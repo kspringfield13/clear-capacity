@@ -1428,7 +1428,7 @@ fn configure_tray(app: &tauri::App) -> tauri::Result<()> {
     )?;
     let pause_tracking =
         MenuItem::with_id(app, "pause-tracking", "Pause Tracking", true, None::<&str>)?;
-    let preferences = MenuItem::with_id(app, "preferences", "Preferences", true, None::<&str>)?;
+    let preferences = MenuItem::with_id(app, "preferences", "Settings", true, None::<&str>)?;
     let reset_review = MenuItem::with_id(
         app,
         "reset-review",
