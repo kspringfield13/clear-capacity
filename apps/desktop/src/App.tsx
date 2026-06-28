@@ -46,6 +46,7 @@ import {
   type ProactiveAlertSettings,
 } from "./lib/proactiveAlerts";
 import { useTrayStatus } from "./hooks/useTrayStatus";
+import { useToasts } from "./hooks/useToasts";
 import { screenLabels } from "./lib/ui";
 import {
   MAX_VISUAL_CONTEXT_CAPTURES_PER_DAY,
@@ -159,6 +160,10 @@ export function App() {
   const [windowMode, setWindowMode] = useState<WindowMode>(() =>
     isDemoMode && new URLSearchParams(window.location.search).get("mode") === "compact" ? "compact" : "large"
   );
+
+  // Transient app-level feedback (success/error/retry). Queue lives here so any
+  // handler or effect can emit one; the visual stack is rendered once in AppShell.
+  const { toasts, pushToast, dismissToast } = useToasts();
 
   // Hydrate theme from persisted preference on mount; the ref prevents the
   // write-back effect from clobbering the saved value before hydration.
@@ -359,6 +364,44 @@ export function App() {
     setVisualContextInsights,
     setAuditEvents,
   });
+
+  // Surface the otherwise-swallowed AI error states as transient toasts, fired once
+  // per failure cycle (the ref tracks the last-seen value, including the null reset
+  // each new attempt produces, so an unchanged error never re-announces). Forecast
+  // and narrative carry a Retry that re-runs their generate/regenerate handler;
+  // visual-context capture is an opportunistic background pass with no idempotent
+  // manual retry, so its toast is informational only.
+  const prevForecastError = useRef<string | null>(null);
+  useEffect(() => {
+    if (forecastError && forecastError !== prevForecastError.current) {
+      pushToast({
+        tone: "error",
+        message: forecastError,
+        action: { label: "Retry", onClick: () => void generateForecastAgent() },
+      });
+    }
+    prevForecastError.current = forecastError;
+  }, [forecastError, pushToast, generateForecastAgent]);
+
+  const prevNarrativeError = useRef<string | null>(null);
+  useEffect(() => {
+    if (narrativeGenerationError && narrativeGenerationError !== prevNarrativeError.current) {
+      pushToast({
+        tone: "error",
+        message: narrativeGenerationError,
+        action: { label: "Retry", onClick: () => void regenerateNarrative("manual") },
+      });
+    }
+    prevNarrativeError.current = narrativeGenerationError;
+  }, [narrativeGenerationError, pushToast, regenerateNarrative]);
+
+  const prevVisualContextError = useRef<string | null>(null);
+  useEffect(() => {
+    if (visualContextError && visualContextError !== prevVisualContextError.current) {
+      pushToast({ tone: "error", message: visualContextError });
+    }
+    prevVisualContextError.current = visualContextError;
+  }, [visualContextError, pushToast]);
 
   // Workload-derived inputs for the proactive-alert rules — all local, all
   // metrics/counts. Time-of-day fields are injected by the hook at eval time.
@@ -896,8 +939,13 @@ export function App() {
     setImportError(null);
     const reader = new FileReader();
 
+    const failImport = (message: string) => {
+      setImportError(message);
+      pushToast({ tone: "error", message });
+    };
+
     reader.onerror = () => {
-      setImportError("Could not read that Outlook export.");
+      failImport("Could not read that Outlook export.");
     };
 
     reader.onload = () => {
@@ -906,7 +954,7 @@ export function App() {
         const importedEvents = parseOutlookIcs(content);
 
         if (importedEvents.length === 0) {
-          setImportError("No usable calendar events were found in that .ics file.");
+          failImport("No usable calendar events were found in that .ics file.");
           return;
         }
 
@@ -954,8 +1002,12 @@ export function App() {
             }
           })
         ].slice(-1000));
+        pushToast({
+          tone: "success",
+          message: `${importedEvents.length} event${importedEvents.length === 1 ? "" : "s"} imported`,
+        });
       } catch {
-        setImportError("The .ics file could not be parsed.");
+        failImport("The .ics file could not be parsed.");
       }
     };
 
@@ -1015,6 +1067,8 @@ export function App() {
       theme={theme}
       setTheme={setTheme}
       demoMode={isDemoMode}
+      toasts={toasts}
+      onDismissToast={dismissToast}
     >
       <ScreenRouter
         active={active}
@@ -1082,6 +1136,7 @@ export function App() {
         auditEvents={auditEvents}
         todayKey={todayKey}
         currentWeekRangeLabel={currentWeekRangeLabel}
+        pushToast={pushToast}
       />
     </AppShell>
   );

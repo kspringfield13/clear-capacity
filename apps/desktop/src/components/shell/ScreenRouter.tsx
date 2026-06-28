@@ -27,6 +27,7 @@ import { SensitiveReviewScreen } from "../audit/SensitiveReviewScreen";
 import { AgentScreen } from "../agent/AgentScreen";
 import type { OnboardingStep } from "../common/OnboardingCard";
 import type { ProactiveAlert, ProactiveAlertSettings } from "../../lib/proactiveAlerts";
+import type { PushToast } from "../../hooks/useToasts";
 
 interface ScreenRouterProps {
   active: Screen;
@@ -106,6 +107,8 @@ interface ScreenRouterProps {
   // agent screen
   todayKey: string;
   currentWeekRangeLabel: string;
+  // transient feedback
+  pushToast: PushToast;
 }
 
 export function ScreenRouter({
@@ -174,6 +177,7 @@ export function ScreenRouter({
   auditEvents,
   todayKey,
   currentWeekRangeLabel,
+  pushToast,
 }: ScreenRouterProps) {
   if (windowMode === "compact") {
     return (
@@ -261,6 +265,7 @@ export function ScreenRouter({
           onConfirm={onConfirm}
           onExclude={onExclude}
           onRelabel={onRelabel}
+          pushToast={pushToast}
         />
       )}
       {active === "weekly" && (
@@ -313,6 +318,7 @@ export function ScreenRouter({
           managerSummaryText={managerSummaryText}
           onManagerSummaryChange={onManagerSummaryChange}
           onRegenerate={onRegenerate}
+          pushToast={pushToast}
         />
       )}
       {active === "audit" && <AuditLogScreen auditEvents={auditEvents} />}
@@ -333,6 +339,7 @@ export function ScreenRouter({
           todayKey={todayKey}
           currentWeekRangeLabel={currentWeekRangeLabel}
           aiConfig={aiConfig}
+          pushToast={pushToast}
         />
       )}
     </>

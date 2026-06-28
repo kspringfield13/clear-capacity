@@ -5,6 +5,7 @@ import { generateWeeklyNarrative } from "../../../../../packages/inference/src/c
 import { displaySafeNarrative, replaceIsoWeekIds } from "../../lib/date";
 import { formatAuditTime } from "../../lib/format";
 import { downloadTextFile } from "../../lib/dataExport";
+import type { PushToast } from "../../hooks/useToasts";
 import { EmptyState } from "../common/EmptyState";
 
 export function NarrativeScreen({
@@ -16,7 +17,8 @@ export function NarrativeScreen({
   generationError,
   managerSummaryText,
   onManagerSummaryChange,
-  onRegenerate
+  onRegenerate,
+  pushToast
 }: {
   narrative: ReturnType<typeof generateWeeklyNarrative>;
   generatedNarrative: PersistedNarrativeRecord | null;
@@ -27,6 +29,7 @@ export function NarrativeScreen({
   managerSummaryText: string | null;
   onManagerSummaryChange: (value: string) => void;
   onRegenerate: () => void;
+  pushToast: PushToast;
 }) {
   const [copied, setCopied] = useState(false);
   const displayNarrative = displaySafeNarrative(generatedNarrative?.narrative ?? narrative, weekRangeLabel);
@@ -167,6 +170,7 @@ export function NarrativeScreen({
               void navigator.clipboard?.writeText(markdownContent);
               setCopied(true);
               window.setTimeout(() => setCopied(false), 1400);
+              pushToast({ tone: "success", message: "Copied to clipboard" });
             }}
           >
             <ClipboardCopy size={18} />

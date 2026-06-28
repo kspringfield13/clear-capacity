@@ -8421,3 +8421,120 @@ html[data-theme="dark"] .agent-active .pause-button:hover {
   color: var(--text-subtle);
   line-height: 1.5;
 }
+
+/* Toast notifications — transient app-level success/error/info feedback.
+   The host is a single polite live region pinned bottom-right (always in the DOM
+   so screen readers observe additions). The slide-in is auto-zeroed by the global
+   prefers-reduced-motion reset above. */
+.toast-host {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(360px, calc(100vw - 40px));
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 12px 12px 14px;
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--text-subtle);
+  border-radius: 10px;
+  background: var(--surface-elevated);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.4;
+  animation: toast-slide-in 0.18s ease;
+}
+
+.toast-success {
+  border-left-color: var(--success);
+}
+
+.toast-error {
+  border-left-color: var(--danger);
+}
+
+.toast-info {
+  border-left-color: var(--info);
+}
+
+.toast-icon {
+  flex-shrink: 0;
+}
+
+.toast-success .toast-icon {
+  color: var(--success);
+}
+
+.toast-error .toast-icon {
+  color: var(--danger);
+}
+
+.toast-info .toast-icon {
+  color: var(--info);
+}
+
+.toast-message {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.toast-action {
+  flex-shrink: 0;
+  padding: 5px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.toast-action:hover {
+  background: var(--hover-background, var(--surface-muted));
+  border-color: var(--text-subtle);
+}
+
+.toast-close {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-subtle);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.toast-close:hover {
+  background: var(--surface-muted);
+  color: var(--text);
+}
+
+@keyframes toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
