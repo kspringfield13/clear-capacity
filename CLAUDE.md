@@ -4,31 +4,65 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-ClearCapacity is a local-first macOS workload intelligence app. It analyzes calendar events and foreground-app activity to estimate analyst capacity. Built as a Tauri 2 desktop app (Rust shell + React 18 frontend) with shared TypeScript packages.
+ClearCapacity is a **local-first macOS workload intelligence app** for analysts. It turns calendar events and foreground-app activity into reviewable "work blocks," then produces an explainable estimate of weekly capacity and reliable headroom for new work. Everything is reviewable: every inference cites evidence, every user-visible action is recorded in an audit trail, and AI assistance is optional and opt-in.
 
-**Monorepo layout:**
-- `apps/desktop/src/` — React UI (components, services, hooks, lib)
-- `apps/desktop/src-tauri/src/lib.rs` — Tauri commands (Rust); handles window management, OS integration, AI credential pass-through
-- `packages/domain/src/models.ts` — shared TypeScript types (`WorkBlock`, `ActivitySession`, `AIConfig`, etc.)
-- `packages/inference/src/` — capacity calculation and session grouping logic
-- `packages/integrations/src/calendar/` — Outlook `.ics` parser
+It is an **early prototype**, not a production monitoring or workforce-management system. Capacity estimates are planning aids meant to be reviewed by the user before they are shared.
+
+**Stack:** Tauri 2 desktop app — Rust shell (menu-bar/tray app) + React 18 + TypeScript frontend (Vite 8), with shared TypeScript packages in a workspace-style monorepo.
+
+## Monorepo layout
+
+```
+apps/desktop/
+  src/                      # React UI
+    App.tsx                 # Root: owns top-level state, wires hooks → ScreenRouter
+    main.tsx                # React entry point
+    components/             # UI, grouped by feature area (see "Screens" below)
+    hooks/                  # Stateful logic: persistence, capture, AI calls, derivations
+    services/               # AI prompts/schemas, provider presets, local store, demo data
+    lib/                    # Pure helpers: dates, formatting, audit, blocks, constants, types
+    styles.css              # Geist design tokens + theme variables
+  src-tauri/
+    src/lib.rs              # All Tauri commands (Rust): window mgmt, capture, AI pass-through
+    src/main.rs             # Binary entry → calls clear_capacity_lib::run()
+    tauri.conf.json         # Window config, bundle settings (port 5173 hardcoded)
+    capabilities/default.json  # Tauri permission capabilities
+    Cargo.toml
+
+packages/
+  domain/src/
+    models.ts               # Shared TS types (WorkBlock, ActivitySession, AIConfig, ...)
+    taxonomy.ts             # Category/mode/status vocabularies
+  inference/src/
+    capacity.ts             # Capacity snapshot, forecast accuracy, correction-bias analysis, narrative
+    sessionizer/activeWindow.ts  # Group raw window samples → ActivitySession[]
+  integrations/src/
+    calendar/outlookIcs.ts       # Outlook .ics parser → OutlookCalendarEvent[] / WorkBlock[]
+    calendar/calendarSource.ts   # Provider-agnostic CalendarSource interface (.ics wired; OAuth stubbed)
+    git/gitLog.ts                # git-log export parser → planned-work signal (RawEvent)
+    git/fixture.ts               # Sample git log for exercising the parser
+    import/rawEvents.ts          # Generic RawEvent import entry point
+    internal/normalize.ts        # Shared hashing + capacity-from-span helpers
+```
+
+Frontend code imports shared packages via **relative paths** (e.g. `../../../packages/domain/src/models`), not package names. There is no separate build step for the packages — `tsc -b` + Vite compile them in place via the `include` globs in `tsconfig.json`.
 
 ## Build & dev commands
 
 ```bash
-# Web UI only (Vite on 127.0.0.1:5173)
+# Web UI only (Vite on 127.0.0.1:5173) — fastest loop, but no native capture/AI
 npm run dev
 
 # Full desktop app (Tauri + Vite) — use this for most feature work
 npm run desktop:dev
 
-# Production build (tsc type-check + Vite bundle)
+# Production web build (tsc type-check + Vite bundle) — the main validation gate
 npm run build
 
-# Demo mode (synthetic data, doesn't touch user state)
+# Demo mode (synthetic data via ?demo=1&screen=weekly; never touches real user state)
 npm run demo
 
-# Desktop production build (can constrain with CARGO_BUILD_JOBS=2)
+# Desktop production build (constrain parallelism with CARGO_BUILD_JOBS=2)
 npm run desktop:build
 ```
 
@@ -37,39 +71,89 @@ npm run desktop:build
 Run all three before opening a PR:
 
 ```bash
-npm run build                                                    # type errors + bundle
-npm audit --audit-level=moderate                                  # dependency vulnerabilities
+npm run build                                                   # type errors + bundle (primary gate)
+npm audit --audit-level=moderate                                 # dependency vulnerabilities
 cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml   # Rust compilation
 ```
+
+A `Stop` hook in `.claude/settings.json` runs `npm run build` automatically. `npm run build` is the authoritative gate — if it passes, types and the bundle are clean.
 
 ## Environment setup
 
 ```bash
 npm install
-cp .env.example .env   # add OPENAI_API_KEY to enable AI features
+cp .env.example .env   # add OPENAI_API_KEY to enable AI features at startup
 ```
 
-Optional env vars (in `.env`):
-- `OPENAI_API_KEY` — enables AI features; loaded by Tauri at startup, never exposed to the Vite bundle
+Optional env vars (in `.env`, loaded by Tauri via `dotenvy` at startup — never exposed to the Vite bundle):
+- `OPENAI_API_KEY` — seeds AI features at startup
 - `OPENAI_MODEL` / `OPENAI_VISION_MODEL` — override default model names
 
-## Gotchas
+AI credentials can also be entered at runtime in the Settings screen (per provider); they flow through Tauri IPC to Rust. See "AI integration."
 
-- **`DEVELOPER_DIR`** — Desktop scripts set this to `/Library/Developer/CommandLineTools` automatically to avoid requiring full Xcode. Override by exporting it before running.
-- **Port 5173** — Hardcoded in both `vite.config.ts` and `tauri.conf.json`. Don't change one without the other.
-- **No test suite** — Testing is manual. Use `npm run dev` or `npm run desktop:dev` to validate changes.
-- **Demo mode** — `npm run demo` opens with `?demo=1&screen=weekly`. Synthetic data only; "Reset Prototype Data" in demo mode is safe.
-- **LocalStorage** — Prototype data stored unencrypted in Tauri webview storage. Users reset via the UI button.
-- **Outlook calendar** — Requires manual `.ics` export; no automated sync. Parsed locally, no network call.
+## Architecture & data flow
 
-## Design system
+The pipeline is **capture → sessionize → classify → review → model → summarize**, with the user able to correct at every step:
 
-Uses Vercel Geist design tokens (colors, spacing, typography). See `design.md` for the token reference and `apps/desktop/src/styles.css` for the full token definitions. The UI supports light and dark themes via CSS variables.
+1. **Capture** — `src-tauri/src/lib.rs` samples the macOS foreground window (`sample_active_window`) on a timer; the React `useActiveWindow` hook collects `ActiveWindowSample[]`. Outlook `.ics` files are imported and parsed locally (`packages/integrations/calendar/outlookIcs.ts`).
+2. **Sessionize** — `packages/inference/sessionizer/activeWindow.ts` groups contiguous samples into `ActivitySession[]`.
+3. **Classify** — sessions + calendar events become `WorkBlock[]` (category, work mode, planned status, project, stakeholder, confidence, evidence). Optional AI classification refines labels (`useClassification` → `classify_active_window_sessions_with_openai`).
+4. **Review** — the user confirms / relabels / excludes blocks. Every edit is a `UserCorrection`; the optional Review Copilot proposes cleanup actions the user approves before they apply.
+5. **Model** — `packages/inference/capacity.ts` computes the `WeeklyCapacitySnapshot` (allocated %, deep-work %, reliable-new-work capacity, WIP/context-switch scores, etc.), plus forecast-accuracy scoring and correction-bias analysis.
+6. **Summarize** — weekly narrative + AI forecast for next week.
 
-## Privacy constraints
+**State ownership:** `App.tsx` is the single source of truth. It composes feature hooks and passes everything down through `ScreenRouter`. Persistence is via `services/localStore.ts` (Tauri Store plugin / webview storage), hydrated on load by `usePersistence`.
 
-Raw activity data (window titles, app names) stays local. Window titles are treated as sensitive — don't log them or include them in any network call without explicit user review. The audit trail in `packages/domain/src/models.ts` (`AuditEvent`) records all user-visible actions for explainability.
+### Screens (`lib/types.ts` `Screen`, routed in `components/shell/ScreenRouter.tsx`)
+
+Organized into primary sections (see `lib/ui.ts`):
+- **Today** — `daily` (DailyReviewScreen): review queue + Review Copilot.
+- **Week** — `weekly` (WeeklyCapacityScreen), `forecast` (ForecastScreen + accuracy track record), `narrative` (NarrativeScreen / weekly summary).
+- **Agent** — `agent` (AgentScreen): conversational Q&A over your workload.
+- **History** — `ledger` (Activity ledger + heatmap), `corrections` (edit log), `audit` (AuditLogScreen), `sensitive` (Flagged Captures review queue).
+- **Other** — `setup` (Settings: AI config, calendar import, retention), plus a `compact` window mode (`CompactWidget`) for the menu-bar quick view.
 
 ## AI integration
 
-Multi-provider abstraction (`AIConfigRequest` in `lib.rs`) supports Anthropic and OpenAI. Provider selection, api_key, base_url, and model flow from the UI through Tauri IPC to the Rust layer — credentials never touch the frontend bundle.
+Multi-provider, OpenAI-compatible abstraction. Presets live in `services/aiProviders.ts`; the union is `AIProvider = "openai" | "grok" | "claude" | "deepseek" | "custom"` (`packages/domain/models.ts`). Provider, `apiKey`, `baseUrl`, `model`, and `visionModel` (`AIConfig`) flow from the Settings UI through Tauri IPC to Rust — **credentials never touch the frontend bundle**; the Rust layer makes the actual HTTP call (`reqwest`).
+
+AI-backed Tauri commands (all in `lib.rs`, all optional features):
+- `classify_active_window_sessions_with_openai` — refine work-block labels
+- `generate_review_copilot_suggestions_with_openai` — Today review suggestions
+- `generate_forecast_agent_with_openai` — next-week capacity forecast
+- `generate_weekly_narrative_with_openai` — manager-ready summary
+- `capture_visual_context_with_openai` — screenshot-derived context (opt-in only)
+- `chat_with_agent` — conversational agent
+- `ai_complete` / `test_ai_connection` — generic completion + connectivity check
+
+Each command has a matching `services/*Prompt.ts` (and a `*Schema.ts` for structured output) on the frontend, invoked through a dedicated hook (`useForecastAgent`, `useNarrativeGeneration`, `useReviewCopilot`, `useVisualContext`, `useClassification`). `aiProviders.ts` also auto-upgrades retired default model IDs (`upgradeRetiredAppDefault`). When changing model defaults, update the presets there.
+
+## Privacy constraints
+
+This is a core product value — treat it as a hard constraint:
+- **Window titles are sensitive.** Don't log them or include them in any network call without explicit user review. Raw activity data (window titles, app names) stays local.
+- **Visual context (screenshots) is opt-in only** and rate-limited via `lib/constants.ts` (`MAX_VISUAL_CONTEXT_CAPTURES_PER_DAY`, `MIN_VISUAL_CONTEXT_SESSION_MINUTES`, `MIN_VISUAL_CONTEXT_GAP_MS`); flagged/sensitive captures land in the `sensitive` review queue.
+- **Audit everything user-visible.** `AuditEvent` (`packages/domain/models.ts`, helpers in `lib/audit.ts`) records actions for explainability. New user-facing actions should emit an audit event.
+- **Retention** is user-controlled (`retentionDays`); `lib/dataExport.ts` backs export/retention controls.
+- See `docs/PRIVACY.md` for the full model.
+
+## Design system
+
+Vercel **Geist** design tokens (colors, spacing, typography) with light/dark themes via CSS variables. Token reference is in `design.md`; full definitions in `apps/desktop/src/styles.css`. Use existing tokens/variables rather than hardcoded values. Icons come from `lucide-react`.
+
+## Gotchas
+
+- **No automated test suite.** Testing is manual — use `npm run dev` / `npm run desktop:dev` to validate, and the `/verify` skill to drive the running app. `npm run build` is the type/bundle gate.
+- **Port 5173** is hardcoded in both `vite.config.ts` and `tauri.conf.json`. Change both or neither.
+- **`DEVELOPER_DIR`** — desktop scripts default it to `/Library/Developer/CommandLineTools` to avoid requiring full Xcode. Override by exporting it first.
+- **Demo mode** — `?demo=1` (or `npm run demo`) uses synthetic data only; "Reset Prototype Data" is safe there.
+- **LocalStorage / webview storage** — prototype data is stored unencrypted. Users reset via the UI button.
+- **Outlook calendar** — manual `.ics` export only; parsed locally, no network call. The `CalendarSource` OAuth path (`calendar/calendarSource.ts`) is a disabled stub.
+- **Shared-package edits** — changes in `packages/` are picked up directly (relative imports, no rebuild), but they must satisfy `tsc -b`.
+
+## Repository conventions & docs
+
+- **`STATUS.md`** drives an autonomous improvement loop (the `/improve` skill): it takes the first unchecked task from the **Next** backlog, implements a single loop-safe slice (scope limited to `apps/desktop/src/` and `packages/`), gates on `npm run build`, then records the change. If you touch this flow, keep `STATUS.md` accurate.
+- **`CHANGELOG.md` / `NOTES.md` / `DIGEST.md` / `docs/digests/`** track ongoing change history and design notes.
+- **`design.md`** — design-token reference. **`README.md`** — user-facing overview. **`CONTRIBUTING.md`** — contribution notes. **`docs/PRIVACY.md`** — privacy model.
+- Commit messages in history follow short imperative summaries (often `improve: …` for loop commits); match the surrounding style.
