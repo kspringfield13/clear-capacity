@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import {
   AlertCircle,
   CalendarCheck,
+  CalendarSync,
   Check,
   CheckCircle2,
   ChevronRight,
@@ -36,6 +37,12 @@ import {
   getAIProviderPreset,
   upgradeRetiredAppDefault
 } from "../../services/aiProviders";
+import { CALENDAR_PROVIDERS } from "../../../../../packages/integrations/src/calendar/calendarSource";
+
+// Automated (OAuth) calendar providers — disabled until the native connector
+// lands (see packages/integrations/src/calendar/calendarSource.ts). The .ics
+// file-import source stays available via the "Outlook calendar" row above.
+const OAUTH_CALENDAR_PROVIDERS = CALENDAR_PROVIDERS.filter((provider) => provider.connection === "oauth");
 
 interface TestConnectionResponse {
   provider: string;
@@ -281,6 +288,33 @@ export function SetupScreen({
             }}
           />
         </label>
+      </section>
+
+      <section className="settings-row">
+        <div className="settings-row-icon"><CalendarSync size={18} /></div>
+        <div>
+          <h2>Automated calendar sync</h2>
+          <p>Connect Google Calendar or Microsoft 365 to sync meetings automatically — no manual `.ics` export. Account connection runs through the native connector and is coming soon.</p>
+        </div>
+        <div className="settings-row-status">
+          <strong>Coming soon</strong>
+          <span>Manual import works today</span>
+        </div>
+        <div className="calendar-connect-options">
+          {OAUTH_CALENDAR_PROVIDERS.map((provider) => (
+            <button
+              key={provider.id}
+              className="settings-control"
+              type="button"
+              disabled
+              title={provider.description}
+              aria-label={`Connect ${provider.label} (coming soon)`}
+            >
+              <PlugZap size={15} />
+              <span>Connect {provider.label}</span>
+            </button>
+          ))}
+        </div>
       </section>
 
       <section className="settings-row">
