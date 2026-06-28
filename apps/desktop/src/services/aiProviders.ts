@@ -7,6 +7,14 @@ export interface AIProviderPreset {
   model: string;
   visionModel?: string;
   modelNote: string;
+  /** Helper text under the Base URL field. */
+  baseUrlNote: string;
+  /** Helper text under the optional Vision Model field. */
+  visionNote: string;
+  /** Recommended model IDs offered as click-to-fill chips under the Model field. */
+  modelSuggestions?: string[];
+  /** External provider model/docs reference, linked from the form header. */
+  docsUrl?: string;
   keyPlaceholder: string;
 }
 
@@ -18,6 +26,9 @@ export const AI_PROVIDER_PRESETS: AIProviderPreset[] = [
     model: "gpt-5.4-mini",
     visionModel: "gpt-5.4-mini",
     modelNote: "Fast, cost-conscious default with structured output and vision.",
+    baseUrlNote: "OpenAI's API endpoint. Change it only if you route through a proxy or Azure gateway.",
+    visionNote: "Model used for opt-in screenshot analysis. Leave blank to reuse the model above.",
+    docsUrl: "https://platform.openai.com/docs/models",
     keyPlaceholder: "sk-..."
   },
   {
@@ -27,6 +38,9 @@ export const AI_PROVIDER_PRESETS: AIProviderPreset[] = [
     model: "grok-4.3",
     visionModel: "grok-4.3",
     modelNote: "xAI's recommended general-purpose model, with structured output and vision.",
+    baseUrlNote: "xAI's OpenAI-compatible endpoint. The default works for hosted Grok.",
+    visionNote: "Model used for opt-in screenshot analysis. Leave blank to reuse the model above.",
+    docsUrl: "https://docs.x.ai/docs/models",
     keyPlaceholder: "xai-..."
   },
   {
@@ -35,6 +49,9 @@ export const AI_PROVIDER_PRESETS: AIProviderPreset[] = [
     baseUrl: "https://api.deepseek.com",
     model: "deepseek-v4-flash",
     modelNote: "DeepSeek's lower-cost V4 model for text and structured output.",
+    baseUrlNote: "DeepSeek's OpenAI-compatible endpoint. The default works for the hosted API.",
+    visionNote: "DeepSeek has no vision model — visual context stays unavailable for this provider.",
+    docsUrl: "https://api-docs.deepseek.com/quick_start/pricing",
     keyPlaceholder: "sk-..."
   },
   {
@@ -44,6 +61,9 @@ export const AI_PROVIDER_PRESETS: AIProviderPreset[] = [
     model: "claude-sonnet-4-6",
     visionModel: "claude-sonnet-4-6",
     modelNote: "Anthropic's balanced default for speed, intelligence, and vision.",
+    baseUrlNote: "Anthropic's API endpoint. Change it only if you route through a proxy or gateway.",
+    visionNote: "Model used for opt-in screenshot analysis. Leave blank to reuse the model above.",
+    docsUrl: "https://docs.anthropic.com/en/docs/about-claude/models",
     keyPlaceholder: "sk-ant-..."
   },
   {
@@ -52,6 +72,8 @@ export const AI_PROVIDER_PRESETS: AIProviderPreset[] = [
     baseUrl: "https://api.openai.com/v1",
     model: "",
     modelNote: "Enter a model ID supported by your OpenAI-compatible endpoint.",
+    baseUrlNote: "Your endpoint's base URL, including the version path (e.g. /v1) if it needs one.",
+    visionNote: "Optional vision-capable model ID, if your endpoint accepts image input.",
     keyPlaceholder: "API key"
   }
 ];
