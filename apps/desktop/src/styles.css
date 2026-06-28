@@ -1940,6 +1940,31 @@ h3 {
   background: rgba(239, 68, 68, 0.12);
 }
 
+/* Shared in-panel error text (InlineError) — one source for AI-op error rows. */
+.inline-error-text {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 10px 12px;
+  border: 1px solid #ffd7d6;
+  border-radius: var(--radius);
+  background: var(--red-soft);
+  color: #d8001b;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.inline-error-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* .narrative-screen uses gap: 0, so restore the spacing the old narrative-error
+   margin provided between the error row and the narrative layout below it. */
+.narrative-screen .error-row {
+  margin-bottom: 14px;
+}
+
 .session-list {
   display: grid;
   gap: 8px;
@@ -2656,14 +2681,6 @@ select {
   color: var(--text-subtle);
   font-size: 13px;
   line-height: 1.45;
-}
-
-.copilot-error {
-  padding: 9px;
-  border: 1px solid rgba(239, 68, 68, 0.28);
-  border-radius: var(--radius);
-  background: rgba(239, 68, 68, 0.1);
-  color: #fecaca !important;
 }
 
 .copilot-list {
@@ -3623,16 +3640,6 @@ select {
   padding-left: 16px;
 }
 
-.forecast-error {
-  padding: 10px 12px;
-  border: 1px solid rgba(239, 68, 68, 0.28);
-  border-radius: var(--radius);
-  background: rgba(239, 68, 68, 0.1);
-  color: #fecaca;
-  font-size: 13px;
-  line-height: 1.45;
-}
-
 .stacked-bar {
   display: flex;
   width: 100%;
@@ -3914,17 +3921,6 @@ select {
   color: var(--text-subtle);
   font-size: 11px;
   font-weight: 650;
-}
-
-.narrative-error {
-  margin: 0 0 14px;
-  padding: 12px 14px;
-  border: 1px solid rgba(239, 68, 68, 0.28);
-  border-radius: var(--radius);
-  background: rgba(239, 68, 68, 0.1);
-  color: #fecaca;
-  font-size: 13px;
-  line-height: 1.45;
 }
 
 .narrative-panel p {
@@ -5743,14 +5739,6 @@ select {
   color: var(--text-subtle);
 }
 
-.copilot-error,
-.forecast-error,
-.narrative-error {
-  border-color: #ffd7d6;
-  background: var(--red-soft);
-  color: #d8001b !important;
-}
-
 .error-retry {
   border-color: rgba(234, 0, 29, 0.35);
   color: #d8001b;
@@ -6343,14 +6331,6 @@ html[data-theme="dark"] .settings-control.is-on {
   background: var(--blue-soft);
 }
 
-html[data-theme="dark"] .copilot-error,
-html[data-theme="dark"] .forecast-error,
-html[data-theme="dark"] .narrative-error {
-  border-color: #5b2529;
-  background: var(--red-soft);
-  color: #ff8d91 !important;
-}
-
 html[data-theme="dark"] .bar-track,
 html[data-theme="dark"] .risk-track,
 html[data-theme="dark"] .stacked-bar {
@@ -6467,6 +6447,11 @@ html[data-theme="dark"] .error-retry {
 
 html[data-theme="dark"] .error-retry:hover {
   background: rgba(255, 141, 145, 0.1);
+}
+
+html[data-theme="dark"] .inline-error-text {
+  border-color: #5b2529;
+  color: #ff8d91;
 }
 
 html[data-theme="dark"] .bar-track .blue { background: var(--info); }

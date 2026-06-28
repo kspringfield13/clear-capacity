@@ -5,6 +5,7 @@ import { forecastRatingLabel, pct } from "../../lib/format";
 import { formatAuditTime } from "../../lib/format";
 import { ForecastList } from "../common/ForecastList";
 import { EmptyState } from "../common/EmptyState";
+import { InlineError } from "../common/InlineError";
 
 function scenarioLikelyPct(conservative: number, likely: number, optimistic: number): number {
   const spread = optimistic - conservative;
@@ -100,12 +101,7 @@ export function ForecastAgentPanel({
           Forecasts have averaged <strong>±{forecastAccuracyTrend.mean_abs_error_pts} pts</strong> over the last {forecastAccuracyTrend.week_count} weeks.
         </p>
       )}
-      {error && (
-        <div className="error-row">
-          <p className="forecast-error">{error}</p>
-          <button type="button" className="error-retry" onClick={onGenerate}>Try again</button>
-        </div>
-      )}
+      {error && <InlineError message={error} onRetry={onGenerate} />}
       {status === "generating" && !forecast ? (
         <div className="forecast-skeleton">
           <div className="forecast-skeleton-grid">

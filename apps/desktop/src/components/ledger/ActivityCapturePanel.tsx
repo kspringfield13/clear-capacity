@@ -5,6 +5,7 @@ import type {
   VisualContextInsight
 } from "../../../../../packages/domain/src/models";
 import { ConfidenceChip } from "../common/ConfidenceChip";
+import { InlineError } from "../common/InlineError";
 import { summarizeRecentSessions } from "../../lib/blocks";
 
 export function ActivityCapturePanel({
@@ -63,12 +64,7 @@ export function ActivityCapturePanel({
           Sending {unclassifiedSessionCount} ready session{unclassifiedSessionCount === 1 ? "" : "s"} to your AI provider…
         </p>
       )}
-      {classificationError && (
-        <div className="error-row">
-          <p className="capture-error">{classificationError}</p>
-          <button type="button" className="error-retry" onClick={onClassifySessions}>Try again</button>
-        </div>
-      )}
+      {classificationError && <InlineError message={classificationError} onRetry={onClassifySessions} />}
       <div className="capture-grid">
         <div className="capture-stat">
           <span>Current app</span>
