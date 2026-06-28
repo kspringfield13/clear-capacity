@@ -2,7 +2,7 @@ export type SourceType =
   | "window"
   | "calendar"
   | "browser"
-  | "slack"
+  | "chat"
   | "task"
   | "git"
   | "manual";
