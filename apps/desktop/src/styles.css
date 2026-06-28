@@ -1206,6 +1206,17 @@ h3 {
   cursor: pointer;
 }
 
+.calendar-connect-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.calendar-connect-options .settings-control {
+  width: 100%;
+}
+
 .source-status {
   display: inline-flex;
   align-items: center;
@@ -4335,7 +4346,8 @@ input:focus {
     text-align: left;
   }
 
-  .settings-control {
+  .settings-control,
+  .calendar-connect-options {
     grid-column: 3;
     grid-row: 1 / span 2;
   }
@@ -6571,14 +6583,20 @@ html[data-theme="dark"] .risk-track span[data-severity="high"] { background: #fb
 
   .settings-row-icon,
   .settings-row-status,
-  .settings-control {
+  .settings-control,
+  .calendar-connect-options {
     grid-column: 1;
     grid-row: auto;
     text-align: left;
   }
 
-  .settings-control {
+  .settings-control,
+  .calendar-connect-options {
     justify-self: start;
+  }
+
+  .calendar-connect-options {
+    align-items: flex-start;
   }
 
   .audit-row summary {
