@@ -226,6 +226,7 @@ export function ScreenRouter({
         <CorrectionsScreen
           blocks={blocks}
           corrections={corrections}
+          auditEvents={auditEvents}
           onResetLocalData={onResetLocalData}
         />
       )}
