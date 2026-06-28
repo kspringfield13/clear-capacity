@@ -385,7 +385,8 @@ export function App() {
       "5": "ledger",
       "6": "corrections",
       "7": "audit",
-      "8": "setup",
+      "8": "sensitive",
+      "9": "setup",
     };
     function handleKeyDown(event: KeyboardEvent) {
       if (!event.metaKey || !(event.key in SCREEN_KEYS)) return;
@@ -524,6 +525,31 @@ export function App() {
     visualContextInsights,
     visualContextStatus
   ]);
+
+  function discardVisualInsight(insightId: string) {
+    const target = visualContextInsights.find((insight) => insight.insight_id === insightId);
+    if (!target) return;
+
+    setVisualContextInsights((current) => current.filter((insight) => insight.insight_id !== insightId));
+    setAuditEvents((current) => [
+      ...current,
+      createAuditEvent({
+        type: "visual_context",
+        source: "privacy_control",
+        title: "Flagged capture discarded",
+        summary: `Sensitive visual insight from ${target.app_name} was removed`,
+        privacy_level: "local_only",
+        details: {
+          insight_id: target.insight_id,
+          app_name: target.app_name,
+          captured_at: target.captured_at,
+          sensitive_content_detected: true,
+          stored_locally: false,
+          sent_to_cloud: false
+        }
+      })
+    ].slice(-1000));
+  }
 
   function addCorrection(correction: Omit<UserCorrection, "correction_id" | "timestamp">) {
     const timestamp = new Date().toISOString();
@@ -826,6 +852,7 @@ export function App() {
         visualContextEnabled={visualContextEnabled}
         setVisualContextEnabled={setVisualContextEnabled}
         visualContextInsights={visualContextInsights}
+        onDiscardInsight={discardVisualInsight}
         calendarEvents={calendarEvents}
         captureError={captureError}
         importError={importError}

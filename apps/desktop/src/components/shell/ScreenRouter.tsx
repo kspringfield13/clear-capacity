@@ -22,6 +22,7 @@ import { WeeklyCapacityScreen } from "../capacity/WeeklyCapacityScreen";
 import { ForecastScreen } from "../capacity/ForecastScreen";
 import { NarrativeScreen } from "../narrative/NarrativeScreen";
 import { AuditLogScreen } from "../audit/AuditLogScreen";
+import { SensitiveReviewScreen } from "../audit/SensitiveReviewScreen";
 import { AgentScreen } from "../agent/AgentScreen";
 
 interface ScreenRouterProps {
@@ -43,6 +44,7 @@ interface ScreenRouterProps {
   visualContextEnabled: boolean;
   setVisualContextEnabled: (value: boolean) => void;
   visualContextInsights: VisualContextInsight[];
+  onDiscardInsight: (insightId: string) => void;
   calendarEvents: OutlookCalendarEvent[];
   captureError: string | null;
   importError: string | null;
@@ -108,6 +110,7 @@ export function ScreenRouter({
   visualContextEnabled,
   setVisualContextEnabled,
   visualContextInsights,
+  onDiscardInsight,
   calendarEvents,
   captureError,
   importError,
@@ -259,6 +262,12 @@ export function ScreenRouter({
         />
       )}
       {active === "audit" && <AuditLogScreen auditEvents={auditEvents} />}
+      {active === "sensitive" && (
+        <SensitiveReviewScreen
+          visualContextInsights={visualContextInsights}
+          onDiscardInsight={onDiscardInsight}
+        />
+      )}
       {active === "agent" && (
         <AgentScreen
           blocks={blocks}

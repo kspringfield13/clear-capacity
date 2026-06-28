@@ -277,6 +277,14 @@ export function createDemoState(reference = new Date()): PersistedAppState {
     project_hint: "Capacity model v2", sensitive_content_detected: false, confidence: 0.9,
     evidence: ["Code editor and capacity terminology were visible"], privacy_level: "derived_only",
     model: "OpenAI vision", raw_screenshot_retained: false
+  }, {
+    insight_id: "demo-visual-2", captured_at: addMinutes(activeStart, 70).toISOString(), session_id: null,
+    app_name: "Mail", window_title: "Compensation review - Q3 planning",
+    activity_summary: "Reviewing a document that appears to contain personnel and compensation details.", visible_tool: "Mail",
+    likely_work_category: "Admin / coordination", likely_mode: "Reactive",
+    project_hint: null, sensitive_content_detected: true, confidence: 0.72,
+    evidence: ["Document headings referenced confidential HR information"], privacy_level: "derived_only",
+    model: "OpenAI vision", raw_screenshot_retained: false
   }];
 
   const auditEvents = [
