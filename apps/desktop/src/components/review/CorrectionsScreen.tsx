@@ -1,19 +1,46 @@
 import { useMemo, useState } from "react";
-import { Search, History, RotateCcw, ArrowRight } from "lucide-react";
-import type { WorkBlock, UserCorrection } from "../../../../../packages/domain/src/models";
+import { Search, History, RotateCcw, ArrowRight, Download } from "lucide-react";
+import type { AuditEvent, WorkBlock, UserCorrection } from "../../../../../packages/domain/src/models";
 import { fieldLabel, formatAuditTime, humanizeCorrectionValue } from "../../lib/format";
+import {
+  downloadTextFile,
+  exportFilename,
+  exportMimeType,
+  serializeAuditTrail,
+  serializeWorkLedger
+} from "../../lib/dataExport";
 import { EmptyState } from "../common/EmptyState";
+import { ConfirmDialog } from "../common/ConfirmDialog";
 
 export function CorrectionsScreen({
   blocks,
   corrections,
+  auditEvents,
   onResetLocalData
 }: {
   blocks: WorkBlock[];
   corrections: UserCorrection[];
+  auditEvents: AuditEvent[];
   onResetLocalData: () => void;
 }) {
   const [query, setQuery] = useState("");
+  const [confirmingReset, setConfirmingReset] = useState(false);
+
+  // Nudge: let the user save their work ledger + audit trail locally before the
+  // irreversible wipe. The dialog stays open after exporting so they can review
+  // the download and then confirm (or cancel).
+  const exportBeforeReset = () => {
+    downloadTextFile(
+      exportFilename("work-ledger", "json"),
+      serializeWorkLedger(blocks, "json"),
+      exportMimeType("json")
+    );
+    downloadTextFile(
+      exportFilename("audit-trail", "json"),
+      serializeAuditTrail(auditEvents, "json"),
+      exportMimeType("json")
+    );
+  };
 
   const rows = useMemo(() => {
     return [...corrections]
@@ -62,13 +89,41 @@ export function CorrectionsScreen({
           <button
             type="button"
             className="corrections-reset"
-            onClick={onResetLocalData}
+            onClick={() => setConfirmingReset(true)}
             title="Reset local prototype data"
           >
             <RotateCcw size={15} />
             <span>Reset data</span>
           </button>
         </div>
+      )}
+
+      {confirmingReset && (
+        <ConfirmDialog
+          title="Reset all local data?"
+          description="This permanently clears everything ClearCapacity has stored on this device. It can't be undone."
+          confirmLabel="Reset everything"
+          onConfirm={() => {
+            setConfirmingReset(false);
+            onResetLocalData();
+          }}
+          onCancel={() => setConfirmingReset(false)}
+        >
+          <ul className="dialog-delete-list">
+            <li>{blocks.length} work {blocks.length === 1 ? "block" : "blocks"} &amp; activity samples</li>
+            <li>{corrections.length} {corrections.length === 1 ? "correction" : "corrections"}</li>
+            <li>The audit trail, forecasts &amp; weekly history</li>
+            <li>Calendar imports &amp; retention settings</li>
+          </ul>
+          <button
+            type="button"
+            className="secondary-action dialog-export-action"
+            onClick={exportBeforeReset}
+          >
+            <Download size={15} />
+            <span>Export my data first</span>
+          </button>
+        </ConfirmDialog>
       )}
 
       {corrections.length === 0 ? (
