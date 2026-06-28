@@ -1050,6 +1050,33 @@ h3 {
   color: #22c55e;
 }
 
+.onboarding-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.onboarding-dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-subtle);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.onboarding-dismiss:hover {
+  background: var(--surface-elevated);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
 .privacy-summary {
   display: grid;
   gap: 14px;
@@ -5754,6 +5781,12 @@ input:focus {
   color: #3730a3;
 }
 
+.audit-badge.onboarding {
+  border-color: #f7c8e3;
+  background: #fdeef6;
+  color: #b4267a;
+}
+
 .audit-privacy--local_only {
   border-color: #b9f5bc;
   background: var(--green-soft);
@@ -6127,6 +6160,12 @@ html[data-theme="dark"] .audit-badge.narrative_generation {
   border-color: #252570;
   background: #141438;
   color: #a5b4fc;
+}
+
+html[data-theme="dark"] .audit-badge.onboarding {
+  border-color: #5a2447;
+  background: #2a1322;
+  color: #f9a8d4;
 }
 
 html[data-theme="dark"] .audit-privacy--local_only {

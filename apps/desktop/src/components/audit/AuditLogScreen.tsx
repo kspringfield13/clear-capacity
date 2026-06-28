@@ -7,7 +7,7 @@ import { AuditEventRow } from "./AuditEventRow";
 import { EmptyState } from "../common/EmptyState";
 
 export function AuditLogScreen({ auditEvents }: { auditEvents: AuditEvent[] }) {
-  type AuditFilter = "all" | "capture" | "session" | "visual" | "calendar" | "correction" | "classifier" | "copilot" | "forecast" | "narrative" | "privacy";
+  type AuditFilter = "all" | "capture" | "session" | "visual" | "calendar" | "correction" | "classifier" | "copilot" | "forecast" | "narrative" | "privacy" | "onboarding";
   const [filter, setFilter] = useState<AuditFilter>("all");
   const [query, setQuery] = useState("");
   const filters: Array<{ id: AuditFilter; label: string }> = [
@@ -21,7 +21,8 @@ export function AuditLogScreen({ auditEvents }: { auditEvents: AuditEvent[] }) {
     { id: "copilot", label: "Copilot" },
     { id: "forecast", label: "Forecast" },
     { id: "narrative", label: "Narrative" },
-    { id: "privacy", label: "Privacy" }
+    { id: "privacy", label: "Privacy" },
+    { id: "onboarding", label: "Onboarding" }
   ];
   const filterMatches: Record<AuditFilter, (event: AuditEvent) => boolean> = {
     all: () => true,
@@ -37,7 +38,8 @@ export function AuditLogScreen({ auditEvents }: { auditEvents: AuditEvent[] }) {
     privacy: (event) =>
       event.type === "privacy_pause" ||
       event.type === "privacy_resume" ||
-      event.type === "retention_policy"
+      event.type === "retention_policy",
+    onboarding: (event) => event.type === "onboarding"
   };
   const filteredEvents = auditEvents
     .filter((event) => filterMatches[filter](event))

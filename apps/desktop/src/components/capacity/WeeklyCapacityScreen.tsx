@@ -1,12 +1,14 @@
 import { useState, useMemo } from "react";
-import { ArrowDown, ArrowUp, BarChart3, ChevronLeft, ChevronRight, Minus } from "lucide-react";
+import { ArrowDown, ArrowUp, BarChart3, ChevronLeft, ChevronRight, Minus, Upload } from "lucide-react";
 import type { WorkBlock } from "../../../../../packages/domain/src/models";
+import type { Screen } from "../../lib/types";
 import type { PersistedSnapshotRecord } from "../../services/localStore";
 import { computeWeeklyCapacitySnapshot, computeCapacityBaselines } from "../../../../../packages/inference/src/capacity";
 import { categoryColors } from "../../../../../packages/domain/src/taxonomy";
 import { pct } from "../../lib/format";
 import { addDays, getCurrentIsoWeekId, getBusinessWeekRangeLabel } from "../../lib/date";
 import { EmptyState } from "../common/EmptyState";
+import { OnboardingCard, type OnboardingStep } from "../common/OnboardingCard";
 import { MetricCard } from "../common/MetricCard";
 import { StackedBar } from "../common/StackedBar";
 import { BarLine } from "../common/BarLine";
@@ -33,12 +35,20 @@ export function WeeklyCapacityScreen({
   weekRangeLabel,
   hasWorkBlocks,
   blocks,
+  onboardingSteps,
+  showOnboarding,
+  onDismissOnboarding,
+  onOpenScreen,
 }: {
   snapshot: ReturnType<typeof computeWeeklyCapacitySnapshot>;
   snapshotHistory: PersistedSnapshotRecord[];
   weekRangeLabel: string;
   hasWorkBlocks: boolean;
   blocks: WorkBlock[];
+  onboardingSteps: OnboardingStep[];
+  showOnboarding: boolean;
+  onDismissOnboarding: () => void;
+  onOpenScreen: (screen: Screen) => void;
 }) {
   const [weekOffset, setWeekOffset] = useState(0);
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
@@ -121,11 +131,22 @@ export function WeeklyCapacityScreen({
             </div>
           </div>
         </div>
+        {showOnboarding && (
+          <OnboardingCard steps={onboardingSteps} onDismiss={onDismissOnboarding} />
+        )}
         <EmptyState
           icon={BarChart3}
           title="No weekly capacity model yet."
           description="The percentage breakdown will stay blank until local sources create work blocks. Import Outlook calendar events now, then let active-window sessions become the next inference source."
-        />
+        >
+          <button className="primary-action" type="button" onClick={() => onOpenScreen("setup")}>
+            <Upload size={16} />
+            <span>Import calendar</span>
+          </button>
+          <button className="secondary-action" type="button" onClick={() => onOpenScreen("setup")}>
+            <span>Open Settings</span>
+          </button>
+        </EmptyState>
       </section>
     );
   }

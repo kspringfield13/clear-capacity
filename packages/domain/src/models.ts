@@ -73,7 +73,8 @@ export type AuditEventType =
   | "visual_context"
   | "privacy_pause"
   | "privacy_resume"
-  | "retention_policy";
+  | "retention_policy"
+  | "onboarding";
 
 export interface AuditEvent {
   event_id: string;

@@ -46,6 +46,7 @@ import {
 import { AppShell } from "./components/shell/AppShell";
 import { buildToolbarActions } from "./lib/toolbarActions";
 import { ScreenRouter } from "./components/shell/ScreenRouter";
+import { buildOnboardingSteps } from "./components/common/OnboardingCard";
 import type { Screen, WindowMode } from "./lib/types";
 
 export function App() {
@@ -79,6 +80,7 @@ export function App() {
         setVisualContextInsights(data.visualContextInsights ?? []);
         setAiConfig(data.aiConfig ?? null);
         setRetentionDays(data.retentionDays ?? null);
+        setOnboardingDismissed(data.onboardingDismissed ?? false);
         setManagerSummaryText(data.managerSummaryText ?? null);
         setGeneratedNarrative(data.generatedNarrative ?? null);
         setLastNarrativeAutoRunDate(data.lastNarrativeAutoRunDate ?? null);
@@ -115,6 +117,9 @@ export function App() {
   );
   const [retentionDays, setRetentionDays] = useState<number | null>(
     () => persistedSnapshot?.retentionDays ?? null
+  );
+  const [onboardingDismissed, setOnboardingDismissed] = useState<boolean>(
+    () => persistedSnapshot?.onboardingDismissed ?? false
   );
   const [visualContextInsights, setVisualContextInsights] = useState<VisualContextInsight[]>(
     () => persistedSnapshot?.visualContextInsights ?? []
@@ -189,6 +194,7 @@ export function App() {
     lastNarrativeAutoRunDate,
     paused,
     retentionDays,
+    onboardingDismissed,
     isDemoMode,
   });
 
@@ -573,6 +579,28 @@ export function App() {
     ].slice(-1000));
   }
 
+  // User dismissed the first-run getting-started card. Persisted so the nudge stays
+  // gone across reloads, and logged once as a discrete, low-noise user action.
+  function dismissOnboarding() {
+    if (onboardingDismissed) return;
+    setOnboardingDismissed(true);
+    if (isDemoMode) return;
+    setAuditEvents((current) => [
+      ...current,
+      createAuditEvent({
+        type: "onboarding",
+        source: "onboarding",
+        title: "Getting started dismissed",
+        summary: "The first-run getting-started checklist was dismissed by the user.",
+        privacy_level: "local_only",
+        details: {
+          stored_locally: true,
+          sent_to_cloud: false
+        }
+      })
+    ].slice(-1000));
+  }
+
   // User-initiated retention-window change. Logged once as a discrete privacy
   // action (the background per-sample expiry deliberately stays unlogged).
   function changeRetentionDays(value: number | null) {
@@ -759,6 +787,7 @@ export function App() {
     setVisualContextInsights([]);
     setVisualContextAttemptedSessionIds([]);
     setRetentionDays(null);
+    setOnboardingDismissed(false);
     setManagerSummaryText(null);
     setGeneratedNarrative(null);
     setLastNarrativeAutoRunDate(null);
@@ -847,6 +876,20 @@ export function App() {
     setWindowMode("large");
   }
 
+  // First-run guidance shown on the empty daily/weekly screens. Shares its step
+  // definitions with the Settings checklist via `buildOnboardingSteps`.
+  const onboardingSteps = useMemo(
+    () =>
+      buildOnboardingSteps({
+        trackingActive: !paused && activeWindowSamples.length > 0,
+        calendarImported: calendarEvents.length > 0,
+        aiConfigured: Boolean(aiConfig?.apiKey),
+        classified: blocks.length > 0,
+      }),
+    [paused, activeWindowSamples.length, calendarEvents.length, aiConfig?.apiKey, blocks.length]
+  );
+  const showOnboarding = !isDemoMode && !onboardingDismissed && blocks.length === 0;
+
   const toolbarActions = buildToolbarActions({
     active,
     isDemoMode,
@@ -896,6 +939,9 @@ export function App() {
         onExclude={excludeBlock}
         onRelabel={updateBlock}
         onOpenScreen={openScreenFromQuickView}
+        onboardingSteps={onboardingSteps}
+        showOnboarding={showOnboarding}
+        onDismissOnboarding={dismissOnboarding}
         visualContextEnabled={visualContextEnabled}
         setVisualContextEnabled={setVisualContextEnabled}
         visualContextInsights={visualContextInsights}

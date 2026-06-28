@@ -127,7 +127,8 @@ export function auditTypeLabel(type: AuditEventType) {
     visual_context: "Visual",
     privacy_pause: "Privacy",
     privacy_resume: "Privacy",
-    retention_policy: "Privacy"
+    retention_policy: "Privacy",
+    onboarding: "Onboarding"
   };
 
   return labels[type];

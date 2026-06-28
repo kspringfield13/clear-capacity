@@ -1,14 +1,20 @@
-import { Check, CalendarCheck, Sparkles } from "lucide-react";
+import { Check, CalendarCheck, Sparkles, Upload } from "lucide-react";
 import type {
   WorkBlock,
   ReviewCopilotSuggestion
 } from "../../../../../packages/domain/src/models";
+import type { Screen } from "../../lib/types";
 import { BlockCard } from "../ledger/BlockCard";
 import { EmptyState } from "../common/EmptyState";
+import { OnboardingCard, type OnboardingStep } from "../common/OnboardingCard";
 import { ReviewCopilotPanel } from "./ReviewCopilotPanel";
 
 export function DailyReviewScreen({
   blocks,
+  onboardingSteps,
+  showOnboarding,
+  onDismissOnboarding,
+  onOpenScreen,
   reviewSuggestions,
   reviewCopilotStatus,
   reviewCopilotError,
@@ -20,6 +26,10 @@ export function DailyReviewScreen({
   onRelabel
 }: {
   blocks: WorkBlock[];
+  onboardingSteps: OnboardingStep[];
+  showOnboarding: boolean;
+  onDismissOnboarding: () => void;
+  onOpenScreen: (screen: Screen) => void;
   reviewSuggestions: ReviewCopilotSuggestion[];
   reviewCopilotStatus: "idle" | "generating" | "error";
   reviewCopilotError: string | null;
@@ -42,11 +52,22 @@ export function DailyReviewScreen({
             <h1>Nothing needs your attention.</h1>
           </div>
         </div>
+        {showOnboarding && (
+          <OnboardingCard steps={onboardingSteps} onDismiss={onDismissOnboarding} />
+        )}
         <EmptyState
           icon={CalendarCheck}
           title="Your review queue is empty."
           description="ClearCapacity will place inferred work here after Outlook meetings are imported or active-window sessions are classified."
-        />
+        >
+          <button className="primary-action" type="button" onClick={() => onOpenScreen("setup")}>
+            <Upload size={16} />
+            <span>Import calendar</span>
+          </button>
+          <button className="secondary-action" type="button" onClick={() => onOpenScreen("setup")}>
+            <span>Open Settings</span>
+          </button>
+        </EmptyState>
       </section>
     );
   }

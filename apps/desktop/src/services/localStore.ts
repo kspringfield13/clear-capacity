@@ -86,6 +86,8 @@ export interface PersistedAppState {
   aiConfig: AIConfig | null;
   /** Auto-expiry window (days) for raw activity samples; null = keep everything. */
   retentionDays: number | null;
+  /** Whether the user dismissed the first-run getting-started card. */
+  onboardingDismissed: boolean;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -152,7 +154,8 @@ export async function readPersistedState(): Promise<PersistedAppState | null> {
         lastNarrativeAutoRunDate: typeof parsed.lastNarrativeAutoRunDate === "string" ? parsed.lastNarrativeAutoRunDate : null,
         paused: typeof parsed.paused === "boolean" ? parsed.paused : true,
         aiConfig: isRecord(parsed.aiConfig) ? (parsed.aiConfig as unknown as AIConfig) : null,
-        retentionDays: parseRetentionDays(parsed.retentionDays)
+        retentionDays: parseRetentionDays(parsed.retentionDays),
+        onboardingDismissed: typeof parsed.onboardingDismissed === "boolean" ? parsed.onboardingDismissed : false
       };
     }
     const data = await store.get<unknown>(STATE_KEY);
@@ -198,7 +201,8 @@ export async function readPersistedState(): Promise<PersistedAppState | null> {
         typeof parsed.lastNarrativeAutoRunDate === "string" ? parsed.lastNarrativeAutoRunDate : null,
       paused: typeof parsed.paused === "boolean" ? parsed.paused : true,
       aiConfig: isRecord(parsed.aiConfig) ? (parsed.aiConfig as unknown as AIConfig) : null,
-      retentionDays: parseRetentionDays(parsed.retentionDays)
+      retentionDays: parseRetentionDays(parsed.retentionDays),
+      onboardingDismissed: typeof parsed.onboardingDismissed === "boolean" ? parsed.onboardingDismissed : false
     };
   } catch {
     return null;
