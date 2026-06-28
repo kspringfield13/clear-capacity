@@ -25,6 +25,7 @@ import { AuditLogScreen } from "../audit/AuditLogScreen";
 import { SensitiveReviewScreen } from "../audit/SensitiveReviewScreen";
 import { AgentScreen } from "../agent/AgentScreen";
 import type { OnboardingStep } from "../common/OnboardingCard";
+import type { ProactiveAlert, ProactiveAlertSettings } from "../../lib/proactiveAlerts";
 
 interface ScreenRouterProps {
   active: Screen;
@@ -58,6 +59,11 @@ interface ScreenRouterProps {
   setAiConfig: (value: AIConfig | null) => void;
   retentionDays: number | null;
   setRetentionDays: (value: number | null) => void;
+  // proactive alerts (compact widget + setup screen)
+  proactiveAlert: ProactiveAlert | null;
+  onDismissProactiveAlert: () => void;
+  proactiveAlertSettings: ProactiveAlertSettings;
+  onProactiveAlertSettingsChange: (value: ProactiveAlertSettings) => void;
   // ledger screen
   classificationStatus: "idle" | "classifying" | "error";
   classificationError: string | null;
@@ -130,6 +136,10 @@ export function ScreenRouter({
   setAiConfig,
   retentionDays,
   setRetentionDays,
+  proactiveAlert,
+  onDismissProactiveAlert,
+  proactiveAlertSettings,
+  onProactiveAlertSettingsChange,
   classificationStatus,
   classificationError,
   visualContextStatus,
@@ -176,6 +186,8 @@ export function ScreenRouter({
         onOpenScreen={onOpenScreen}
         onConfirm={onConfirm}
         onExclude={onExclude}
+        proactiveAlert={proactiveAlert}
+        onDismissProactiveAlert={onDismissProactiveAlert}
       />
     );
   }
@@ -202,6 +214,8 @@ export function ScreenRouter({
           auditEvents={auditEvents}
           retentionDays={retentionDays}
           setRetentionDays={setRetentionDays}
+          proactiveAlertSettings={proactiveAlertSettings}
+          onProactiveAlertSettingsChange={onProactiveAlertSettingsChange}
         />
       )}
       {active === "ledger" && (

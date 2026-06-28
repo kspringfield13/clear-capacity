@@ -9,6 +9,7 @@ import type {
   WorkBlock
 } from "../../../../packages/domain/src/models";
 import type { PersistedAppState, PersistedSnapshotRecord } from "./localStore";
+import { DEFAULT_PROACTIVE_ALERT_SETTINGS, EMPTY_PROACTIVE_ALERT_RUNTIME } from "../lib/proactiveAlerts";
 import { humanizeCorrectionValue } from "../lib/format";
 
 function addMinutes(date: Date, minutes: number) {
@@ -387,6 +388,8 @@ export function createDemoState(reference = new Date()): PersistedAppState {
     paused: false,
     aiConfig: null,
     retentionDays: 30,
-    onboardingDismissed: false
+    onboardingDismissed: false,
+    proactiveAlertSettings: DEFAULT_PROACTIVE_ALERT_SETTINGS,
+    proactiveAlertRuntime: EMPTY_PROACTIVE_ALERT_RUNTIME
   };
 }

@@ -11,6 +11,7 @@ import type {
   AIConfig
 } from "../../../../packages/domain/src/models";
 import type { PersistedForecastRecord, PersistedNarrativeRecord, PersistedSnapshotRecord } from "../services/localStore";
+import type { ProactiveAlertRuntime, ProactiveAlertSettings } from "../lib/proactiveAlerts";
 
 interface PersistableState {
   blocks: WorkBlock[];
@@ -31,6 +32,8 @@ interface PersistableState {
   aiConfig: AIConfig | null;
   retentionDays: number | null;
   onboardingDismissed: boolean;
+  proactiveAlertSettings: ProactiveAlertSettings;
+  proactiveAlertRuntime: ProactiveAlertRuntime;
   isDemoMode: boolean;
 }
 
@@ -62,6 +65,8 @@ export function usePersistence(state: PersistableState) {
     persistData.aiConfig,
     persistData.retentionDays,
     persistData.onboardingDismissed,
+    persistData.proactiveAlertSettings,
+    persistData.proactiveAlertRuntime,
     isDemoMode,
   ]);
 }

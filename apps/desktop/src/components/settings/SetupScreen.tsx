@@ -2,6 +2,7 @@ import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
   AlertCircle,
+  BellRing,
   CalendarCheck,
   CalendarSync,
   CheckCircle2,
@@ -34,7 +35,8 @@ import type {
 } from "../../../../../packages/domain/src/models";
 import { getLocalDateKey } from "../../lib/date";
 import { formatAuditTime } from "../../lib/format";
-import { MAX_VISUAL_CONTEXT_CAPTURES_PER_DAY } from "../../lib/constants";
+import { MAX_PROACTIVE_ALERTS_PER_DAY, MAX_VISUAL_CONTEXT_CAPTURES_PER_DAY } from "../../lib/constants";
+import type { ProactiveAlertSettings } from "../../lib/proactiveAlerts";
 import {
   downloadTextFile,
   exportFilename,
@@ -59,6 +61,9 @@ const OAUTH_CALENDAR_PROVIDERS = CALENDAR_PROVIDERS.filter((provider) => provide
 
 // Retention windows (in days) offered for auto-expiring stored activity samples.
 const RETENTION_OPTIONS = [7, 14, 30, 90] as const;
+
+// Reliable-capacity floors (%) offered for the proactive guardrail.
+const CAPACITY_THRESHOLD_OPTIONS = [5, 10, 15, 20] as const;
 
 interface TestConnectionResponse {
   provider: string;
@@ -89,6 +94,8 @@ export function SetupScreen({
   auditEvents,
   retentionDays,
   setRetentionDays,
+  proactiveAlertSettings,
+  onProactiveAlertSettingsChange,
 }: {
   paused: boolean;
   setPaused: (value: boolean) => void;
@@ -108,6 +115,8 @@ export function SetupScreen({
   auditEvents: AuditEvent[];
   retentionDays: number | null;
   setRetentionDays: (value: number | null) => void;
+  proactiveAlertSettings: ProactiveAlertSettings;
+  onProactiveAlertSettingsChange: (value: ProactiveAlertSettings) => void;
 }) {
   const steps = buildOnboardingSteps({
     trackingActive: !paused && activeWindowSamples.length > 0,
@@ -344,6 +353,58 @@ export function SetupScreen({
           {visualContextEnabled ? "Disable Visual Context" : "Enable Visual Context"}
         </button>
       </section>
+
+      <section className="settings-row">
+        <div className="settings-row-icon"><BellRing size={18} /></div>
+        <div>
+          <h2>Proactive alerts</h2>
+          <p>Get a menu-bar notification when your reliable capacity runs low or carryover risk climbs. Alerts use capacity metrics only — never window titles or app names — and are capped at {MAX_PROACTIVE_ALERTS_PER_DAY} per day.</p>
+        </div>
+        <div className="settings-row-status">
+          <strong>{proactiveAlertSettings.enabled ? "On" : "Off"}</strong>
+          <span>{proactiveAlertSettings.enabled ? `Warns below ${proactiveAlertSettings.capacityThresholdPct}%` : "No notifications sent"}</span>
+        </div>
+        <button
+          className={proactiveAlertSettings.enabled ? "settings-control is-on" : "settings-control"}
+          type="button"
+          onClick={() => onProactiveAlertSettingsChange({ ...proactiveAlertSettings, enabled: !proactiveAlertSettings.enabled })}
+        >
+          {proactiveAlertSettings.enabled ? "Disable Alerts" : "Enable Alerts"}
+        </button>
+      </section>
+
+      {proactiveAlertSettings.enabled && (
+        <section className="settings-row">
+          <div className="settings-row-icon"><AlertCircle size={18} /></div>
+          <div>
+            <h2>Capacity guardrail</h2>
+            <p>Notify me when reliable new-work capacity drops to or below this level (or carryover risk spikes). Lower it to be warned only when capacity is nearly gone.</p>
+          </div>
+          <div className="settings-row-status">
+            <strong>{proactiveAlertSettings.capacityGuardrailEnabled ? "Active" : "Muted"}</strong>
+            <span>Floor at {proactiveAlertSettings.capacityThresholdPct}%</span>
+          </div>
+          <div className="data-export-options">
+            <label className="sr-only" htmlFor="capacity-threshold">Capacity warning threshold</label>
+            <select
+              id="capacity-threshold"
+              value={String(proactiveAlertSettings.capacityThresholdPct)}
+              onChange={(event) => onProactiveAlertSettingsChange({ ...proactiveAlertSettings, capacityThresholdPct: Number(event.target.value) })}
+            >
+              {CAPACITY_THRESHOLD_OPTIONS.map((value) => (
+                <option key={value} value={value}>Below {value}%</option>
+              ))}
+            </select>
+            <button
+              className={proactiveAlertSettings.capacityGuardrailEnabled ? "settings-control is-on" : "settings-control"}
+              type="button"
+              onClick={() => onProactiveAlertSettingsChange({ ...proactiveAlertSettings, capacityGuardrailEnabled: !proactiveAlertSettings.capacityGuardrailEnabled })}
+            >
+              {proactiveAlertSettings.capacityGuardrailEnabled ? "Mute Guardrail" : "Unmute Guardrail"}
+            </button>
+          </div>
+        </section>
+      )}
 
       <div className="settings-section-heading">
         <div>

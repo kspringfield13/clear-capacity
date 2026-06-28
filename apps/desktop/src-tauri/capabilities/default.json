@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "Default desktop capability for ClearCapacity",
   "windows": ["main"],
-  "permissions": ["core:default", "core:window:allow-start-dragging", "opener:default", "store:default"]
+  "permissions": ["core:default", "core:window:allow-start-dragging", "opener:default", "store:default", "notification:default"]
 }
