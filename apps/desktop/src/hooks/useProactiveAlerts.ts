@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
-import type { AuditEvent, WeeklyCapacitySnapshot } from "../../../../packages/domain/src/models";
+import type { AuditEvent } from "../../../../packages/domain/src/models";
 import { createAuditEvent } from "../lib/audit";
 import { getLocalDateKey } from "../lib/date";
 import { MAX_PROACTIVE_ALERTS_PER_DAY, MIN_PROACTIVE_ALERT_GAP_MS } from "../lib/constants";
@@ -9,6 +9,7 @@ import {
   recordFiredAlert,
   shouldFireOsNotification,
   type ProactiveAlert,
+  type ProactiveAlertData,
   type ProactiveAlertRuntime,
   type ProactiveAlertSettings,
 } from "../lib/proactiveAlerts";
@@ -21,8 +22,7 @@ const EVAL_INTERVAL_MS = 3 * 60 * 1000;
 
 interface UseProactiveAlertsArgs {
   isDemoMode: boolean;
-  snapshot: WeeklyCapacitySnapshot;
-  hasWorkBlocks: boolean;
+  data: ProactiveAlertData;
   settings: ProactiveAlertSettings;
   runtime: ProactiveAlertRuntime;
   setRuntime: Dispatch<SetStateAction<ProactiveAlertRuntime>>;
@@ -37,8 +37,7 @@ interface UseProactiveAlertsArgs {
  */
 export function useProactiveAlerts({
   isDemoMode,
-  snapshot,
-  hasWorkBlocks,
+  data,
   settings,
   runtime,
   setRuntime,
@@ -49,7 +48,13 @@ export function useProactiveAlerts({
   const [dismissedSignature, setDismissedSignature] = useState<string | null>(null);
 
   const evaluate = useCallback(() => {
-    const alert = evaluateProactiveAlerts({ snapshot, hasWorkBlocks }, settings);
+    // Inject the real "now" at eval time so clock-based rules stay accurate
+    // between renders (the slow interval re-runs this same callback).
+    const now = new Date();
+    const alert = evaluateProactiveAlerts(
+      { ...data, nowHour: now.getHours(), nowDow: now.getDay(), todayKey: getLocalDateKey(now) },
+      settings,
+    );
 
     if (!alert || dismissedSignature === alert.signature) {
       setActiveAlert(null);
@@ -63,13 +68,12 @@ export function useProactiveAlerts({
 
     if (isDemoMode) return;
 
-    const now = Date.now();
-    const todayKey = getLocalDateKey();
+    const todayKey = getLocalDateKey(now);
     if (
       !shouldFireOsNotification(
         alert,
         runtime,
-        now,
+        now.getTime(),
         todayKey,
         MAX_PROACTIVE_ALERTS_PER_DAY,
         MIN_PROACTIVE_ALERT_GAP_MS,
@@ -78,7 +82,7 @@ export function useProactiveAlerts({
       return;
     }
 
-    const nowIso = new Date(now).toISOString();
+    const nowIso = now.toISOString();
     void sendOsNotification(alert.title, alert.body);
     setRuntime((current) => recordFiredAlert(alert, current, nowIso, todayKey));
     setAuditEvents((current) =>
@@ -102,7 +106,7 @@ export function useProactiveAlerts({
         }),
       ].slice(-1000),
     );
-  }, [snapshot, hasWorkBlocks, settings, runtime, isDemoMode, dismissedSignature, setRuntime, setAuditEvents]);
+  }, [data, settings, runtime, isDemoMode, dismissedSignature, setRuntime, setAuditEvents]);
 
   useEffect(() => {
     evaluate();

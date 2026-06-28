@@ -65,6 +65,14 @@ const RETENTION_OPTIONS = [7, 14, 30, 90] as const;
 // Reliable-capacity floors (%) offered for the proactive guardrail.
 const CAPACITY_THRESHOLD_OPTIONS = [5, 10, 15, 20] as const;
 
+// Optional proactive-alert rules (the capacity guardrail has its own row above).
+const OPTIONAL_ALERT_RULES = [
+  { key: "endOfDayReviewEnabled", label: "End-of-day review nudge", hint: "When blocks still need review late in the day" },
+  { key: "heavyDayAheadEnabled", label: "Heavy-day-ahead warning", hint: "The day before a meeting-heavy day" },
+  { key: "fragmentationEnabled", label: "Fragmentation nudge", hint: "When context-switching runs high" },
+  { key: "weeklyArtifactsEnabled", label: "Weekly summary ready", hint: "When the summary and forecast are ready to review" },
+] as const;
+
 interface TestConnectionResponse {
   provider: string;
   model: string;
@@ -405,6 +413,27 @@ export function SetupScreen({
           </div>
         </section>
       )}
+
+      {proactiveAlertSettings.enabled && OPTIONAL_ALERT_RULES.map((rule) => (
+        <section className="settings-row" key={rule.key}>
+          <div className="settings-row-icon"><BellRing size={18} /></div>
+          <div>
+            <h2>{rule.label}</h2>
+            <p>{rule.hint}.</p>
+          </div>
+          <div className="settings-row-status">
+            <strong>{proactiveAlertSettings[rule.key] ? "On" : "Off"}</strong>
+            <span>Metrics only</span>
+          </div>
+          <button
+            className={proactiveAlertSettings[rule.key] ? "settings-control is-on" : "settings-control"}
+            type="button"
+            onClick={() => onProactiveAlertSettingsChange({ ...proactiveAlertSettings, [rule.key]: !proactiveAlertSettings[rule.key] })}
+          >
+            {proactiveAlertSettings[rule.key] ? "Disable" : "Enable"}
+          </button>
+        </section>
+      ))}
 
       <div className="settings-section-heading">
         <div>
