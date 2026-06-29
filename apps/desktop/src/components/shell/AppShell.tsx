@@ -77,13 +77,16 @@ export function AppShell({
         </div>
         <nav className="nav-list">
           {[
-            { id: "today", label: "Today", description: "Review and current activity", screen: "daily" as const, icon: CalendarCheck },
-            { id: "week", label: "Week", description: "Capacity and summary", screen: "weekly" as const, icon: BarChart3 },
-            { id: "agent", label: "Agent", description: "Ask, plan, and understand", screen: "agent" as const, icon: Bot },
-            { id: "history", label: "History", description: "Ledger and audit trail", screen: "ledger" as const, icon: History },
+            // `shortcut`/`shortcutKey` mirror the ⌘1–9 SCREEN_KEYS map in App.tsx so the
+            // power-user jump shortcuts are discoverable (title hint + aria-keyshortcuts).
+            // Agent has no SCREEN_KEYS entry, so it stays hint-free.
+            { id: "today", label: "Today", description: "Review and current activity", screen: "daily" as const, icon: CalendarCheck, shortcut: "⌘1", shortcutKey: "Meta+1" },
+            { id: "week", label: "Week", description: "Capacity and summary", screen: "weekly" as const, icon: BarChart3, shortcut: "⌘2", shortcutKey: "Meta+2" },
+            { id: "agent", label: "Agent", description: "Ask, plan, and understand", screen: "agent" as const, icon: Bot, shortcut: undefined, shortcutKey: undefined },
+            { id: "history", label: "History", description: "Ledger and audit trail", screen: "ledger" as const, icon: History, shortcut: "⌘5", shortcutKey: "Meta+5" },
             // Narrow-viewport-only: the dedicated `.settings-button` below is hidden at
             // ≤760px, so surface Settings here too (CSS keeps it hidden on desktop).
-            { id: "setup", label: "Settings", description: "AI, calendar, retention", screen: "setup" as const, icon: Settings }
+            { id: "setup", label: "Settings", description: "AI, calendar, retention", screen: "setup" as const, icon: Settings, shortcut: "⌘9", shortcutKey: "Meta+9" }
           ].map((item) => {
             const Icon = item.icon;
             const isSettings = item.id === "setup";
@@ -93,6 +96,8 @@ export function AppShell({
                 className={`nav-item${isSettings ? " nav-item-settings" : ""}${selected ? " is-active" : ""}`}
                 key={item.id}
                 onClick={() => setActive(item.screen)}
+                title={item.shortcut ? `${item.label} (${item.shortcut})` : undefined}
+                aria-keyshortcuts={item.shortcutKey}
                 type="button"
               >
                 <Icon size={18} />
@@ -126,7 +131,7 @@ export function AppShell({
           {paused ? <Moon size={18} /> : <Pause size={18} />}
           <span>{paused ? "Resume Tracking" : "Pause Tracking"}</span>
         </button>
-        <button className={active === "setup" ? "settings-button is-active" : "settings-button"} type="button" onClick={() => setActive("setup")}>
+        <button className={active === "setup" ? "settings-button is-active" : "settings-button"} type="button" onClick={() => setActive("setup")} title="Settings (⌘9)" aria-keyshortcuts="Meta+9">
           <Settings size={17} />
           <span>Settings</span>
         </button>
