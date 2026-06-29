@@ -8075,11 +8075,6 @@ html[data-theme="light"] .agent-message.user .agent-bubble {
   background: transparent;
 }
 
-.agent-attach:hover {
-  color: var(--text);
-  background: var(--hover-background);
-}
-
 .agent-input {
   min-height: 36px;
   max-height: 144px;

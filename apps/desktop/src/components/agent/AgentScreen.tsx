@@ -717,9 +717,9 @@ export function AgentScreen({
 
         <div className="agent-composer-shell">
         <div className="agent-input-area">
-          <button className="agent-attach" type="button" title="Context is attached automatically" aria-label="Workload context attached">
+          <span className="agent-attach" role="img" title="Context is attached automatically" aria-label="Workload context attached">
             <Paperclip size={17} />
-          </button>
+          </span>
           <textarea
             ref={inputRef}
             className="agent-input"
