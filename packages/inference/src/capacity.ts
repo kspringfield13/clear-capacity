@@ -596,9 +596,21 @@ export function summarizeChatStakeholders(
   };
 }
 
-export function generateWeeklyNarrative(snapshot: WeeklyCapacitySnapshot): WeeklyNarrative {
+export function generateWeeklyNarrative(
+  snapshot: WeeklyCapacitySnapshot,
+  baselines?: CapacityBaselines | null
+): WeeklyNarrative {
   const reactiveDominant = snapshot.reactive_pct > snapshot.planned_pct * 0.7;
-  const denseMeetings = snapshot.meeting_pct >= 18;
+  // "Dense meetings": an absolute `>= 18%`-of-week cut fires for nearly everyone — collaboration is
+  // ~85% of the modern work week, so 18% (~7.2h) is below most people's normal meeting load and the
+  // flag cries wolf (see docs/heuristics-vs-research.md §4). When ≥2 prior weeks of history exist,
+  // compare against the user's OWN rolling median instead, flagging the week only when its meeting
+  // share runs meaningfully (≥25%) above that personal norm. Fall back to the absolute 18% when
+  // there isn't enough history to have a personal baseline (< 2 prior weeks, or a null median).
+  const meetingMedian =
+    baselines && baselines.week_count >= 2 ? baselines.meeting_pct : null;
+  const denseMeetings =
+    meetingMedian !== null ? snapshot.meeting_pct > meetingMedian * 1.25 : snapshot.meeting_pct >= 18;
   // Flag a fragmented week once the context-switch score crosses 0.45. Penalizing fragmentation is
   // well-grounded (collaboration is ~85% of the work week; sustained attention averages ~47s —
   // Mark 2023), and the model likely *under*-weights it; the exact 0.45 cut is hand-tuned, not
