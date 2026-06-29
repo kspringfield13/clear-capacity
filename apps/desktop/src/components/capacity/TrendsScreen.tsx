@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, LineChart, Minus, Upload } from "lucide-react";
 import type { Screen } from "../../lib/types";
 import type { PersistedSnapshotRecord } from "../../services/localStore";
@@ -62,6 +62,11 @@ export function TrendsScreen({
   hasWorkBlocks: boolean;
   onOpenScreen: (screen: Screen) => void;
 }) {
+  // Hovering a legend row (or a line/dot) isolates that series by dimming its
+  // peers — mirrors the Weekly StackedBar legend↔segment crosslink, since the
+  // four lines cross and colour alone can't disambiguate them.
+  const [hoveredSeries, setHoveredSeries] = useState<string | null>(null);
+
   // Merge retained weekly snapshots with the live current-week snapshot (current
   // week wins), newest-last, capped to the trend window.
   const weeks = useMemo(() => {
@@ -152,7 +157,17 @@ export function TrendsScreen({
             const Icon = item.direction === "up" ? ArrowUp : item.direction === "down" ? ArrowDown : Minus;
             const signed = `${item.delta > 0 ? "+" : ""}${item.delta}`;
             return (
-              <span className={`trend-legend-item ${item.className}`} role="listitem" key={item.key}>
+              <span
+                className={`trend-legend-item ${item.className}`}
+                role="listitem"
+                key={item.key}
+                style={{
+                  opacity: hoveredSeries && hoveredSeries !== item.key ? 0.3 : 1,
+                  transition: "opacity 0.12s",
+                }}
+                onMouseEnter={() => setHoveredSeries(item.key)}
+                onMouseLeave={() => setHoveredSeries(null)}
+              >
                 <span className="trend-legend-swatch" aria-hidden />
                 <span className="trend-legend-label">{item.label}</span>
                 <strong className="trend-legend-value">{pct(item.current)}</strong>
@@ -209,7 +224,16 @@ export function TrendsScreen({
               .map((week, index) => `${x(index)},${y(week.snapshot[series.key])}`)
               .join(" ");
             return (
-              <g className={`trend-series ${series.className}`} key={series.key}>
+              <g
+                className={`trend-series ${series.className}`}
+                key={series.key}
+                style={{
+                  opacity: hoveredSeries && hoveredSeries !== series.key ? 0.3 : 1,
+                  transition: "opacity 0.12s",
+                }}
+                onMouseEnter={() => setHoveredSeries(series.key)}
+                onMouseLeave={() => setHoveredSeries(null)}
+              >
                 <polyline className="trend-line" points={points} />
                 {weeks.map((week, index) => (
                   <circle
