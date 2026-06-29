@@ -134,7 +134,7 @@ export function ForecastAgentPanel({
         <>
           <div className="forecast-summary">
             <div>
-              <span>Reliable new-work capacity</span>
+              <span>AI reliable estimate</span>
               <strong>{pct(forecast.reliable_new_work_capacity_pct)}</strong>
               <small>{Math.round(forecast.confidence * 100)}% forecast confidence</small>
             </div>
