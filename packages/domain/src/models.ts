@@ -65,6 +65,7 @@ export type AuditEventType =
   | "active_window_sample"
   | "activity_session"
   | "calendar_import"
+  | "chat_import"
   | "user_correction"
   | "narrative_generation"
   | "work_block_classification"

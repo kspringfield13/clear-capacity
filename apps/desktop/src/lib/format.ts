@@ -119,6 +119,7 @@ export function auditTypeLabel(type: AuditEventType) {
     active_window_sample: "Capture",
     activity_session: "Session",
     calendar_import: "Calendar",
+    chat_import: "Chat",
     user_correction: "Correction",
     narrative_generation: "Narrative",
     work_block_classification: "Classifier",

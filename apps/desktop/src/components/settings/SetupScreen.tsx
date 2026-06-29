@@ -13,6 +13,7 @@ import {
   FileText,
   LoaderCircle,
   Lock,
+  MessagesSquare,
   Monitor,
   Pause,
   Play,
@@ -54,6 +55,7 @@ import {
 } from "../../services/aiProviders";
 import { OnboardingCard, buildOnboardingSteps } from "../common/OnboardingCard";
 import { CALENDAR_PROVIDERS } from "../../../../../packages/integrations/src/calendar/calendarSource";
+import { CHAT_PROVIDERS } from "../../../../../packages/integrations/src/chat/chatSource";
 
 // Automated (OAuth) calendar providers — disabled until the native connector
 // lands (see packages/integrations/src/calendar/calendarSource.ts). The .ics
@@ -96,6 +98,8 @@ export function SetupScreen({
   captureError,
   importError,
   onImportOutlookIcs,
+  chatImportError,
+  onImportChatExport,
   aiConfig,
   setAiConfig,
   hasClassification,
@@ -117,6 +121,8 @@ export function SetupScreen({
   captureError: string | null;
   importError: string | null;
   onImportOutlookIcs: (file: File) => void;
+  chatImportError: string | null;
+  onImportChatExport: (file: File) => void;
   aiConfig: AIConfig | null;
   setAiConfig: (config: AIConfig | null) => void;
   hasClassification: boolean;
@@ -346,6 +352,50 @@ export function SetupScreen({
               <PlugZap size={15} />
               <span>Connect {provider.label}</span>
             </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="settings-row">
+        <div className="settings-row-icon"><MessagesSquare size={18} /></div>
+        <div>
+          <h2>Workplace chat</h2>
+          <p>Turn Slack, Teams, or Webex activity into reactive-work signals. Only metadata is read — timestamps, channels, and message counts — never message text, and nothing leaves this Mac.</p>
+        </div>
+        <div className="settings-row-status">
+          <strong>Metadata only</strong>
+          <span>No message text imported</span>
+          {chatImportError && <small className="import-error">{chatImportError}</small>}
+        </div>
+        <div className="chat-connect-options">
+          {CHAT_PROVIDERS.map((provider) => (
+            provider.loopSafe ? (
+              <label key={provider.id} className="settings-control" title={provider.description}>
+                <Upload size={15} />
+                <span>Import {provider.label}</span>
+                <input
+                  accept=".json,application/json"
+                  type="file"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) onImportChatExport(file);
+                    event.currentTarget.value = "";
+                  }}
+                />
+              </label>
+            ) : (
+              <button
+                key={provider.id}
+                className="settings-control"
+                type="button"
+                disabled
+                title={provider.description}
+                aria-label={`Connect ${provider.label} (coming soon)`}
+              >
+                <PlugZap size={15} />
+                <span>Connect {provider.label}</span>
+              </button>
+            )
           ))}
         </div>
       </section>
