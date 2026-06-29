@@ -3131,6 +3131,12 @@ select {
   color: var(--text-subtle);
 }
 
+/* The stakeholder chip row reuses the baseline-chip styling but follows the interruption
+   note rather than the metric cards, so it wants normal top spacing, not the negative pull. */
+.stakeholder-chips {
+  margin: 14px 0 2px;
+}
+
 .metric-card {
   display: grid;
   gap: 4px;

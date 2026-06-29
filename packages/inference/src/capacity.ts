@@ -423,6 +423,101 @@ export function analyzeInterruptionLoad(
   };
 }
 
+/**
+ * A stakeholder group (channel / DM) the week's reactive chat work served, ranked by message
+ * volume. Channel/participant labels only — never message content.
+ */
+export interface ChatStakeholderGroup {
+  /** Channel/DM display label (e.g. "#data-requests", "DM · Priya"). Never message text. */
+  label: string;
+  /** Reactive bursts that involved this group (the concrete, always-exact count). */
+  burst_count: number;
+  /**
+   * Share (0–100) of the window's reactive message *volume* this group accounts for. A burst
+   * spanning multiple channels splits its volume evenly so no channel is over-credited; that
+   * fractional weight drives the share but is never surfaced as a misleading rounded count.
+   */
+  share_pct: number;
+}
+
+export interface ChatStakeholderSummary {
+  /** Total reactive messages across every group in the window (metadata counts only). */
+  total_message_count: number;
+  /** Distinct stakeholder groups seen, before the top-N cut. */
+  group_count: number;
+  /** Top groups by reactive message volume, descending. */
+  groups: ChatStakeholderGroup[];
+}
+
+const DEFAULT_STAKEHOLDER_LIMIT = 4;
+// Bursts with no channel/DM label (e.g. a DM export that omits the participant name) still
+// served reactive time — bucket them honestly rather than silently dropping the volume.
+const UNLABELED_STAKEHOLDER_GROUP = "Direct & untagged";
+
+/** Split a metadata `channels` value ("#a, #b") into trimmed labels; missing/empty → []. */
+function parseChannelLabels(value: string | null | undefined): string[] {
+  if (typeof value !== "string") return [];
+  return value
+    .split(",")
+    .map((label) => label.trim())
+    .filter((label) => label.length > 0);
+}
+
+/**
+ * Rank the stakeholder groups (channels / DMs) the week's reactive chat work served, so the user
+ * can see *who* their ad-hoc time went to — the collaboration view calendar + git can't surface.
+ * Pure and domain-typed (no persistence/frontend types) so it stays unit-testable like
+ * `analyzeInterruptionLoad`. **Privacy:** reads ONLY the metadata-only labels/counts the chat
+ * parser emits (`channels` labels + `messages` count) plus event time spans — never message text.
+ * A burst spanning multiple channels splits its volume evenly so no channel is over-credited.
+ * Returns `null` when there is no chat signal so the caller can hide the panel.
+ */
+export function summarizeChatStakeholders(
+  chatEvents: RawEvent[],
+  options: { limit?: number } = {}
+): ChatStakeholderSummary | null {
+  const limit = Math.max(1, options.limit ?? DEFAULT_STAKEHOLDER_LIMIT);
+  const groups = new Map<string, { label: string; weight: number; bursts: number }>();
+  let totalMessages = 0;
+  for (const event of chatEvents) {
+    if (event.source_type !== "chat") continue;
+    const start = new Date(event.timestamp_start).getTime();
+    const end = new Date(event.timestamp_end).getTime();
+    if (Number.isNaN(start) || Number.isNaN(end) || end <= start) continue;
+    // `metadata` is typed non-null, but events can arrive from untrusted persisted JSON —
+    // fall back to an empty bag so a malformed record can't throw here.
+    const metadata = event.metadata ?? {};
+    const messages = metadataCount(metadata.messages);
+    const labels = parseChannelLabels(metadata.channels);
+    const targets = labels.length > 0 ? labels : [UNLABELED_STAKEHOLDER_GROUP];
+    const perLabel = messages / targets.length;
+    totalMessages += messages;
+    for (const label of targets) {
+      const existing = groups.get(label) ?? { label, weight: 0, bursts: 0 };
+      existing.weight += perLabel;
+      existing.bursts += 1;
+      groups.set(label, existing);
+    }
+  }
+  // No reactive message volume (no chat events, or only zero-message bursts) → nothing worth
+  // ranking, so hide the panel rather than render a row of meaningless 0% chips.
+  if (totalMessages === 0) return null;
+
+  const ranked = [...groups.values()]
+    .sort((left, right) => right.weight - left.weight || right.bursts - left.bursts || left.label.localeCompare(right.label))
+    .map((group) => ({
+      label: group.label,
+      burst_count: group.bursts,
+      share_pct: Math.round((group.weight / totalMessages) * 100)
+    }));
+
+  return {
+    total_message_count: totalMessages,
+    group_count: ranked.length,
+    groups: ranked.slice(0, limit)
+  };
+}
+
 export function generateWeeklyNarrative(snapshot: WeeklyCapacitySnapshot): WeeklyNarrative {
   const reactiveDominant = snapshot.reactive_pct > snapshot.planned_pct * 0.7;
   const denseMeetings = snapshot.meeting_pct >= 18;

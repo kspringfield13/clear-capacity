@@ -11,7 +11,7 @@ import type {
   AIConfig,
 } from "../../../../../packages/domain/src/models";
 import type { PersistedForecastRecord, PersistedNarrativeRecord, ForecastAccuracyReview, PersistedSnapshotRecord } from "../../services/localStore";
-import type { computeWeeklyCapacitySnapshot, generateWeeklyNarrative, ForecastAccuracyTrend, ForecastTrackRecordEntry, InterruptionLoadAnalysis } from "../../../../../packages/inference/src/capacity";
+import type { computeWeeklyCapacitySnapshot, generateWeeklyNarrative, ChatStakeholderSummary, ForecastAccuracyTrend, ForecastTrackRecordEntry, InterruptionLoadAnalysis } from "../../../../../packages/inference/src/capacity";
 
 import { CompactWidget } from "../compact/CompactWidget";
 import { SetupScreen } from "../settings/SetupScreen";
@@ -41,6 +41,7 @@ interface ScreenRouterProps {
   snapshot: ReturnType<typeof computeWeeklyCapacitySnapshot>;
   snapshotHistory: PersistedSnapshotRecord[];
   interruptionLoad: InterruptionLoadAnalysis | null;
+  chatStakeholders: ChatStakeholderSummary | null;
   onConfirm: (blockId: string) => void;
   onExclude: (blockId: string) => void;
   onRelabel: (blockId: string, field: keyof WorkBlock, value: WorkBlock[keyof WorkBlock]) => void;
@@ -125,6 +126,7 @@ export function ScreenRouter({
   snapshot,
   snapshotHistory,
   interruptionLoad,
+  chatStakeholders,
   onConfirm,
   onExclude,
   onRelabel,
@@ -282,6 +284,7 @@ export function ScreenRouter({
           snapshot={snapshot}
           snapshotHistory={snapshotHistory}
           interruptionLoad={interruptionLoad}
+          chatStakeholders={chatStakeholders}
           weekRangeLabel={weekRangeLabel}
           hasWorkBlocks={blocks.length > 0}
           blocks={blocks}
