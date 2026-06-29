@@ -1907,6 +1907,24 @@ h3 {
   overflow-x: hidden;
 }
 
+/* Scroll-shadow affordance (same technique as .ledger-list): the cover
+   gradients (local) hide the edge shadows when parked at a scroll boundary;
+   the radial shadows (scroll) reveal when more content sits above/below the
+   fold. These screens are roomier than the tight ledger list, so the cover
+   bands run a touch taller to clear the card padding. The
+   `background-color: var(--background)` longhand MUST stay after the
+   `background` shorthand, which would otherwise reset it to transparent. */
+.capacity-screen,
+.forecast-screen,
+.settings-screen {
+  background:
+    linear-gradient(var(--background) 30%, transparent) 0 0 / 100% 24px no-repeat local,
+    linear-gradient(transparent, var(--background) 70%) 0 100% / 100% 40px no-repeat local,
+    radial-gradient(farthest-side at 50% 0, var(--scroll-shadow), transparent) 0 0 / 100% 8px no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, var(--scroll-shadow), transparent) 0 100% / 100% 10px no-repeat scroll;
+  background-color: var(--background);
+}
+
 .capacity-screen > *,
 .forecast-screen > * {
   flex: 0 0 auto;
