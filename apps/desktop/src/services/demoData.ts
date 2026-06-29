@@ -46,6 +46,7 @@ function demoSnapshot(week: string, overrides: Partial<WeeklyCapacitySnapshot>):
     blocked_pct: 6,
     recurring_pct: 24,
     reliable_new_work_capacity_pct: 28,
+    committed_utilization_pct: 52,
     carryover_risk_pct: 18,
     wip_load_score: 0.52,
     context_switch_score: 0.44,
