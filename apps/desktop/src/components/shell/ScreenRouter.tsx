@@ -57,6 +57,8 @@ interface ScreenRouterProps {
   captureError: string | null;
   importError: string | null;
   onImportOutlookIcs: (file: File) => void;
+  chatImportError: string | null;
+  onImportChatExport: (file: File) => void;
   aiConfig: AIConfig | null;
   setAiConfig: (value: AIConfig | null) => void;
   retentionDays: number | null;
@@ -136,6 +138,8 @@ export function ScreenRouter({
   captureError,
   importError,
   onImportOutlookIcs,
+  chatImportError,
+  onImportChatExport,
   aiConfig,
   setAiConfig,
   retentionDays,
@@ -212,6 +216,8 @@ export function ScreenRouter({
           captureError={captureError}
           importError={importError}
           onImportOutlookIcs={onImportOutlookIcs}
+          chatImportError={chatImportError}
+          onImportChatExport={onImportChatExport}
           aiConfig={aiConfig}
           setAiConfig={setAiConfig}
           hasClassification={blocks.length > 0}

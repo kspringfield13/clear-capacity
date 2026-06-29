@@ -1242,6 +1242,7 @@ h3 {
 }
 
 .calendar-connect-options,
+.chat-connect-options,
 .data-export-options {
   display: flex;
   flex-direction: column;
@@ -1250,6 +1251,7 @@ h3 {
 }
 
 .calendar-connect-options .settings-control,
+.chat-connect-options .settings-control,
 .data-export-options .settings-control {
   width: 100%;
 }
@@ -4949,6 +4951,7 @@ input:focus {
 
   .settings-control,
   .calendar-connect-options,
+  .chat-connect-options,
   .data-export-options {
     grid-column: 3;
     grid-row: 1 / span 2;
@@ -6074,6 +6077,12 @@ input:focus {
   color: #007f70;
 }
 
+.audit-badge.chat_import {
+  border-color: #bbe4f7;
+  background: #e6f5fd;
+  color: #0a6a94;
+}
+
 .audit-badge.user_correction {
   border-color: #ffdc73;
   background: var(--amber-soft);
@@ -6445,6 +6454,12 @@ html[data-theme="dark"] .audit-badge.forecast_agent {
   border-color: #1d5c54;
   background: #0e302c;
   color: #70d8ca;
+}
+
+html[data-theme="dark"] .audit-badge.chat_import {
+  border-color: #1a4a63;
+  background: #0a2632;
+  color: #6cc4e8;
 }
 
 html[data-theme="dark"] .audit-badge.user_correction {
@@ -7195,6 +7210,7 @@ html[data-theme="dark"] .risk-track span[data-severity="high"] { background: #fb
   .settings-row-status,
   .settings-control,
   .calendar-connect-options,
+  .chat-connect-options,
   .data-export-options {
     grid-column: 1;
     grid-row: auto;
@@ -7203,11 +7219,13 @@ html[data-theme="dark"] .risk-track span[data-severity="high"] { background: #fb
 
   .settings-control,
   .calendar-connect-options,
+  .chat-connect-options,
   .data-export-options {
     justify-self: start;
   }
 
   .calendar-connect-options,
+  .chat-connect-options,
   .data-export-options {
     align-items: flex-start;
   }

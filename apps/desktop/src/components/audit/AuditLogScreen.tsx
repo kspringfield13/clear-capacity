@@ -7,7 +7,7 @@ import { AuditEventRow } from "./AuditEventRow";
 import { EmptyState } from "../common/EmptyState";
 
 export function AuditLogScreen({ auditEvents }: { auditEvents: AuditEvent[] }) {
-  type AuditFilter = "all" | "capture" | "session" | "visual" | "calendar" | "correction" | "classifier" | "copilot" | "forecast" | "narrative" | "privacy" | "onboarding";
+  type AuditFilter = "all" | "capture" | "session" | "visual" | "calendar" | "chat" | "correction" | "classifier" | "copilot" | "forecast" | "narrative" | "privacy" | "onboarding";
   const [filter, setFilter] = useState<AuditFilter>("all");
   const [query, setQuery] = useState("");
   const filters: Array<{ id: AuditFilter; label: string }> = [
@@ -16,6 +16,7 @@ export function AuditLogScreen({ auditEvents }: { auditEvents: AuditEvent[] }) {
     { id: "session", label: "Session" },
     { id: "visual", label: "Visual" },
     { id: "calendar", label: "Calendar" },
+    { id: "chat", label: "Chat" },
     { id: "correction", label: "Correction" },
     { id: "classifier", label: "Classifier" },
     { id: "copilot", label: "Copilot" },
@@ -30,6 +31,7 @@ export function AuditLogScreen({ auditEvents }: { auditEvents: AuditEvent[] }) {
     session: (event) => event.type === "activity_session",
     visual: (event) => event.type === "visual_context",
     calendar: (event) => event.type === "calendar_import",
+    chat: (event) => event.type === "chat_import",
     correction: (event) => event.type === "user_correction",
     classifier: (event) => event.type === "work_block_classification",
     copilot: (event) => event.type === "review_copilot",

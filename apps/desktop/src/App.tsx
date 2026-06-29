@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { outlookEventsToWorkBlocks, parseOutlookIcs } from "../../../packages/integrations/src/calendar/outlookIcs";
+import { importChatExport } from "../../../packages/integrations/src/chat/chatExport";
 import type {
   ActiveWindowSample,
   AuditEvent,
@@ -26,7 +27,7 @@ import {
   getLocalDateKey,
 } from "./lib/date";
 import { fieldLabel, humanizeCorrectionValue } from "./lib/format";
-import { createAuditEvent } from "./lib/audit";
+import { createAuditEvent, createChatImportAuditEvent } from "./lib/audit";
 import { removeSeededCorrections, removeSeededWorkBlocks } from "./lib/blocks";
 import { useDerived } from "./hooks/useDerived";
 import { usePersistence } from "./hooks/usePersistence";
@@ -153,6 +154,7 @@ export function App() {
   );
   const [visualContextAttemptedSessionIds, setVisualContextAttemptedSessionIds] = useState<string[]>([]);
   const [importError, setImportError] = useState<string | null>(null);
+  const [chatImportError, setChatImportError] = useState<string | null>(null);
   const [captureError, setCaptureError] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [theme, setTheme] = useState<AppTheme>("light");
@@ -931,6 +933,7 @@ export function App() {
     resetForecast();
     resetVisualContext();
     setImportError(null);
+    setChatImportError(null);
     setCaptureError(null);
     setPaused(true);
   }
@@ -1008,6 +1011,61 @@ export function App() {
         });
       } catch {
         failImport("The .ics file could not be parsed.");
+      }
+    };
+
+    reader.readAsText(file);
+  }
+
+  function importWorkplaceChat(file: File) {
+    setChatImportError(null);
+    const reader = new FileReader();
+
+    const failImport = (message: string) => {
+      setChatImportError(message);
+      pushToast({ tone: "error", message });
+    };
+
+    reader.onerror = () => {
+      failImport("Could not read that chat export.");
+    };
+
+    reader.onload = () => {
+      try {
+        const content = String(reader.result ?? "");
+        // Metadata-only: importChatExport whitelists timestamps/channels/counts and
+        // has no message-text field, so message bodies can never enter the ledger.
+        const result = importChatExport(content, { weekId: currentWeekId });
+
+        if (result.work_blocks.length === 0) {
+          failImport("No usable chat activity was found in that export.");
+          return;
+        }
+
+        setBlocks((current) => {
+          // Imported blocks carry stable ids (`imported-<hash>`), so re-importing
+          // the same export upserts rather than duplicating.
+          const merged = new Map(current.map((block) => [block.work_block_id, block]));
+          result.work_blocks.forEach((block) => merged.set(block.work_block_id, block));
+          return [...merged.values()].sort(
+            (left, right) => new Date(left.start_time).getTime() - new Date(right.start_time).getTime()
+          );
+        });
+
+        setAuditEvents((current) => [
+          ...current,
+          createChatImportAuditEvent({
+            fileName: file.name,
+            importedBlockCount: result.work_blocks.length,
+            skippedRecordCount: result.skipped
+          })
+        ].slice(-1000));
+        pushToast({
+          tone: "success",
+          message: `${result.work_blocks.length} reactive block${result.work_blocks.length === 1 ? "" : "s"} imported`,
+        });
+      } catch {
+        failImport("That chat export could not be parsed.");
       }
     };
 
@@ -1095,6 +1153,8 @@ export function App() {
         captureError={captureError}
         importError={importError}
         onImportOutlookIcs={importOutlookIcs}
+        chatImportError={chatImportError}
+        onImportChatExport={importWorkplaceChat}
         aiConfig={aiConfig}
         setAiConfig={setAiConfig}
         retentionDays={retentionDays}
