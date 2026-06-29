@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Search, PieChart, Monitor } from "lucide-react";
+import { useRef, useState } from "react";
+import { Search, PieChart, Monitor, X } from "lucide-react";
 import type {
   WorkBlock,
   ActiveWindowSample,
@@ -45,6 +45,7 @@ export function LedgerScreen({
   onRelabel: (blockId: string, field: keyof WorkBlock, value: WorkBlock[keyof WorkBlock]) => void;
 }) {
   const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const classifiedSessionIds = new Set(blocks.flatMap((block) => block.derived_from));
   const unclassifiedSessionCount = activeWindowSessions.filter(
@@ -76,12 +77,23 @@ export function LedgerScreen({
         <div className="search-box">
           <Search size={17} />
           <input
+            ref={searchInputRef}
             aria-label="Search work blocks"
             placeholder="Search project, stakeholder, category"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Escape") setSearchQuery(""); }}
           />
+          {searchQuery && (
+            <button
+              type="button"
+              className="search-box-clear"
+              aria-label="Clear search"
+              onClick={() => { setSearchQuery(""); searchInputRef.current?.focus(); }}
+            >
+              <X size={15} />
+            </button>
+          )}
         </div>
       </div>
       {current && (
