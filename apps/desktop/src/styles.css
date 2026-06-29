@@ -2325,6 +2325,21 @@ h3 {
   gap: 8px;
 }
 
+.tag-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.tag-field-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
 select {
   width: 100%;
   min-height: 36px;
@@ -6786,6 +6801,14 @@ html[data-theme="dark"] .risk-track span[data-severity="high"] { background: #fb
   min-height: 32px;
   padding-inline: 8px 28px;
   font-size: 12px;
+}
+
+.ledger-screen .tag-field {
+  gap: 3px;
+}
+
+.ledger-screen .tag-field-label {
+  font-size: 10px;
 }
 
 .ledger-screen .evidence {
