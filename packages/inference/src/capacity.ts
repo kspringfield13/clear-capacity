@@ -349,7 +349,23 @@ export interface InterruptionLoadAnalysis {
   interrupted_deep_work_count: number;
   /** Share (0–100) of in-window deep-work blocks a chat burst interleaved. */
   interrupted_deep_work_pct: number;
+  /** Distinct local weekdays that carried reactive message volume (0–7; caller scopes to a week). */
+  active_day_count: number;
+  /** Weekday name (local time) reactive message volume peaked on; null when no message volume. */
+  peak_day: string | null;
+  /** Reactive messages on `peak_day` (metadata count only); 0 when `peak_day` is null. */
+  peak_day_message_count: number;
 }
+
+const WEEKDAY_NAMES = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday"
+];
 
 /** Parse a metadata count string (`messages`/`mentions`); non-numeric/negative → 0. */
 function metadataCount(value: string | null | undefined): number {
@@ -369,6 +385,9 @@ export function analyzeInterruptionLoad(
   workBlocks: WorkBlock[]
 ): InterruptionLoadAnalysis | null {
   const bursts: { start: number; end: number }[] = [];
+  // Reactive message volume bucketed by local weekday (0–6) so we can name the day focus took the
+  // most chat pressure. Local time is the right semantic — the user's sense of "Wednesday".
+  const dayMessages = new Map<number, number>();
   let messageCount = 0;
   let mentionCount = 0;
   let activeMs = 0;
@@ -382,10 +401,31 @@ export function analyzeInterruptionLoad(
     // `metadata` is typed non-null, but events can arrive from untrusted persisted
     // JSON — fall back to an empty bag so a malformed record can't throw here.
     const metadata = event.metadata ?? {};
-    messageCount += metadataCount(metadata.messages);
+    const messages = metadataCount(metadata.messages);
+    messageCount += messages;
     mentionCount += metadataCount(metadata.mentions);
+    // Bucket only message-bearing days so `active_day_count` and the peak both reflect actual
+    // reactive volume — a malformed 0-message burst on a separate day can't inflate the count
+    // (or trip the ≥2-day footnote gate) into implying activity it didn't carry.
+    if (messages > 0) {
+      const dayIndex = new Date(start).getDay();
+      dayMessages.set(dayIndex, (dayMessages.get(dayIndex) ?? 0) + messages);
+    }
   }
   if (bursts.length === 0) return null;
+
+  // Name the weekday reactive volume peaked on. Iterate by ascending weekday index so ties resolve
+  // to the lower index deterministically regardless of event order; strict `>` from a 0 baseline
+  // leaves `peak_day` null for a burst-only week with no message counts (nothing worth naming).
+  let peakDayIndex = -1;
+  let peakDayMessages = 0;
+  for (const dayIndex of [...dayMessages.keys()].sort((left, right) => left - right)) {
+    const total = dayMessages.get(dayIndex) ?? 0;
+    if (total > peakDayMessages) {
+      peakDayMessages = total;
+      peakDayIndex = dayIndex;
+    }
+  }
 
   // Scope deep-work blocks to the chat window so the interleave denominator reflects the period
   // chat could actually have fragmented, not the user's entire history.
@@ -419,7 +459,10 @@ export function analyzeInterruptionLoad(
     deep_work_block_count: deepWorkInWindow.length,
     interrupted_deep_work_count: interrupted,
     interrupted_deep_work_pct:
-      deepWorkInWindow.length > 0 ? Math.round((interrupted / deepWorkInWindow.length) * 100) : 0
+      deepWorkInWindow.length > 0 ? Math.round((interrupted / deepWorkInWindow.length) * 100) : 0,
+    active_day_count: dayMessages.size,
+    peak_day: peakDayIndex >= 0 ? WEEKDAY_NAMES[peakDayIndex] : null,
+    peak_day_message_count: peakDayMessages
   };
 }
 

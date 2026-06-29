@@ -3669,6 +3669,17 @@ select {
   color: var(--text-subtle);
 }
 
+.interruption-peak-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-subtle);
+}
+
+.interruption-peak-note strong {
+  color: var(--text);
+}
+
 .forecast-summary > div {
   display: grid;
   gap: 5px;
