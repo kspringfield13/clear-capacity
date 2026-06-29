@@ -580,9 +580,18 @@ export function AgentScreen({
             </div>
           </div>
           <div className="briefing-metrics">
-            <div><span>Planned</span><strong>{briefing.planned}%</strong></div>
-            <div><span>Reactive</span><strong>{briefing.reactive}%</strong></div>
-            <div><span>Outlook</span><strong>{riskLabel}</strong></div>
+            <div title="Share of your tracked work this week that was scheduled or planned ahead of time">
+              <span>Planned</span><strong>{briefing.planned}%</strong>
+              <span className="sr-only">Share of your tracked work this week that was scheduled or planned ahead of time.</span>
+            </div>
+            <div title="Share of your tracked work this week that was unplanned — reacting to chats, interruptions, or ad-hoc requests">
+              <span>Reactive</span><strong>{briefing.reactive}%</strong>
+              <span className="sr-only">Share of your tracked work this week that was unplanned — reacting to chats, interruptions, or ad-hoc requests.</span>
+            </div>
+            <div title="How likely your unfinished work is to spill into next week, based on this week's load">
+              <span>Outlook</span><strong>{riskLabel}</strong>
+              <span className="sr-only">How likely your unfinished work is to spill into next week, based on this week's load.</span>
+            </div>
           </div>
           <div className="briefing-actions">
             <button type="button" onClick={() => handleSuggested("Explain why my reliable capacity is at its current level.")}>Explain forecast <ArrowRight size={14} /></button>
