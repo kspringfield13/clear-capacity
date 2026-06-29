@@ -15,7 +15,8 @@ import {
  * export into reactive `WorkBlock`s by:
  *   1. {@link parseChatExport} — JSON export → {@link ChatMessageRecord}[]
  *   2. {@link chatMessagesToImport} — messages → session {@link RawEventImport}[]
- *      (consecutive messages within a provider collapse into one reactive block)
+ *      (consecutive text pings collapse into one reactive block; `call`/`huddle`
+ *      surfaces collapse into collaborative *meeting* blocks instead)
  *   3. {@link importChatExport} — the full pipeline, normalized through the
  *      shared {@link importRawEvents} so capacity/id/dedup heuristics stay
  *      identical to every other source.
@@ -46,7 +47,7 @@ import {
  * {
  *   "timestamp": "2026-06-22T09:01:00Z",
  *   "provider": "slack",        // slack | teams | webex
- *   "surface": "channel",       // channel | dm | thread
+ *   "surface": "channel",       // channel | dm | thread | call | huddle
  *   "direction": "received",    // sent | received
  *   "mentioned_me": true,
  *   "thread_id": "T-1042",
@@ -68,8 +69,13 @@ import {
 /** Supported chat vendors. The signal is vendor-uniform; this only labels it. */
 export type ChatProvider = "slack" | "teams" | "webex";
 
-/** Where a message was exchanged. */
-export type ChatSurface = "channel" | "dm" | "thread";
+/**
+ * Where a message was exchanged. `call`/`huddle` mark synchronous voice/video
+ * sessions (Teams/Webex meetings, ad-hoc Slack huddles) — those sessionize into
+ * collaborative *meeting* blocks rather than reactive interruption blocks, and
+ * are de-duplicated against calendar meetings by `chat/callDedup.ts`.
+ */
+export type ChatSurface = "channel" | "dm" | "thread" | "call" | "huddle";
 
 /** Direction relative to the user. */
 export type ChatDirection = "sent" | "received";
@@ -96,8 +102,16 @@ export interface ChatExportOptions extends ImportRawEventsOptions {
 }
 
 const CHAT_PROVIDERS: readonly ChatProvider[] = ["slack", "teams", "webex"];
-const CHAT_SURFACES: readonly ChatSurface[] = ["channel", "dm", "thread"];
+const CHAT_SURFACES: readonly ChatSurface[] = ["channel", "dm", "thread", "call", "huddle"];
 const CHAT_DIRECTIONS: readonly ChatDirection[] = ["sent", "received"];
+
+/** Surfaces that represent a synchronous call/meeting rather than a text ping. */
+const CALL_SURFACES: readonly ChatSurface[] = ["call", "huddle"];
+
+/** True when a message records participation in a synchronous call/huddle. */
+function isCallSurface(surface: ChatSurface): boolean {
+  return CALL_SURFACES.includes(surface);
+}
 
 /** Human label for a provider, used in the imported event's `app_name`. */
 const PROVIDER_LABEL: Record<ChatProvider, string> = {
@@ -209,14 +223,20 @@ export function parseChatExport(
 }
 
 /**
- * Group messages into reactive bursts and emit one `RawEventImport` per burst.
+ * Group messages into bursts and emit one `RawEventImport` per burst.
  *
- * Messages are grouped by provider, sorted by time, then split wherever two
- * consecutive messages are more than `sessionGapMinutes` apart — exactly how
- * {@link gitCommitsToImport} splits commits. Each burst spans `leadMinutes`
- * before its first message through its last message, so even a lone ping gets a
- * non-zero block. The emitted metadata is counts + channel/participant labels
- * only; there is no message text.
+ * Messages are grouped by provider AND kind (text vs. `call`/`huddle`), sorted
+ * by time, then split wherever two consecutive messages are more than
+ * `sessionGapMinutes` apart — exactly how {@link gitCommitsToImport} splits
+ * commits. Keying on kind keeps a synchronous call from merging into an adjacent
+ * text burst. Each burst spans `leadMinutes` before its first message through its
+ * last message, so even a lone ping gets a non-zero block.
+ *
+ * Text bursts become reactive interruption blocks (`Ad hoc stakeholder
+ * requests` / `Reactive`); call/huddle bursts become collaborative *meeting*
+ * blocks (`Meetings / stakeholder syncs` / `Collaborative` / `fixed`), tagged
+ * `metadata.kind = "call"` so callers can route them to calendar dedup. The
+ * emitted metadata is counts + channel/participant labels only; no message text.
  */
 export function chatMessagesToImport(
   messages: ChatMessageRecord[],
@@ -225,19 +245,23 @@ export function chatMessagesToImport(
   const gapMs = Math.max(0, options.sessionGapMinutes ?? DEFAULT_SESSION_GAP_MINUTES) * 60_000;
   const leadMs = Math.max(0, options.leadMinutes ?? DEFAULT_LEAD_MINUTES) * 60_000;
 
-  const byProvider = new Map<ChatProvider, ChatMessageRecord[]>();
+  // Group by provider + kind so a call never sessionizes together with the text
+  // pings around it. The key embeds both; the value carries the typed pieces.
+  const groups = new Map<string, { provider: ChatProvider; isCall: boolean; messages: ChatMessageRecord[] }>();
   for (const message of messages) {
-    const list = byProvider.get(message.provider);
-    if (list) {
-      list.push(message);
+    const isCall = isCallSurface(message.surface);
+    const key = `${message.provider}::${isCall ? "call" : "text"}`;
+    const group = groups.get(key);
+    if (group) {
+      group.messages.push(message);
     } else {
-      byProvider.set(message.provider, [message]);
+      groups.set(key, { provider: message.provider, isCall, messages: [message] });
     }
   }
 
   const imports: RawEventImport[] = [];
-  for (const [provider, providerMessages] of byProvider) {
-    const sorted = [...providerMessages].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+  for (const { provider, isCall, messages: groupMessages } of groups.values()) {
+    const sorted = [...groupMessages].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
     let session: ChatMessageRecord[] = [];
 
     const flush = () => {
@@ -266,6 +290,7 @@ export function chatMessagesToImport(
       // Metadata-only: counts + channel/participant labels. NO message text.
       const metadata: Record<string, string> = {
         provider,
+        kind: isCall ? "call" : "message",
         messages: String(session.length),
         received: String(received),
         sent: String(sent),
@@ -283,19 +308,32 @@ export function chatMessagesToImport(
       }
 
       // A single dominant channel labels the block; mixed-channel bursts fall
-      // back to a generic reactive-messaging name.
+      // back to a generic name (call vs. reactive messaging).
       const singleChannel = channels.length === 1 ? channels[0] : null;
+      const fallbackName = isCall ? `${PROVIDER_LABEL[provider]} call` : "Reactive messaging";
 
       imports.push({
-        // Sessions within a provider never overlap (sorted + gap-split), so the
-        // first message's instant keys the burst uniquely per provider.
-        event_id: `chat-${provider}-${first.timestamp.toISOString()}`,
+        // Sessions within a provider+kind never overlap (sorted + gap-split), so
+        // the first message's instant keys the burst uniquely. Only call bursts
+        // take a prefix — text bursts keep the original `chat-<provider>-<iso>`
+        // id so a re-import upserts existing reactive blocks instead of
+        // duplicating them, while a call and a text burst that start at the same
+        // instant still resolve to distinct ids.
+        event_id: `chat-${isCall ? "call-" : ""}${provider}-${first.timestamp.toISOString()}`,
         timestamp_start: start.toISOString(),
         timestamp_end: end.toISOString(),
         source_type: "chat",
         app_name: PROVIDER_LABEL[provider],
         project_hint: singleChannel,
-        project_name: singleChannel ?? "Reactive messaging",
+        project_name: singleChannel ?? fallbackName,
+        // Call/huddle bursts are synchronous meetings, not reactive pings.
+        ...(isCall
+          ? {
+              category: "Meetings / stakeholder syncs" as const,
+              mode: "Collaborative" as const,
+              planned_status: "fixed" as const
+            }
+          : {}),
         metadata
       });
       session = [];

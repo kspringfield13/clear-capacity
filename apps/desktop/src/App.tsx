@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { outlookEventsToWorkBlocks, parseOutlookIcs } from "../../../packages/integrations/src/calendar/outlookIcs";
 import { importChatExport } from "../../../packages/integrations/src/chat/chatExport";
+import { dedupeChatCallsAgainstCalendar } from "../../../packages/integrations/src/chat/callDedup";
 import type {
   ActiveWindowSample,
   AuditEvent,
@@ -984,10 +985,16 @@ export function App() {
           const nonCalendarBlocks = current.filter((block) => !block.work_block_id.startsWith("calendar-outlook-"));
           const currentEvents = new Map(calendarEvents.map((event) => [event.calendar_event_id, event]));
           importedEvents.forEach((event) => currentEvents.set(event.calendar_event_id, event));
-          return [
-            ...nonCalendarBlocks,
-            ...outlookEventsToWorkBlocks([...currentEvents.values()], currentWeekId)
-          ].sort((left, right) => new Date(left.start_time).getTime() - new Date(right.start_time).getTime());
+          const calendarBlocks = outlookEventsToWorkBlocks([...currentEvents.values()], currentWeekId);
+          // Symmetric dedup: importing the calendar after a chat export must also
+          // drop any previously-imported chat call block now covered by a calendar
+          // meeting, so the order of the two imports never double-counts the call.
+          const importedBlocks = nonCalendarBlocks.filter((block) => block.work_block_id.startsWith("imported-"));
+          const otherBlocks = nonCalendarBlocks.filter((block) => !block.work_block_id.startsWith("imported-"));
+          const { kept } = dedupeChatCallsAgainstCalendar(importedBlocks, calendarBlocks);
+          return [...otherBlocks, ...kept, ...calendarBlocks].sort(
+            (left, right) => new Date(left.start_time).getTime() - new Date(right.start_time).getTime()
+          );
         });
 
         addCorrection({
@@ -1053,38 +1060,56 @@ export function App() {
           return;
         }
 
-        setBlocks((current) => {
-          // Imported blocks carry stable ids (`imported-<hash>`), so re-importing
-          // the same export upserts rather than duplicating.
-          const merged = new Map(current.map((block) => [block.work_block_id, block]));
-          result.work_blocks.forEach((block) => merged.set(block.work_block_id, block));
-          return [...merged.values()].sort(
-            (left, right) => new Date(left.start_time).getTime() - new Date(right.start_time).getTime()
-          );
-        });
+        // Drop chat call/huddle meeting blocks that overlap a meeting already on
+        // the calendar, so a Teams/Webex call on both isn't double-counted in
+        // meeting_pct. Reactive blocks are always kept.
+        const { kept, deduped } = dedupeChatCallsAgainstCalendar(result.work_blocks, blocks);
 
-        // Retain the metadata-only chat events (deduped by event_id) so the
-        // interruption-load signal survives a reload. NO message text is stored.
-        setChatEvents((current) => {
-          const merged = new Map(current.map((event) => [event.event_id, event]));
-          result.events.forEach((event) => merged.set(event.event_id, event));
-          return [...merged.values()].sort(
-            (left, right) =>
-              new Date(left.timestamp_start).getTime() - new Date(right.timestamp_start).getTime()
-          );
-        });
+        if (kept.length > 0) {
+          setBlocks((current) => {
+            // Imported blocks carry stable ids (`imported-<hash>`), so re-importing
+            // the same export upserts rather than duplicating.
+            const merged = new Map(current.map((block) => [block.work_block_id, block]));
+            kept.forEach((block) => merged.set(block.work_block_id, block));
+            return [...merged.values()].sort(
+              (left, right) => new Date(left.start_time).getTime() - new Date(right.start_time).getTime()
+            );
+          });
 
+          // Retain the metadata-only chat events (deduped by event_id) so the
+          // interruption-load signal survives a reload — but only the reactive text
+          // bursts, not call/huddle meetings (those are meeting blocks, not
+          // interruptions). NO message text is stored.
+          const reactiveEvents = result.events.filter((event) => event.metadata?.kind !== "call");
+          setChatEvents((current) => {
+            const merged = new Map(current.map((event) => [event.event_id, event]));
+            reactiveEvents.forEach((event) => merged.set(event.event_id, event));
+            return [...merged.values()].sort(
+              (left, right) =>
+                new Date(left.timestamp_start).getTime() - new Date(right.timestamp_start).getTime()
+            );
+          });
+        }
+
+        // Audit every import attempt, including one where every block was a call
+        // already covered by the calendar (a user-visible decision that changed
+        // what was imported).
         setAuditEvents((current) => [
           ...current,
           createChatImportAuditEvent({
             fileName: file.name,
-            importedBlockCount: result.work_blocks.length,
+            importedBlockCount: kept.length,
             skippedRecordCount: result.skipped
           })
         ].slice(-1000));
         pushToast({
-          tone: "success",
-          message: `${result.work_blocks.length} reactive block${result.work_blocks.length === 1 ? "" : "s"} imported`,
+          tone: kept.length === 0 ? "info" : "success",
+          message:
+            kept.length === 0
+              ? `${deduped.length} chat call${deduped.length === 1 ? "" : "s"} already on your calendar — nothing new imported`
+              : deduped.length > 0
+                ? `${kept.length} block${kept.length === 1 ? "" : "s"} imported · ${deduped.length} call${deduped.length === 1 ? "" : "s"} already on your calendar`
+                : `${kept.length} block${kept.length === 1 ? "" : "s"} imported`,
         });
       } catch {
         failImport("That chat export could not be parsed.");
