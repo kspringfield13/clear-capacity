@@ -10,6 +10,11 @@ import type {
 import { workCategories, workModes } from "../../domain/src/taxonomy";
 
 const BASELINE_CAPACITY = 100;
+// Cap reliable new-work capacity at 40% of the week. Basis: queueing theory — for an M/M/1
+// queue residence time scales as 1/(1−ρ), so wait time goes vertical past the ~80% utilization
+// "knee". If existing commitments run ~60%, promising new work only up to ~40% keeps total
+// target utilization near that knee, the only stable operating point. Exact 40% is hand-tuned;
+// see docs/heuristics-vs-research.md §1. (A target-utilization model is the principled successor.)
 const MAX_RELIABLE_NEW_WORK = 40;
 
 function roundPct(value: number) {
@@ -68,6 +73,9 @@ export function computeWeeklyCapacitySnapshot(
   );
   const deepWorkPct = roundPct(sum(included, (block) => block.mode === "Deep work"));
   const fragmentedWorkPct = roundPct(sum(included, (block) => block.mode === "Fragmented"));
+  // Discount unverified low-confidence work to 55% when scoring carryover risk: only a fraction of
+  // it is likely to actually spill into next week. The 0.55 weight is hand-tuned, not derived —
+  // see docs/heuristics-vs-research.md §1–2 ("Document the 0.72 / 0.55 / 40% constants").
   const carryoverRiskPct = roundPct(sum(included, (block) => !block.user_verified && block.confidence < 0.75) * 0.55);
   // Improved fragmentation: count context switches more accurately
   const contextSwitchScore = clamp(
@@ -84,6 +92,10 @@ export function computeWeeklyCapacitySnapshot(
       BASELINE_CAPACITY -
         recurringPct -
         carryoverRiskPct -
+        // Reactive work counts for only ~72% of its face value toward sustainable capacity.
+        // Mark, Gudith & Klocke (CHI 2008) found interrupted/reactive work costs higher stress,
+        // effort and time pressure (not slower clocks) — i.e. it delivers less *sustainable*
+        // throughput. The 0.72 magnitude is hand-tuned; see docs/heuristics-vs-research.md §2.
         reactivePct * 0.72 -
         fragmentationPenalty -
         wipPenalty
@@ -587,6 +599,10 @@ export function summarizeChatStakeholders(
 export function generateWeeklyNarrative(snapshot: WeeklyCapacitySnapshot): WeeklyNarrative {
   const reactiveDominant = snapshot.reactive_pct > snapshot.planned_pct * 0.7;
   const denseMeetings = snapshot.meeting_pct >= 18;
+  // Flag a fragmented week once the context-switch score crosses 0.45. Penalizing fragmentation is
+  // well-grounded (collaboration is ~85% of the work week; sustained attention averages ~47s —
+  // Mark 2023), and the model likely *under*-weights it; the exact 0.45 cut is hand-tuned, not
+  // derived — see docs/heuristics-vs-research.md §3.
   const fragmented = snapshot.context_switch_score >= 0.45;
   const topDrivers = [
     reactiveDominant ? "Reactive work displaced planned analysis time" : "Planned work remained the largest allocation",
