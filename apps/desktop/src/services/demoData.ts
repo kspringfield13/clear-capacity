@@ -186,12 +186,12 @@ export function createDemoState(reference = new Date()): PersistedAppState {
       derived_from: ["demo-session-datagrip"], evidence: ["Query and issue-tracker context followed a data alert"],
       confidence: 0.89, user_verified: true
     }),
-    workBlock(monday, "demo-planning", 0, 245, {
+    workBlock(monday, "calendar-outlook-demo-planning", 0, 245, {
       ...common, estimated_capacity_pct: 8, category: "Meetings / stakeholder syncs", mode: "Collaborative",
       planned_status: "fixed", project_name: "Weekly planning sync", derived_from: ["demo-calendar-planning"],
       evidence: ["Imported from Outlook calendar", "Six attendee records found"], confidence: 0.98, user_verified: true
     }),
-    workBlock(monday, "demo-product-review", 1, 285, {
+    workBlock(monday, "calendar-outlook-demo-product-review", 1, 285, {
       ...common, estimated_capacity_pct: 8, category: "Meetings / stakeholder syncs", mode: "Collaborative",
       planned_status: "fixed", project_name: "Product metrics review", stakeholder_group: "Product",
       derived_from: ["demo-calendar-product"], evidence: ["Imported from Outlook calendar"], confidence: 0.96,

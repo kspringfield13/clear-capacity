@@ -6,6 +6,21 @@ import { fieldLabel, formatRange, humanizeCorrectionValue, pct, plannedStatusLab
 import type { LearnedLabelMatch } from "../../lib/learnedLabels";
 import { ConfidenceChip } from "../common/ConfidenceChip";
 
+// Provenance label derived from the `work_block_id` prefix — the same convention
+// `App.tsx` keys cross-source dedup off of (`calendar-outlook-` = calendar, `imported-`
+// = generic source import). Workplace chat is the only `imported-` source surfaced in
+// the UI today; if a future non-chat `imported-` source lands, refine the label off
+// `derived_from`/`evidence` rather than assuming chat here.
+function blockOrigin(workBlockId: string): { label: string; title: string } {
+  if (workBlockId.startsWith("calendar-outlook-")) {
+    return { label: "Calendar", title: "Imported from your Outlook calendar" };
+  }
+  if (workBlockId.startsWith("imported-")) {
+    return { label: "Workplace chat", title: "Derived from imported workplace-chat activity" };
+  }
+  return { label: "Activity capture", title: "Captured from your foreground-app activity" };
+}
+
 function toLocalTimeInput(isoString: string): string {
   const d = new Date(isoString);
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
@@ -35,6 +50,7 @@ export function BlockCard({
   const [draftStart, setDraftStart] = useState("");
   const [draftEnd, setDraftEnd] = useState("");
   const [timeError, setTimeError] = useState(false);
+  const origin = blockOrigin(block.work_block_id);
 
   function handleStartTimeEdit() {
     setDraftStart(toLocalTimeInput(block.start_time));
@@ -121,6 +137,7 @@ export function BlockCard({
           )}
         </div>
         <div className="block-chips">
+          <span className="block-origin" title={origin.title}>{origin.label}</span>
           {block.blocker_flag && <span className="blocker-badge">Blocker</span>}
           <ConfidenceChip value={block.confidence} />
         </div>
