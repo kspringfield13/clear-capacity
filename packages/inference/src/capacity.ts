@@ -84,7 +84,18 @@ export function computeWeeklyCapacitySnapshot(
     0,
     1
   );
-  const wipLoadScore = clamp(new Set(included.map((block) => block.project_name)).size / 10, 0, 1);
+  // Work-in-progress penalty. Context-switching cost grows FASTER than the raw count of
+  // concurrent projects (the cost is closer to combinatorial — every extra project competes
+  // with all the others for attention), and the research pass found fragmentation is likely
+  // *under*-weighted, not over- (docs/heuristics-vs-research.md §3: collaboration is ~85% of
+  // the week, sustained attention ~47s). So curve the score upward (quadratic) instead of the
+  // old forgiving linear count/10: a handful of parallel projects now hurts disproportionately
+  // more than the same work volume on a single project. Squaring `count / 7` keeps the score
+  // near the old linear value around 5 projects, gentler below it (few projects = little
+  // switching), and harsher above — saturating the penalty at 7 concurrent projects (the
+  // "badly overloaded" knee). Still clamped to [0,1].
+  const activeProjectCount = new Set(included.map((block) => block.project_name)).size;
+  const wipLoadScore = clamp(Math.pow(activeProjectCount / 7, 2), 0, 1);
   const fragmentationPenalty = roundPct(contextSwitchScore * 12);
   const wipPenalty = roundPct(wipLoadScore * 10);
   const reliableNewWorkCapacityPct = clamp(
