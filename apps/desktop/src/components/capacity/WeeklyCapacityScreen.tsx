@@ -390,8 +390,15 @@ export function WeeklyCapacityScreen({
               Reactive load peaked on <strong>{interruptionLoad.peak_day}</strong> —{" "}
               {interruptionLoad.peak_day_message_count}{" "}
               {interruptionLoad.peak_day_message_count === 1 ? "message" : "messages"} across{" "}
-              {interruptionLoad.active_day_count} active days. Consider protecting the quieter days
-              for deep work.
+              {interruptionLoad.active_day_count} active days.{" "}
+              {interruptionLoad.calm_day && interruptionLoad.calm_day !== interruptionLoad.peak_day ? (
+                <>
+                  Your quietest active day was <strong>{interruptionLoad.calm_day}</strong> —
+                  consider protecting it for deep work.
+                </>
+              ) : (
+                "Consider protecting the quieter days for deep work."
+              )}
             </p>
           )}
         </section>

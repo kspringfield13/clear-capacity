@@ -355,6 +355,11 @@ export interface InterruptionLoadAnalysis {
   peak_day: string | null;
   /** Reactive messages on `peak_day` (metadata count only); 0 when `peak_day` is null. */
   peak_day_message_count: number;
+  /**
+   * Lowest-volume *active* weekday (local time) — the quietest day to protect for deep work;
+   * null when there are fewer than 2 active days (no quieter day to contrast against the peak).
+   */
+  calm_day: string | null;
 }
 
 const WEEKDAY_NAMES = [
@@ -427,6 +432,23 @@ export function analyzeInterruptionLoad(
     }
   }
 
+  // Name the calmest *active* weekday (lowest reactive volume) so the footnote can suggest a
+  // concrete day to protect for deep work. Only meaningful with ≥2 active days — with one (or
+  // zero) message-bearing day there is no quieter day to contrast against the peak, so leave it
+  // null. Same ascending-index iteration + strict `<` from a high baseline → lowest-index-wins
+  // tie-break, mirroring the peak computation above.
+  let calmDayIndex = -1;
+  if (dayMessages.size >= 2) {
+    let calmDayMessages = Number.POSITIVE_INFINITY;
+    for (const dayIndex of [...dayMessages.keys()].sort((left, right) => left - right)) {
+      const total = dayMessages.get(dayIndex) ?? 0;
+      if (total < calmDayMessages) {
+        calmDayMessages = total;
+        calmDayIndex = dayIndex;
+      }
+    }
+  }
+
   // Scope deep-work blocks to the chat window so the interleave denominator reflects the period
   // chat could actually have fragmented, not the user's entire history.
   const windowStart = Math.min(...bursts.map((burst) => burst.start));
@@ -462,7 +484,8 @@ export function analyzeInterruptionLoad(
       deepWorkInWindow.length > 0 ? Math.round((interrupted / deepWorkInWindow.length) * 100) : 0,
     active_day_count: dayMessages.size,
     peak_day: peakDayIndex >= 0 ? WEEKDAY_NAMES[peakDayIndex] : null,
-    peak_day_message_count: peakDayMessages
+    peak_day_message_count: peakDayMessages,
+    calm_day: calmDayIndex >= 0 ? WEEKDAY_NAMES[calmDayIndex] : null
   };
 }
 
