@@ -148,21 +148,30 @@ export function BlockCard({
         </div>
       </div>
       <div className="tag-grid">
-        <select aria-label="Work category" title={block.category} value={block.category} onChange={(event) => onRelabel(block.work_block_id, "category", event.target.value as WorkCategory)}>
-          {workCategories.map((category) => (
-            <option key={category}>{category}</option>
-          ))}
-        </select>
-        <select aria-label="Planned status" title={plannedStatusLabel(block.planned_status)} value={block.planned_status} onChange={(event) => onRelabel(block.work_block_id, "planned_status", event.target.value as PlannedStatus)}>
-          {plannedStatuses.map((status) => (
-            <option key={status} value={status}>{plannedStatusLabel(status)}</option>
-          ))}
-        </select>
-        <select aria-label="Work mode" title={block.mode} value={block.mode} onChange={(event) => onRelabel(block.work_block_id, "mode", event.target.value as WorkMode)}>
-          {workModes.map((mode) => (
-            <option key={mode}>{mode}</option>
-          ))}
-        </select>
+        <label className="tag-field">
+          <span className="tag-field-label">Work category</span>
+          <select aria-label="Work category" title={block.category} value={block.category} onChange={(event) => onRelabel(block.work_block_id, "category", event.target.value as WorkCategory)}>
+            {workCategories.map((category) => (
+              <option key={category}>{category}</option>
+            ))}
+          </select>
+        </label>
+        <label className="tag-field">
+          <span className="tag-field-label">Planned status</span>
+          <select aria-label="Planned status" title={plannedStatusLabel(block.planned_status)} value={block.planned_status} onChange={(event) => onRelabel(block.work_block_id, "planned_status", event.target.value as PlannedStatus)}>
+            {plannedStatuses.map((status) => (
+              <option key={status} value={status}>{plannedStatusLabel(status)}</option>
+            ))}
+          </select>
+        </label>
+        <label className="tag-field">
+          <span className="tag-field-label">Work mode</span>
+          <select aria-label="Work mode" title={block.mode} value={block.mode} onChange={(event) => onRelabel(block.work_block_id, "mode", event.target.value as WorkMode)}>
+            {workModes.map((mode) => (
+              <option key={mode}>{mode}</option>
+            ))}
+          </select>
+        </label>
       </div>
       <details className="evidence">
         <summary>Why this estimate?</summary>
