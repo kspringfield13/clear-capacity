@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Search, ScrollText } from "lucide-react";
+import { useRef, useState } from "react";
+import { Search, ScrollText, X } from "lucide-react";
 import type { AuditEvent } from "../../../../../packages/domain/src/models";
 import { auditTypeLabel } from "../../lib/format";
 import { formatAuditTime } from "../../lib/format";
@@ -10,6 +10,7 @@ export function AuditLogScreen({ auditEvents }: { auditEvents: AuditEvent[] }) {
   type AuditFilter = "all" | "capture" | "session" | "visual" | "calendar" | "chat" | "correction" | "classifier" | "copilot" | "forecast" | "narrative" | "privacy" | "onboarding";
   const [filter, setFilter] = useState<AuditFilter>("all");
   const [query, setQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const filters: Array<{ id: AuditFilter; label: string }> = [
     { id: "all", label: "All" },
     { id: "capture", label: "Capture" },
@@ -81,12 +82,23 @@ export function AuditLogScreen({ auditEvents }: { auditEvents: AuditEvent[] }) {
         <div className="search-box">
           <Search size={17} />
           <input
+            ref={searchInputRef}
             aria-label="Search audit log"
             placeholder="Search audit events"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={(e) => { if (e.key === "Escape") { setQuery(""); setFilter("all"); } }}
           />
+          {query && (
+            <button
+              type="button"
+              className="search-box-clear"
+              aria-label="Clear search"
+              onClick={() => { setQuery(""); searchInputRef.current?.focus(); }}
+            >
+              <X size={15} />
+            </button>
+          )}
         </div>
       </div>
 
