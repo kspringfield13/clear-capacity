@@ -290,13 +290,15 @@ export function App() {
     });
   }, [snapshot, blocks.length, isDemoMode]);
 
-  // Retention policy: auto-expire raw active-window samples older than the
-  // user-chosen window (null = keep everything). Sessions and work blocks already
-  // derived from these samples are untouched — only the raw rows expire. The effect
-  // re-runs as samples accrue; the functional update returns the same reference
-  // when nothing crosses the cutoff, so this never loops. The discrete policy change
-  // is audited in `changeRetentionDays`; the per-sample expiry is not logged (it
-  // would flood the capped audit trail as samples continuously age past the cutoff).
+  // Retention policy: auto-expire raw activity older than the user-chosen window
+  // (null = keep everything). This covers both the raw active-window samples and the
+  // retained chat `RawEvent` store (each grows one-row-per-event, so both must be
+  // pruned or the chat history would accumulate forever). Sessions and work blocks
+  // already derived from these are untouched — only the raw rows expire. The effect
+  // re-runs as rows accrue; each functional update returns the same reference when
+  // nothing crosses the cutoff, so this never loops. The discrete policy change is
+  // audited in `changeRetentionDays`; the per-row expiry is not logged (it would
+  // flood the capped audit trail as rows continuously age past the cutoff).
   useEffect(() => {
     if (isDemoMode || retentionDays === null) return;
     const cutoff = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
@@ -304,7 +306,11 @@ export function App() {
       const kept = current.filter((sample) => new Date(sample.timestamp).getTime() >= cutoff);
       return kept.length === current.length ? current : kept;
     });
-  }, [isDemoMode, retentionDays, activeWindowSamples]);
+    setChatEvents((current) => {
+      const kept = current.filter((event) => new Date(event.timestamp_end).getTime() >= cutoff);
+      return kept.length === current.length ? current : kept;
+    });
+  }, [isDemoMode, retentionDays, activeWindowSamples, chatEvents]);
 
   const { classificationStatus, classificationError, classifyActiveWindowSessions, resetClassification } =
     useClassification({
