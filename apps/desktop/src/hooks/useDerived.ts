@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { analyzeInterruptionLoad, buildForecastTrackRecord, computeWeeklyCapacitySnapshot, generateWeeklyNarrative, scoreForecastAccuracy, summarizeForecastAccuracy } from "../../../../packages/inference/src/capacity";
-import type { ForecastAccuracyTrend, ForecastTrackRecordEntry, InterruptionLoadAnalysis } from "../../../../packages/inference/src/capacity";
+import { analyzeInterruptionLoad, buildForecastTrackRecord, computeWeeklyCapacitySnapshot, generateWeeklyNarrative, scoreForecastAccuracy, summarizeChatStakeholders, summarizeForecastAccuracy } from "../../../../packages/inference/src/capacity";
+import type { ChatStakeholderSummary, ForecastAccuracyTrend, ForecastTrackRecordEntry, InterruptionLoadAnalysis } from "../../../../packages/inference/src/capacity";
 import { sessionizeActiveWindowSamples } from "../../../../packages/inference/src/sessionizer/activeWindow";
 import type {
   WorkBlock,
@@ -108,13 +108,25 @@ export function useDerived(params: UseDerivedParams) {
   // with the reactive density calendar + git can't see. Metadata-only inputs. Scoped to the
   // current ISO week so the panel (which renders only on the current week) describes *this*
   // week's chat load, not accumulated lifetime totals.
+  const weekChatEvents = useMemo(
+    () =>
+      chatEvents.filter(
+        (event) => getCurrentIsoWeekId(new Date(event.timestamp_start)) === currentWeekId
+      ),
+    [chatEvents, currentWeekId]
+  );
+
   const interruptionLoad = useMemo<InterruptionLoadAnalysis | null>(() => {
-    const weekChatEvents = chatEvents.filter(
-      (event) => getCurrentIsoWeekId(new Date(event.timestamp_start)) === currentWeekId
-    );
     const weekBlocks = blocks.filter((block) => block.week_id === currentWeekId);
     return analyzeInterruptionLoad(weekChatEvents, weekBlocks);
-  }, [chatEvents, blocks, currentWeekId]);
+  }, [weekChatEvents, blocks, currentWeekId]);
+
+  // Who the week's reactive chat work served — the collaboration view that pairs with the
+  // interruption load. Same week-scoped, metadata-only chat events; null when no chat data.
+  const chatStakeholders = useMemo<ChatStakeholderSummary | null>(
+    () => summarizeChatStakeholders(weekChatEvents),
+    [weekChatEvents]
+  );
 
   const narrative = useMemo(
     () => generateWeeklyNarrative(snapshot),
@@ -162,5 +174,6 @@ export function useDerived(params: UseDerivedParams) {
     forecastAccuracyTrend,
     forecastTrackRecord,
     interruptionLoad,
+    chatStakeholders,
   };
 }

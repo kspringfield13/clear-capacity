@@ -4,7 +4,7 @@ import type { WorkBlock } from "../../../../../packages/domain/src/models";
 import type { Screen } from "../../lib/types";
 import type { PersistedSnapshotRecord } from "../../services/localStore";
 import { computeWeeklyCapacitySnapshot, computeCapacityBaselines } from "../../../../../packages/inference/src/capacity";
-import type { InterruptionLoadAnalysis } from "../../../../../packages/inference/src/capacity";
+import type { ChatStakeholderSummary, InterruptionLoadAnalysis } from "../../../../../packages/inference/src/capacity";
 import { categoryColors } from "../../../../../packages/domain/src/taxonomy";
 import { pct } from "../../lib/format";
 import { addDays, getCurrentIsoWeekId, getBusinessWeekRangeLabel } from "../../lib/date";
@@ -34,6 +34,7 @@ export function WeeklyCapacityScreen({
   snapshot: currentSnapshot,
   snapshotHistory,
   interruptionLoad,
+  chatStakeholders,
   weekRangeLabel,
   hasWorkBlocks,
   blocks,
@@ -45,6 +46,7 @@ export function WeeklyCapacityScreen({
   snapshot: ReturnType<typeof computeWeeklyCapacitySnapshot>;
   snapshotHistory: PersistedSnapshotRecord[];
   interruptionLoad: InterruptionLoadAnalysis | null;
+  chatStakeholders: ChatStakeholderSummary | null;
   weekRangeLabel: string;
   hasWorkBlocks: boolean;
   blocks: WorkBlock[];
@@ -365,6 +367,30 @@ export function WeeklyCapacityScreen({
               <span>deep work interrupted</span>
             </li>
           </ul>
+        </section>
+      )}
+
+      {isCurrentWeek && chatStakeholders && chatStakeholders.groups.length > 0 && (
+        <section
+          className="baseline-chips stakeholder-chips"
+          aria-label="Who your reactive chat time served this week"
+        >
+          <span className="baseline-chips-label">Who your reactive time served</span>
+          <div className="baseline-chip-row">
+            {chatStakeholders.groups.map((group) => (
+              <span
+                key={group.label}
+                className="baseline-chip"
+                title={`${group.label}: ${group.share_pct}% of this week's reactive chat volume, across ${group.burst_count} ${group.burst_count === 1 ? "burst" : "bursts"}`}
+              >
+                <span className="baseline-chip-metric">{group.label}</span>
+                <span className="baseline-chip-delta">{group.share_pct}%</span>
+                <span className="sr-only">
+                  {group.share_pct}% of this week's reactive chat volume, across {group.burst_count} {group.burst_count === 1 ? "burst" : "bursts"}
+                </span>
+              </span>
+            ))}
+          </div>
         </section>
       )}
     </section>
