@@ -10,11 +10,16 @@ import type {
 import { workCategories, workModes } from "../../domain/src/taxonomy";
 
 const BASELINE_CAPACITY = 100;
-// Cap reliable new-work capacity at 40% of the week. Basis: queueing theory — for an M/M/1
-// queue residence time scales as 1/(1−ρ), so wait time goes vertical past the ~80% utilization
-// "knee". If existing commitments run ~60%, promising new work only up to ~40% keeps total
-// target utilization near that knee, the only stable operating point. Exact 40% is hand-tuned;
-// see docs/heuristics-vs-research.md §1. (A target-utilization model is the principled successor.)
+// Target total utilization for the reliable new-work estimate: the ~80% queueing "knee". For an
+// M/M/1 queue residence time scales as 1/(1−ρ), so wait time goes vertical past ρ≈0.8 — past the
+// knee a knowledge worker's latency (and carryover) explodes. So instead of offering "all the
+// hours left up to 100%", offer only enough new work to bring TOTAL utilization up to this knee,
+// the only stable operating point. See docs/heuristics-vs-research.md §1.
+const TARGET_UTILIZATION_PCT = 80;
+// Retained guardrail: never promise more than 40% of a week as reliable new work, even when
+// current utilization is near zero (a near-empty week shouldn't license a 60–80% new-work
+// commitment on the strength of one quiet week). This was the old fixed ceiling; it stays as the
+// conservative floor under the target-utilization model. Hand-tuned; see §1.
 const MAX_RELIABLE_NEW_WORK = 40;
 
 function roundPct(value: number) {
@@ -98,19 +103,21 @@ export function computeWeeklyCapacitySnapshot(
   const wipLoadScore = clamp(Math.pow(activeProjectCount / 7, 2), 0, 1);
   const fragmentationPenalty = roundPct(contextSwitchScore * 12);
   const wipPenalty = roundPct(wipLoadScore * 10);
+  // Forward-committed load = the week's current utilization for the target-utilization model.
+  // Sum the commitments that carry into next week: recurring work that repeats, carryover that
+  // spills in, reactive load (counted at only ~72% of its face value — Mark, Gudith & Klocke,
+  // CHI 2008, found reactive/interrupted work costs higher stress, effort and time pressure, so
+  // it delivers less *sustainable* throughput; 0.72 is hand-tuned, docs/heuristics-vs-research.md
+  // §2), plus the fragmentation/WIP drag. This replaces the old implicit "100% baseline".
+  const committedUtilizationPct = roundPct(
+    recurringPct + carryoverRiskPct + reactivePct * 0.72 + fragmentationPenalty + wipPenalty
+  );
+  // Reliable new work = headroom that brings total utilization up to the ~80% knee, clamped to a
+  // [0, 40] guardrail. More explainable than the old 0–40% clamp ("you're at 64% committed; ~16%
+  // keeps you under the 80% reliability knee") and removes the arbitrary 100% baseline; the 40%
+  // cap stays as the old-behavior floor against over-promising on a near-empty week. See §1.
   const reliableNewWorkCapacityPct = clamp(
-    roundPct(
-      BASELINE_CAPACITY -
-        recurringPct -
-        carryoverRiskPct -
-        // Reactive work counts for only ~72% of its face value toward sustainable capacity.
-        // Mark, Gudith & Klocke (CHI 2008) found interrupted/reactive work costs higher stress,
-        // effort and time pressure (not slower clocks) — i.e. it delivers less *sustainable*
-        // throughput. The 0.72 magnitude is hand-tuned; see docs/heuristics-vs-research.md §2.
-        reactivePct * 0.72 -
-        fragmentationPenalty -
-        wipPenalty
-    ),
+    TARGET_UTILIZATION_PCT - committedUtilizationPct,
     0,
     MAX_RELIABLE_NEW_WORK
   );
@@ -129,6 +136,7 @@ export function computeWeeklyCapacitySnapshot(
     blocked_pct: blockedPct,
     recurring_pct: recurringPct,
     reliable_new_work_capacity_pct: reliableNewWorkCapacityPct,
+    committed_utilization_pct: committedUtilizationPct,
     carryover_risk_pct: carryoverRiskPct,
     wip_load_score: Number(wipLoadScore.toFixed(2)),
     context_switch_score: Number(contextSwitchScore.toFixed(2)),
@@ -640,8 +648,8 @@ export function generateWeeklyNarrative(
   return {
     week_id: snapshot.week_id,
     headline,
-    summary_text: `Estimated allocation reached ${snapshot.allocated_pct}% of a standard 40-hour week. Planned work accounted for ${snapshot.planned_pct}%, reactive work for ${snapshot.reactive_pct}%, and meetings for ${snapshot.meeting_pct}%. Reliable new-work capacity for next week is estimated at ${snapshot.reliable_new_work_capacity_pct}%.`,
+    summary_text: `Estimated allocation reached ${snapshot.allocated_pct}% of a standard 40-hour week. Planned work accounted for ${snapshot.planned_pct}%, reactive work for ${snapshot.reactive_pct}%, and meetings for ${snapshot.meeting_pct}%. About ${snapshot.committed_utilization_pct}% of next week is already committed (recurring work, carryover, reactive load and fragmentation), so reliable new-work capacity is estimated at ${snapshot.reliable_new_work_capacity_pct}% — enough to stay near the ~80% utilization knee where delivery reliability holds.`,
     key_drivers: topDrivers,
-    manager_ready_summary: `This week appears to have ${snapshot.reliable_new_work_capacity_pct}% reliable capacity for new planned work next week. The main constraints are reactive load, recurring commitments, carryover risk, and fragmentation. The estimate confidence is ${Math.round(snapshot.summary_confidence * 100)}%, and the user should review low-confidence blocks before sharing.`
+    manager_ready_summary: `This week appears to have ${snapshot.reliable_new_work_capacity_pct}% reliable capacity for new planned work next week, on top of roughly ${snapshot.committed_utilization_pct}% already committed — keeping total load near the ~80% reliability knee. The main constraints are reactive load, recurring commitments, carryover risk, and fragmentation. The estimate confidence is ${Math.round(snapshot.summary_confidence * 100)}%, and the user should review low-confidence blocks before sharing.`
   };
 }

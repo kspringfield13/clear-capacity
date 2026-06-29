@@ -219,6 +219,14 @@ export interface WeeklyCapacitySnapshot {
   blocked_pct: number;
   recurring_pct: number;
   reliable_new_work_capacity_pct: number;
+  /**
+   * Forward-committed load treated as the week's current utilization (recurring commitments,
+   * carryover, discounted reactive load, and the fragmentation/WIP drag). The reliable new-work
+   * estimate is the headroom that brings total utilization toward the ~80% queueing knee: new
+   * work is offered only up to `80 - committed_utilization_pct` (capped at 40%, floored at 0), so
+   * no new work is promised once this already exceeds the knee.
+   */
+  committed_utilization_pct: number;
   carryover_risk_pct: number;
   wip_load_score: number;
   context_switch_score: number;

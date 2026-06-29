@@ -199,7 +199,7 @@ export function WeeklyCapacityScreen({
         <MetricCard label="Allocated capacity" value={snapshot.allocated_pct} helper="Estimated distribution this week" />
         <MetricCard label="Effective planned work" value={snapshot.planned_pct} helper="Capacity spent on planned work" />
         <MetricCard label="Reactive load" value={snapshot.reactive_pct} helper="Unplanned support and interruption work" />
-        <MetricCard label="Reliable new work" value={snapshot.reliable_new_work_capacity_pct} helper="Forecast for next week" showRing />
+        <MetricCard label="Reliable new work" value={snapshot.reliable_new_work_capacity_pct} helper={`${pct(snapshot.committed_utilization_pct)} already committed · room to the 80% knee`} showRing />
       </div>
 
       {baselineChips.length > 0 && (isCurrentWeek || viewedBlocks.length > 0) && (
