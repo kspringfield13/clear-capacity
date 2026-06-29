@@ -11,7 +11,7 @@ import type {
   AIConfig,
 } from "../../../../../packages/domain/src/models";
 import type { PersistedForecastRecord, PersistedNarrativeRecord, ForecastAccuracyReview, PersistedSnapshotRecord } from "../../services/localStore";
-import type { computeWeeklyCapacitySnapshot, generateWeeklyNarrative, ForecastAccuracyTrend, ForecastTrackRecordEntry } from "../../../../../packages/inference/src/capacity";
+import type { computeWeeklyCapacitySnapshot, generateWeeklyNarrative, ForecastAccuracyTrend, ForecastTrackRecordEntry, InterruptionLoadAnalysis } from "../../../../../packages/inference/src/capacity";
 
 import { CompactWidget } from "../compact/CompactWidget";
 import { SetupScreen } from "../settings/SetupScreen";
@@ -40,6 +40,7 @@ interface ScreenRouterProps {
   activeWindowSessions: ActivitySession[];
   snapshot: ReturnType<typeof computeWeeklyCapacitySnapshot>;
   snapshotHistory: PersistedSnapshotRecord[];
+  interruptionLoad: InterruptionLoadAnalysis | null;
   onConfirm: (blockId: string) => void;
   onExclude: (blockId: string) => void;
   onRelabel: (blockId: string, field: keyof WorkBlock, value: WorkBlock[keyof WorkBlock]) => void;
@@ -123,6 +124,7 @@ export function ScreenRouter({
   activeWindowSessions,
   snapshot,
   snapshotHistory,
+  interruptionLoad,
   onConfirm,
   onExclude,
   onRelabel,
@@ -279,6 +281,7 @@ export function ScreenRouter({
         <WeeklyCapacityScreen
           snapshot={snapshot}
           snapshotHistory={snapshotHistory}
+          interruptionLoad={interruptionLoad}
           weekRangeLabel={weekRangeLabel}
           hasWorkBlocks={blocks.length > 0}
           blocks={blocks}

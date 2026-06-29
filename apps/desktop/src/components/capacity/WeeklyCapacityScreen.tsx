@@ -1,9 +1,10 @@
 import { useState, useMemo } from "react";
-import { ArrowDown, ArrowUp, BarChart3, ChevronLeft, ChevronRight, Minus, Upload } from "lucide-react";
+import { ArrowDown, ArrowUp, BarChart3, ChevronLeft, ChevronRight, Minus, Upload, Zap } from "lucide-react";
 import type { WorkBlock } from "../../../../../packages/domain/src/models";
 import type { Screen } from "../../lib/types";
 import type { PersistedSnapshotRecord } from "../../services/localStore";
 import { computeWeeklyCapacitySnapshot, computeCapacityBaselines } from "../../../../../packages/inference/src/capacity";
+import type { InterruptionLoadAnalysis } from "../../../../../packages/inference/src/capacity";
 import { categoryColors } from "../../../../../packages/domain/src/taxonomy";
 import { pct } from "../../lib/format";
 import { addDays, getCurrentIsoWeekId, getBusinessWeekRangeLabel } from "../../lib/date";
@@ -32,6 +33,7 @@ const BASELINE_METRICS: Array<{
 export function WeeklyCapacityScreen({
   snapshot: currentSnapshot,
   snapshotHistory,
+  interruptionLoad,
   weekRangeLabel,
   hasWorkBlocks,
   blocks,
@@ -42,6 +44,7 @@ export function WeeklyCapacityScreen({
 }: {
   snapshot: ReturnType<typeof computeWeeklyCapacitySnapshot>;
   snapshotHistory: PersistedSnapshotRecord[];
+  interruptionLoad: InterruptionLoadAnalysis | null;
   weekRangeLabel: string;
   hasWorkBlocks: boolean;
   blocks: WorkBlock[];
@@ -324,6 +327,46 @@ export function WeeklyCapacityScreen({
           </div>
         </section>
       </div>
+
+      {isCurrentWeek && interruptionLoad && (
+        <section className="interruption-note" aria-label="Chat interruption load">
+          <div className="interruption-header">
+            <Zap size={16} aria-hidden className="interruption-icon" />
+            <div>
+              <strong>Chat interruption load</strong>
+              <p>
+                Workplace chat is the reactive signal calendar and git can't see. These
+                metadata-only counts (no message text) show how much it fragmented your focus —
+                feeding the context-switch burden above.
+              </p>
+            </div>
+          </div>
+          <ul className="interruption-stats">
+            <li className="interruption-stat">
+              <strong>{interruptionLoad.burst_count}</strong>
+              <span>reactive {interruptionLoad.burst_count === 1 ? "burst" : "bursts"}</span>
+            </li>
+            <li
+              className="interruption-stat"
+              title="Messages per hour spent in chat bursts this week — interruption intensity while engaged"
+            >
+              <strong>{interruptionLoad.messages_per_active_hour}/hr</strong>
+              <span>messages while active</span>
+            </li>
+            <li className="interruption-stat">
+              <strong>{interruptionLoad.mention_count}</strong>
+              <span>direct @-mentions</span>
+            </li>
+            <li
+              className="interruption-stat"
+              title={`${interruptionLoad.interrupted_deep_work_count} of ${interruptionLoad.deep_work_block_count} deep-work blocks overlapped a chat burst`}
+            >
+              <strong>{interruptionLoad.interrupted_deep_work_pct}%</strong>
+              <span>deep work interrupted</span>
+            </li>
+          </ul>
+        </section>
+      )}
     </section>
   );
 }

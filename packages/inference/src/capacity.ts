@@ -1,4 +1,5 @@
 import type {
+  RawEvent,
   UserCorrection,
   WeeklyCapacitySnapshot,
   WeeklyNarrative,
@@ -317,6 +318,108 @@ export function analyzeCorrections(corrections: UserCorrection[]): CorrectionBia
     total_corrections: corrections.length,
     label_correction_count: labelCount,
     biases
+  };
+}
+
+/**
+ * Chat-driven interruption load, derived from imported workplace-chat events. Chat is the one
+ * source that exposes reactive interruption density — the part of the capacity model that
+ * calendar + git can't see — so this quantifies how much it fragmented the week's deep work,
+ * feeding the same `context_switch_score` / `fragmented_work_pct` story.
+ *
+ * - `messages_per_active_hour` is the interruption density while engaged in chat bursts.
+ * - `burst_count` is the reactive-burst frequency (one imported chat event per burst).
+ * - `interrupted_deep_work_pct` is how often a chat burst overlapped a deep-work block in the
+ *   same window — the interleave signal.
+ */
+export interface InterruptionLoadAnalysis {
+  /** Reactive chat bursts in the window (one per imported chat event). */
+  burst_count: number;
+  /** Total messages across bursts (metadata count only — never message text). */
+  message_count: number;
+  /** Direct @-mentions — the sharpest interruption signal. */
+  mention_count: number;
+  /** Hours spent inside chat bursts. */
+  active_hours: number;
+  /** Messages per active chat hour — interruption density while engaged. */
+  messages_per_active_hour: number;
+  /** Deep-work blocks active during the chat window. */
+  deep_work_block_count: number;
+  /** Deep-work blocks a chat burst overlapped (interleaved). */
+  interrupted_deep_work_count: number;
+  /** Share (0–100) of in-window deep-work blocks a chat burst interleaved. */
+  interrupted_deep_work_pct: number;
+}
+
+/** Parse a metadata count string (`messages`/`mentions`); non-numeric/negative → 0. */
+function metadataCount(value: string | null | undefined): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : 0;
+}
+
+/**
+ * Quantify chat-driven interruption load from imported chat events plus the work blocks they
+ * could have fragmented. Pure and domain-typed (no persistence/frontend types) so it stays
+ * unit-testable like `scoreForecastAccuracy`. **Privacy:** reads ONLY the metadata-only counts
+ * the chat parser emits (`messages`/`mentions`) plus event time spans — never message text.
+ * Returns `null` when there is no chat signal so the caller can hide the panel.
+ */
+export function analyzeInterruptionLoad(
+  chatEvents: RawEvent[],
+  workBlocks: WorkBlock[]
+): InterruptionLoadAnalysis | null {
+  const bursts: { start: number; end: number }[] = [];
+  let messageCount = 0;
+  let mentionCount = 0;
+  let activeMs = 0;
+  for (const event of chatEvents) {
+    if (event.source_type !== "chat") continue;
+    const start = new Date(event.timestamp_start).getTime();
+    const end = new Date(event.timestamp_end).getTime();
+    if (Number.isNaN(start) || Number.isNaN(end) || end <= start) continue;
+    bursts.push({ start, end });
+    activeMs += end - start;
+    // `metadata` is typed non-null, but events can arrive from untrusted persisted
+    // JSON — fall back to an empty bag so a malformed record can't throw here.
+    const metadata = event.metadata ?? {};
+    messageCount += metadataCount(metadata.messages);
+    mentionCount += metadataCount(metadata.mentions);
+  }
+  if (bursts.length === 0) return null;
+
+  // Scope deep-work blocks to the chat window so the interleave denominator reflects the period
+  // chat could actually have fragmented, not the user's entire history.
+  const windowStart = Math.min(...bursts.map((burst) => burst.start));
+  const windowEnd = Math.max(...bursts.map((burst) => burst.end));
+  const deepWorkInWindow = workBlocks
+    .filter((block) => block.mode === "Deep work")
+    .map((block) => ({
+      start: new Date(block.start_time).getTime(),
+      end: new Date(block.end_time).getTime()
+    }))
+    .filter(
+      (span) =>
+        !Number.isNaN(span.start) &&
+        !Number.isNaN(span.end) &&
+        span.start < windowEnd &&
+        windowStart < span.end
+    );
+
+  const interrupted = deepWorkInWindow.filter((span) =>
+    bursts.some((burst) => burst.start < span.end && span.start < burst.end)
+  ).length;
+
+  const activeHours = activeMs / 3_600_000;
+  return {
+    burst_count: bursts.length,
+    message_count: messageCount,
+    mention_count: mentionCount,
+    active_hours: Number(activeHours.toFixed(2)),
+    messages_per_active_hour: activeHours > 0 ? Math.round(messageCount / activeHours) : 0,
+    deep_work_block_count: deepWorkInWindow.length,
+    interrupted_deep_work_count: interrupted,
+    interrupted_deep_work_pct:
+      deepWorkInWindow.length > 0 ? Math.round((interrupted / deepWorkInWindow.length) * 100) : 0
   };
 }
 

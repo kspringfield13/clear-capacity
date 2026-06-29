@@ -2,6 +2,7 @@ import type {
   ActiveWindowSample,
   AuditEvent,
   OutlookCalendarEvent,
+  RawEvent,
   ReviewCopilotSuggestion,
   UserCorrection,
   VisualContextInsight,
@@ -75,6 +76,42 @@ function workBlock(
     week_id: weekId(start),
     start_time: blockStart.toISOString(),
     end_time: addMinutes(blockStart, Math.max(45, input.estimated_capacity_pct * 12)).toISOString()
+  };
+}
+
+// Metadata-only workplace-chat burst (no message text), shaped exactly like the chat
+// importer's output so the interruption-load panel renders in demo mode.
+function chatEvent(
+  start: Date,
+  id: string,
+  day: number,
+  minute: number,
+  durationMinutes: number,
+  input: { messages: number; mentions: number; channel: string; surface: "channel" | "dm" | "thread" }
+): RawEvent {
+  const begin = at(start, day, minute);
+  const received = Math.max(0, input.messages - 1);
+  return {
+    event_id: id,
+    user_id: "local-user",
+    timestamp_start: begin.toISOString(),
+    timestamp_end: addMinutes(begin, durationMinutes).toISOString(),
+    source_type: "chat",
+    app_name: "Slack",
+    window_title: null,
+    domain: null,
+    file_path: null,
+    project_hint: input.channel,
+    metadata: {
+      provider: "slack",
+      messages: String(input.messages),
+      received: String(received),
+      sent: String(input.messages - received),
+      mentions: String(input.mentions),
+      surfaces: input.surface,
+      channels: input.channel
+    },
+    privacy_level: "derived_only"
   };
 }
 
@@ -221,6 +258,15 @@ export function createDemoState(reference = new Date()): PersistedAppState {
     imported_at: importedAt.toISOString()
   }));
 
+  // Reactive chat bursts spread across the week. Two overlap the deep-work blocks above
+  // (capacity model Monday, dashboard Tuesday) so the interruption panel shows real interleave.
+  const chatEvents: RawEvent[] = [
+    chatEvent(monday, "demo-chat-1", 0, 60, 18, { messages: 9, mentions: 3, channel: "#data-requests", surface: "channel" }),
+    chatEvent(monday, "demo-chat-2", 1, 120, 18, { messages: 7, mentions: 2, channel: "#exec-dashboard", surface: "channel" }),
+    chatEvent(monday, "demo-chat-3", 2, 300, 12, { messages: 5, mentions: 1, channel: "DM · Priya", surface: "dm" }),
+    chatEvent(monday, "demo-chat-4", 3, 40, 15, { messages: 4, mentions: 0, channel: "#team-ops", surface: "channel" })
+  ];
+
   const corrections: UserCorrection[] = [
     {
       correction_id: "demo-correction-1", work_block_id: "demo-retention", field: "planned_status",
@@ -311,7 +357,7 @@ export function createDemoState(reference = new Date()): PersistedAppState {
   const managerSummary = "This week centered on the capacity model, executive dashboard, and recurring operating metrics. Two unplanned investigations displaced some planned analysis, while fixed meetings and reporting consumed a meaningful share of the week. The current model indicates 24% reliable capacity for new planned work next week, provided the warehouse access blocker clears and protected focus time remains intact. Two lower-confidence blocks should be reviewed before this summary is shared.";
 
   return {
-    version: 1, blocks, calendarEvents, activeWindowSamples, auditEvents, corrections, reviewSuggestions,
+    version: 1, blocks, calendarEvents, chatEvents, activeWindowSamples, auditEvents, corrections, reviewSuggestions,
     visualContextEnabled: true, visualContextInsights, managerSummaryText: managerSummary,
     generatedForecast: {
       generated_at: addMinutes(now, -31).toISOString(), generated_for_week: weekId(addMinutes(now, 10_080)),
