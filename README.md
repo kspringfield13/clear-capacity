@@ -21,6 +21,7 @@ Analyst workload is often split across planned projects, recurring reporting, me
 - foreground app and window-title sampling
 - local session grouping and audit history
 - Outlook `.ics` calendar import
+- workplace chat metadata import (Slack export today; Teams/Webex connectors planned) as a reactive-work signal
 - Today review queue to confirm, relabel, or exclude inferred work blocks
 - reviewable work ledger with confidence and evidence
 - category, work-mode, planned-status, and project labels
@@ -47,6 +48,7 @@ ClearCapacity is designed to keep raw activity data under the user's control:
 
 - Active-window capture records app name, front-window title, and timestamp.
 - Outlook exports are parsed locally.
+- Workplace chat is read as metadata only (timestamps, channels, message counts) — never message text.
 - Review history, audit events, and derived work blocks are stored in local webview storage.
 - Tracking can be paused immediately from the app or menu bar.
 - Visual context is disabled by default.
@@ -175,7 +177,7 @@ apps/desktop/
 packages/
   domain/src/                Shared workload and audit models
   inference/src/             Capacity calculation and session grouping
-  integrations/src/          Outlook .ics, git-log, and generic raw-event import parsers
+  integrations/src/          Outlook .ics, git-log, workplace-chat, and generic raw-event import parsers
 ```
 
 ## Validation
