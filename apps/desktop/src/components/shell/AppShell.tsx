@@ -115,9 +115,15 @@ export function AppShell({
             <span>Reliable capacity</span>
             <Gauge size={14} />
           </div>
-          <div className="side-metric-value">
+          <div
+            className="side-metric-value"
+            title="Estimated share of next week that can absorb new planned work without slippage"
+          >
             <strong>{hasWorkBlocks ? pct(snapshot.reliable_new_work_capacity_pct) : "--"}</strong>
             <small>{hasWorkBlocks ? "Next week" : "Needs signal"}</small>
+            <span className="sr-only">
+              Estimated share of next week that can absorb new planned work without slippage
+            </span>
           </div>
           <div className="side-capacity-track" aria-hidden="true">
             <span style={{ width: `${Math.max(0, Math.min(100, snapshot.reliable_new_work_capacity_pct || 0))}%` }} />
