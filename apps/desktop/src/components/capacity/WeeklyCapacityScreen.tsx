@@ -344,9 +344,15 @@ export function WeeklyCapacityScreen({
             </div>
           </div>
           <ul className="interruption-stats">
-            <li className="interruption-stat">
+            <li
+              className="interruption-stat"
+              title="A reactive burst is a cluster of chat messages within ~20 minutes — counted once per imported chat session"
+            >
               <strong>{interruptionLoad.burst_count}</strong>
               <span>reactive {interruptionLoad.burst_count === 1 ? "burst" : "bursts"}</span>
+              <span className="sr-only">
+                A reactive burst is a cluster of chat messages within about 20 minutes.
+              </span>
             </li>
             <li
               className="interruption-stat"
@@ -354,10 +360,19 @@ export function WeeklyCapacityScreen({
             >
               <strong>{interruptionLoad.messages_per_active_hour}/hr</strong>
               <span>messages while active</span>
+              <span className="sr-only">
+                Messages per hour spent in chat bursts — interruption intensity while engaged.
+              </span>
             </li>
-            <li className="interruption-stat">
+            <li
+              className="interruption-stat"
+              title="Messages that @-mentioned you directly — the sharpest interruption signal"
+            >
               <strong>{interruptionLoad.mention_count}</strong>
               <span>direct @-mentions</span>
+              <span className="sr-only">
+                Messages that pulled you in by name — the sharpest interruption signal.
+              </span>
             </li>
             <li
               className="interruption-stat"
@@ -365,6 +380,9 @@ export function WeeklyCapacityScreen({
             >
               <strong>{interruptionLoad.interrupted_deep_work_pct}%</strong>
               <span>deep work interrupted</span>
+              <span className="sr-only">
+                {interruptionLoad.interrupted_deep_work_count} of {interruptionLoad.deep_work_block_count} deep-work blocks overlapped a chat burst.
+              </span>
             </li>
           </ul>
         </section>
