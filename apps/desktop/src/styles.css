@@ -3170,6 +3170,14 @@ select {
   margin: 14px 0 2px;
 }
 
+/* Truncation footnote for the stakeholder chip row: forced onto its own line below the chips
+   (flex-basis 100%) so it reads as a caption noting the chips show only the top groups. */
+.stakeholder-chips-note {
+  flex-basis: 100%;
+  font-size: 11px;
+  color: var(--text-subtle);
+}
+
 .metric-card {
   display: grid;
   gap: 4px;

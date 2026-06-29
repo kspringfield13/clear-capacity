@@ -409,6 +409,12 @@ export function WeeklyCapacityScreen({
               </span>
             ))}
           </div>
+          {chatStakeholders.group_count > chatStakeholders.groups.length && (
+            <span className="stakeholder-chips-note">
+              Top {chatStakeholders.groups.length} of {chatStakeholders.group_count} groups by reactive
+              volume — {chatStakeholders.group_count - chatStakeholders.groups.length} more not shown.
+            </span>
+          )}
         </section>
       )}
     </section>
