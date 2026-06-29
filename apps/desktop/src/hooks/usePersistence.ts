@@ -3,6 +3,7 @@ import { writePersistedState } from "../services/localStore";
 import type {
   WorkBlock,
   OutlookCalendarEvent,
+  RawEvent,
   ActiveWindowSample,
   AuditEvent,
   UserCorrection,
@@ -16,6 +17,7 @@ import type { ProactiveAlertRuntime, ProactiveAlertSettings } from "../lib/proac
 interface PersistableState {
   blocks: WorkBlock[];
   calendarEvents: OutlookCalendarEvent[];
+  chatEvents: RawEvent[];
   activeWindowSamples: ActiveWindowSample[];
   auditEvents: AuditEvent[];
   corrections: UserCorrection[];
@@ -49,6 +51,7 @@ export function usePersistence(state: PersistableState) {
   }, [
     persistData.blocks,
     persistData.calendarEvents,
+    persistData.chatEvents,
     persistData.activeWindowSamples,
     persistData.auditEvents,
     persistData.corrections,

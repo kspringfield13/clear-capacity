@@ -3556,6 +3556,72 @@ select {
   font-weight: 600;
 }
 
+/* Chat interruption-load insight (Weekly screen). Mirrors the .model-bias-note
+   amber treatment; token-based so it works in light + dark without overrides. */
+.interruption-note {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--warning);
+  border-radius: var(--radius);
+  background: var(--amber-soft);
+}
+
+.interruption-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.interruption-icon {
+  flex: none;
+  margin-top: 1px;
+  color: var(--warning);
+}
+
+.interruption-header strong {
+  display: block;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.interruption-header p {
+  margin: 3px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-subtle);
+}
+
+.interruption-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.interruption-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 8px);
+  background: var(--background);
+}
+
+.interruption-stat strong {
+  font-size: 16px;
+  color: var(--text);
+}
+
+.interruption-stat span {
+  font-size: 11px;
+  color: var(--text-subtle);
+}
+
 .forecast-summary > div {
   display: grid;
   gap: 5px;

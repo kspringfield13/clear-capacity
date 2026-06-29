@@ -5,6 +5,7 @@ import { importChatExport } from "../../../packages/integrations/src/chat/chatEx
 import type {
   ActiveWindowSample,
   AuditEvent,
+  RawEvent,
   ReviewCopilotSuggestion,
   UserCorrection,
   VisualContextInsight,
@@ -87,6 +88,7 @@ export function App() {
         setGeneratedForecast(data.generatedForecast ?? null);
         setForecastHistory(data.forecastHistory ?? []);
         setSnapshotHistory(data.snapshotHistory ?? []);
+        setChatEvents(data.chatEvents ?? []);
         setVisualContextEnabled(data.visualContextEnabled ?? false);
         setVisualContextInsights(data.visualContextInsights ?? []);
         setAiConfig(data.aiConfig ?? null);
@@ -121,6 +123,10 @@ export function App() {
   );
   const [snapshotHistory, setSnapshotHistory] = useState<PersistedSnapshotRecord[]>(
     () => persistedSnapshot?.snapshotHistory ?? []
+  );
+  // Imported workplace-chat events (metadata only) retained for the interruption-load signal.
+  const [chatEvents, setChatEvents] = useState<RawEvent[]>(
+    () => persistedSnapshot?.chatEvents ?? []
   );
   const [visualContextEnabled, setVisualContextEnabled] = useState<boolean>(
     () => persistedSnapshot?.visualContextEnabled ?? false
@@ -203,6 +209,7 @@ export function App() {
   usePersistence({
     blocks,
     calendarEvents,
+    chatEvents,
     activeWindowSamples,
     auditEvents,
     corrections,
@@ -232,6 +239,7 @@ export function App() {
 
   const derived = useDerived({
     blocks,
+    chatEvents,
     activeWindowSamples,
     calendarEvents,
     generatedNarrative,
@@ -255,6 +263,7 @@ export function App() {
     forecastAccuracy,
     forecastAccuracyTrend,
     forecastTrackRecord,
+    interruptionLoad,
   } = derived;
 
   // Retain the latest computed snapshot per ISO week so cross-week trends and
@@ -917,6 +926,7 @@ export function App() {
     setGeneratedForecast(null);
     setForecastHistory([]);
     setSnapshotHistory([]);
+    setChatEvents([]);
     setVisualContextEnabled(true);
     setVisualContextInsights([]);
     setVisualContextAttemptedSessionIds([]);
@@ -1052,6 +1062,17 @@ export function App() {
           );
         });
 
+        // Retain the metadata-only chat events (deduped by event_id) so the
+        // interruption-load signal survives a reload. NO message text is stored.
+        setChatEvents((current) => {
+          const merged = new Map(current.map((event) => [event.event_id, event]));
+          result.events.forEach((event) => merged.set(event.event_id, event));
+          return [...merged.values()].sort(
+            (left, right) =>
+              new Date(left.timestamp_start).getTime() - new Date(right.timestamp_start).getTime()
+          );
+        });
+
         setAuditEvents((current) => [
           ...current,
           createChatImportAuditEvent({
@@ -1138,6 +1159,7 @@ export function App() {
         activeWindowSessions={activeWindowSessions}
         snapshot={snapshot}
         snapshotHistory={snapshotHistory}
+        interruptionLoad={interruptionLoad}
         onConfirm={confirmBlock}
         onExclude={excludeBlock}
         onRelabel={updateBlock}

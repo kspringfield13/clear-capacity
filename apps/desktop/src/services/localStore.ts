@@ -4,6 +4,7 @@ import type {
   AuditEvent,
   ForecastAgentResult,
   OutlookCalendarEvent,
+  RawEvent,
   ReviewCopilotSuggestion,
   VisualContextInsight,
   WeeklyCapacitySnapshot,
@@ -76,6 +77,8 @@ export interface PersistedAppState {
   version: 1;
   blocks: WorkBlock[];
   calendarEvents: OutlookCalendarEvent[];
+  /** Imported workplace-chat events (metadata only), kept for the interruption-load signal. */
+  chatEvents: RawEvent[];
   activeWindowSamples: ActiveWindowSample[];
   auditEvents: AuditEvent[];
   corrections: UserCorrection[];
@@ -168,6 +171,20 @@ function parseSnapshotHistory(value: unknown): PersistedSnapshotRecord[] {
   );
 }
 
+function parseChatEvents(value: unknown): RawEvent[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (entry): entry is RawEvent =>
+      isRecord(entry) &&
+      entry.source_type === "chat" &&
+      typeof entry.timestamp_start === "string" &&
+      typeof entry.timestamp_end === "string" &&
+      // metadata must be a real object — `analyzeInterruptionLoad` reads counts off it
+      // without guarding, so a corrupted null/missing bag would crash the render.
+      isRecord(entry.metadata)
+  );
+}
+
 async function getStore(): Promise<Store | null> {
   try {
     if (!("__TAURI_INTERNALS__" in window)) {
@@ -194,6 +211,7 @@ export async function readPersistedState(): Promise<PersistedAppState | null> {
         version: 1,
         blocks: parsed.blocks as WorkBlock[],
         calendarEvents: Array.isArray(parsed.calendarEvents) ? (parsed.calendarEvents as OutlookCalendarEvent[]) : [],
+        chatEvents: parseChatEvents(parsed.chatEvents),
         activeWindowSamples: Array.isArray(parsed.activeWindowSamples) ? (parsed.activeWindowSamples as ActiveWindowSample[]) : [],
         auditEvents: Array.isArray(parsed.auditEvents) ? (parsed.auditEvents as AuditEvent[]) : [],
         corrections: Array.isArray(parsed.corrections) ? (parsed.corrections as UserCorrection[]) : [],
@@ -228,6 +246,7 @@ export async function readPersistedState(): Promise<PersistedAppState | null> {
       version: 1,
       blocks: parsed.blocks as WorkBlock[],
       calendarEvents: Array.isArray(parsed.calendarEvents) ? (parsed.calendarEvents as OutlookCalendarEvent[]) : [],
+      chatEvents: parseChatEvents(parsed.chatEvents),
       activeWindowSamples: Array.isArray(parsed.activeWindowSamples)
         ? (parsed.activeWindowSamples as ActiveWindowSample[])
         : [],
