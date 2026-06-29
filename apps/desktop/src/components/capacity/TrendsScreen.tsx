@@ -215,6 +215,7 @@ export function TrendsScreen({
               y={VB_H - PAD.b + 18}
               textAnchor="middle"
             >
+              <title>{formatIsoWeekLabel(week.week_id)}</title>
               {shortWeekLabel(week.week_id)}
             </text>
           ))}
