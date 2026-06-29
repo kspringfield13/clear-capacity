@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { analyzeInterruptionLoad, buildForecastTrackRecord, computeWeeklyCapacitySnapshot, generateWeeklyNarrative, scoreForecastAccuracy, summarizeChatStakeholders, summarizeForecastAccuracy } from "../../../../packages/inference/src/capacity";
+import { analyzeInterruptionLoad, buildForecastTrackRecord, computeCapacityBaselines, computeWeeklyCapacitySnapshot, generateWeeklyNarrative, scoreForecastAccuracy, summarizeChatStakeholders, summarizeForecastAccuracy } from "../../../../packages/inference/src/capacity";
 import type { ChatStakeholderSummary, ForecastAccuracyTrend, ForecastTrackRecordEntry, InterruptionLoadAnalysis } from "../../../../packages/inference/src/capacity";
 import { sessionizeActiveWindowSamples } from "../../../../packages/inference/src/sessionizer/activeWindow";
 import type {
@@ -128,9 +128,19 @@ export function useDerived(params: UseDerivedParams) {
     [weekChatEvents]
   );
 
+  // Rolling personal baselines from the weeks strictly before the current one, so the narrative's
+  // "dense meetings" trigger can read against the user's own norm rather than an absolute cut
+  // (mirrors the baseline machinery WeeklyCapacityScreen uses for its capacity chips).
+  const capacityBaselines = useMemo(() => {
+    const prior = snapshotHistory
+      .filter((record) => record.week_id < currentWeekId)
+      .map((record) => record.snapshot);
+    return computeCapacityBaselines(prior);
+  }, [snapshotHistory, currentWeekId]);
+
   const narrative = useMemo(
-    () => generateWeeklyNarrative(snapshot),
-    [snapshot]
+    () => generateWeeklyNarrative(snapshot, capacityBaselines),
+    [snapshot, capacityBaselines]
   );
 
   const managerText = generatedNarrative
