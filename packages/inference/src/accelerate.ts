@@ -35,6 +35,25 @@ const WEEKLY_BASELINE_MINUTES = 40 * 60;
 /** A category is "recurring" once it has been observed at least this many times in the week. */
 const MIN_TIMESINK_BLOCKS = MIN_RECURRENCES;
 
+/** An hour-of-day needs at least this many app switches to be worth flagging as a hotspot. */
+const MIN_HOTSPOT_SWITCHES = MIN_RECURRENCES;
+
+/**
+ * An hour is a "hotspot" only when its switch count is at least this multiple of the average
+ * switches across the user's active hours — i.e. switching is genuinely *concentrated* there,
+ * not evenly spread through the day. (A day with only one active switching hour is treated as
+ * concentrated by definition.)
+ */
+const HOTSPOT_CONCENTRATION_FACTOR = 1.5;
+
+/**
+ * Conservative reclaimable refocus minutes per avoided app switch. The cost of a context switch
+ * is well-grounded — Mark et al. (CHI 2008) measured ~23 min to fully return to an interrupted
+ * task — but batching never eliminates every switch and not every switch is a deep interruption,
+ * so this is set deliberately well below that figure for a user-reviewed planning aid.
+ */
+const REFOCUS_MINUTES_PER_SWITCH = 3;
+
 /**
  * Categories where an off-the-shelf tool or template has the most leverage: repetitive,
  * low-craft work that is rarely deep-focus output. Membership (not order) gates a `tool`
@@ -73,6 +92,25 @@ function finiteMinutes(value: number) {
 /** Convert a block's `estimated_capacity_pct` (% of the week) back into minutes. */
 function minutesFromCapacityPct(pct: number) {
   return (finiteMinutes(pct) / 100) * WEEKLY_BASELINE_MINUTES;
+}
+
+/** Local hour-of-day (0–23) for an ISO timestamp, or null when it is unparseable. */
+function localHourOfDay(iso: string): number | null {
+  const date = new Date(iso);
+  return Number.isFinite(date.getTime()) ? date.getHours() : null;
+}
+
+/** A 12-hour clock label for an hour bucket, e.g. 0 → "12am", 14 → "2pm". */
+function hourLabel(hour: number) {
+  const normalized = ((hour % 24) + 24) % 24;
+  const meridiem = normalized < 12 ? "am" : "pm";
+  const twelve = normalized % 12 === 0 ? 12 : normalized % 12;
+  return `${twelve}${meridiem}`;
+}
+
+/** A one-hour window label, e.g. 14 → "2pm–3pm". */
+function hourWindowLabel(hour: number) {
+  return `${hourLabel(hour)}–${hourLabel(hour + 1)}`;
 }
 
 /** The project_name accounting for the most minutes in a tally, or null when none is set. */
@@ -270,6 +308,111 @@ export function detectTimeSinks(
   }
 
   // Sensible standalone ordering (B4 re-ranks): biggest reclaimable time first, id as tie-break.
+  signals.sort((left, right) => {
+    if (left.estimated_minutes_saved_per_week !== right.estimated_minutes_saved_per_week) {
+      return right.estimated_minutes_saved_per_week - left.estimated_minutes_saved_per_week;
+    }
+    return left.signal_id < right.signal_id ? -1 : left.signal_id > right.signal_id ? 1 : 0;
+  });
+
+  return signals;
+}
+
+interface HourSwitchTally {
+  hour: number;
+  count: number;
+  /** session_ids on either side of a switch bucketed to this hour — the cited evidence. */
+  sessionIds: Set<string>;
+}
+
+/**
+ * Detect hours-of-day where app switching is concentrated and emit one `technique` signal per
+ * hotspot, with a batching/focus angle in `detail`. A "switch" is a handoff between consecutive
+ * sessions whose `app_name` changes — the same notion of a real handoff `detectRepetitiveSequences`
+ * uses, and the session-level analog of the block-mode fragmentation that drives `context_switch_score`
+ * in `capacity.ts` (both treat reactive app-hopping as the fragmentation cost, so the two agree).
+ * Switches are bucketed by the local hour the user switched *into* the new app. Pure; dedup/ranking
+ * across detectors is the aggregator's job (B4).
+ *
+ * Privacy: reads `ActivitySession` fields but evidence carries app-switch counts, an hour window,
+ * and a share percentage only — never window titles.
+ */
+export function detectContextSwitchHotspots(sessions: ActivitySession[]): AccelerationSignal[] {
+  const ordered = [...sessions].sort((left, right) => {
+    const leftMs = comparableStartMs(left.start_time);
+    const rightMs = comparableStartMs(right.start_time);
+    return leftMs === rightMs ? 0 : rightMs > leftMs ? -1 : 1;
+  });
+
+  const tallies = new Map<number, HourSwitchTally>();
+  let totalSwitches = 0;
+
+  for (let index = 1; index < ordered.length; index += 1) {
+    const previous = ordered[index - 1];
+    const current = ordered[index];
+    if (previous.app_name === current.app_name) {
+      continue;
+    }
+
+    // Bucket by the hour the user switched into the new app; an unparseable time can't be placed.
+    const hour = localHourOfDay(current.start_time);
+    if (hour === null) {
+      continue;
+    }
+
+    let tally = tallies.get(hour);
+    if (!tally) {
+      tally = { hour, count: 0, sessionIds: new Set() };
+      tallies.set(hour, tally);
+    }
+    tally.count += 1;
+    tally.sessionIds.add(previous.session_id);
+    tally.sessionIds.add(current.session_id);
+    totalSwitches += 1;
+  }
+
+  if (totalSwitches === 0) {
+    return [];
+  }
+
+  const activeHours = tallies.size;
+  const meanPerActiveHour = totalSwitches / activeHours;
+  const signals: AccelerationSignal[] = [];
+
+  for (const tally of tallies.values()) {
+    const concentrated =
+      activeHours <= 1 || tally.count >= meanPerActiveHour * HOTSPOT_CONCENTRATION_FACTOR;
+    if (tally.count < MIN_HOTSPOT_SWITCHES || !concentrated) {
+      continue;
+    }
+
+    const estimatedSaved = Math.round(REFOCUS_MINUTES_PER_SWITCH * tally.count);
+    if (estimatedSaved <= 0) {
+      continue;
+    }
+
+    const timeWindow = hourWindowLabel(tally.hour);
+    const share = tally.count / totalSwitches;
+    const sharePct = Math.max(1, Math.round(share * 100));
+    const confidence = Math.min(0.9, 0.5 + (tally.count - MIN_HOTSPOT_SWITCHES) * 0.05 + share * 0.1);
+
+    signals.push({
+      signal_id: `technique-${stableHash(`hotspot:${tally.hour}`)}`,
+      type: "technique",
+      title: `Context-switch hotspot: ${timeWindow}`,
+      detail: `You switch apps most around ${timeWindow} — about ${tally.count} switches there. Batching similar work into one block, or guarding ${timeWindow} for focused work, cuts the refocus tax of jumping between tools.`,
+      evidence: [
+        `${tally.count} app switches concentrated in ${timeWindow}`,
+        `${sharePct}% of the day's ${totalSwitches} observed app switches happen then`,
+        `Each avoided switch reclaims ~${REFOCUS_MINUTES_PER_SWITCH} min of refocus time`
+      ],
+      estimated_minutes_saved_per_week: estimatedSaved,
+      confidence: Number(confidence.toFixed(2)),
+      derived_from: [...tally.sessionIds]
+    });
+  }
+
+  // Sensible standalone ordering (B4 re-ranks): busiest switching hour first, id as tie-break.
   signals.sort((left, right) => {
     if (left.estimated_minutes_saved_per_week !== right.estimated_minutes_saved_per_week) {
       return right.estimated_minutes_saved_per_week - left.estimated_minutes_saved_per_week;
