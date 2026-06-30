@@ -167,7 +167,7 @@ export function createDemoState(reference = new Date()): PersistedAppState {
     }),
     workBlock(monday, "demo-dashboard", 1, 25, {
       ...common, estimated_capacity_pct: 11, category: "Dashboard development / edits", mode: "Deep work",
-      planned_status: "planned", project_name: "Executive capacity dashboard", derived_from: ["demo-session-figma"],
+      planned_status: "planned", project_name: "Capacity model v2", derived_from: ["demo-session-figma"],
       evidence: ["Figma prototype and implementation files were active"], confidence: 0.92, user_verified: true
     }),
     workBlock(monday, "demo-reporting", 2, 0, {
@@ -189,12 +189,12 @@ export function createDemoState(reference = new Date()): PersistedAppState {
     }),
     workBlock(monday, "calendar-outlook-demo-planning", 0, 245, {
       ...common, estimated_capacity_pct: 8, category: "Meetings / stakeholder syncs", mode: "Collaborative",
-      planned_status: "fixed", project_name: "Weekly planning sync", derived_from: ["demo-calendar-planning"],
+      planned_status: "fixed", project_name: "Weekly operating metrics", derived_from: ["demo-calendar-planning"],
       evidence: ["Imported from Outlook calendar", "Six attendee records found"], confidence: 0.98, user_verified: true
     }),
     workBlock(monday, "calendar-outlook-demo-product-review", 1, 285, {
       ...common, estimated_capacity_pct: 8, category: "Meetings / stakeholder syncs", mode: "Collaborative",
-      planned_status: "fixed", project_name: "Product metrics review", stakeholder_group: "Product",
+      planned_status: "fixed", project_name: "Weekly operating metrics", stakeholder_group: "Product",
       derived_from: ["demo-calendar-product"], evidence: ["Imported from Outlook calendar"], confidence: 0.96,
       user_verified: true
     }),
@@ -206,7 +206,7 @@ export function createDemoState(reference = new Date()): PersistedAppState {
     }),
     workBlock(monday, "demo-blocker", 4, 130, {
       ...common, estimated_capacity_pct: 8, category: "Blocked / waiting / dependency delay", mode: "Blocked",
-      planned_status: "blocked", project_name: "Marketing attribution refresh", stakeholder_group: "Marketing Analytics",
+      planned_status: "blocked", project_name: "Revenue attribution mismatch", stakeholder_group: "Marketing Analytics",
       derived_from: ["demo-session-jira"], evidence: ["Warehouse permission dependency remained unresolved"],
       confidence: 0.72, user_verified: false, blocker_flag: true, notes: "Waiting for warehouse role approval."
     })
@@ -278,7 +278,7 @@ export function createDemoState(reference = new Date()): PersistedAppState {
     },
     {
       correction_id: "demo-correction-2", work_block_id: "demo-dashboard", field: "project_name",
-      old_value: "Dashboard work", new_value: "Executive capacity dashboard",
+      old_value: "Dashboard work", new_value: "Capacity model v2",
       timestamp: addMinutes(now, -55).toISOString(), reason: "User applied a more specific label."
     },
     // A repeated planned→unplanned drift (the model keeps over-counting planned work) plus a
