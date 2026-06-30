@@ -13,10 +13,18 @@ export function formatTime(value: string) {
 export function formatRange(block: WorkBlock) {
   const start = new Date(block.start_time);
   const end = new Date(block.end_time);
-  return `${formatTime(block.start_time)} - ${new Intl.DateTimeFormat("en-US", {
+  const startMs = start.getTime();
+  const endMs = end.getTime();
+  const head = `${formatTime(block.start_time)} - ${new Intl.DateTimeFormat("en-US", {
     hour: "numeric",
     minute: "2-digit"
-  }).format(end)} (${Math.round((end.getTime() - start.getTime()) / 60000)} min)`;
+  }).format(end)}`;
+  // A malformed start_time/end_time yields NaN here; omit the duration suffix
+  // rather than rendering "… (NaN min)".
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) {
+    return head;
+  }
+  return `${head} (${Math.round((endMs - startMs) / 60000)} min)`;
 }
 
 export function compactCategory(category: WorkCategory) {
