@@ -264,7 +264,9 @@ export function createDemoState(reference = new Date()): PersistedAppState {
   const chatEvents: RawEvent[] = [
     chatEvent(monday, "demo-chat-1", 0, 60, 18, { messages: 9, mentions: 3, channel: "#data-requests", surface: "channel" }),
     chatEvent(monday, "demo-chat-2", 1, 120, 18, { messages: 7, mentions: 2, channel: "#exec-dashboard", surface: "channel" }),
-    chatEvent(monday, "demo-chat-3", 2, 300, 12, { messages: 5, mentions: 1, channel: "DM · Priya", surface: "dm" }),
+    // 19:00 (9:00 + 600m) — an after-hours DM so the after-hours reactive-load footnote renders in
+    // demo. Same day/channel/volume as before, so peak/calm-day and stakeholder shares are unchanged.
+    chatEvent(monday, "demo-chat-3", 2, 600, 12, { messages: 5, mentions: 1, channel: "DM · Priya", surface: "dm" }),
     chatEvent(monday, "demo-chat-4", 3, 40, 15, { messages: 4, mentions: 0, channel: "#team-ops", surface: "channel" })
   ];
 
