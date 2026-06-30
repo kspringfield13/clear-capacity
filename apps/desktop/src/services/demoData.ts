@@ -357,7 +357,7 @@ export function createDemoState(reference = new Date()): PersistedAppState {
     { week_id: weekId(addMinutes(now, -10_080)), computed_at: addMinutes(now, -10_080).toISOString(), snapshot: demoSnapshot(weekId(addMinutes(now, -10_080)), { reliable_new_work_capacity_pct: 29, reactive_pct: 21, meeting_pct: 22, context_switch_score: 0.45 }) }
   ];
 
-  const managerSummary = "This week centered on the capacity model, executive dashboard, and recurring operating metrics. Two unplanned investigations displaced some planned analysis, while fixed meetings and reporting consumed a meaningful share of the week. The current model indicates 24% reliable capacity for new planned work next week, provided the warehouse access blocker clears and protected focus time remains intact. Two lower-confidence blocks should be reviewed before this summary is shared.";
+  const managerSummary = "This week centered on the capacity model, executive dashboard, and recurring operating metrics. Two unplanned investigations displaced some planned analysis, while fixed meetings and reporting consumed a meaningful share of the week. The current model indicates 22% reliable capacity for new planned work next week — on top of roughly 58% already committed, which keeps total load near the ~80% reliability knee — provided the warehouse access blocker clears and protected focus time remains intact. Two lower-confidence blocks should be reviewed before this summary is shared.";
 
   return {
     version: 1, blocks, calendarEvents, chatEvents, activeWindowSamples, auditEvents, corrections, reviewSuggestions,
