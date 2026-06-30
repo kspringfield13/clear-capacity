@@ -350,11 +350,16 @@ export function createDemoState(reference = new Date()): PersistedAppState {
 
   // Three prior completed weeks of retained snapshots so cross-week trends and
   // personal baselines have history to read in demo mode (the live current-week
-  // snapshot is computed from the seeded blocks).
+  // snapshot is computed from the seeded blocks). Each week also varies
+  // allocated_pct + deep_work_pct (NOT just reactive/reliable) because the Trends
+  // chart plots allocated/reactive/deep-work/reliable — leaving the first two at
+  // the base default rendered two of the four flagship lines dead-flat. The story:
+  // a calm earlier week (high deep work, high reliable), a busy middle week (load
+  // up, deep work + reliable down), then a recovering week.
   const snapshotHistory: PersistedSnapshotRecord[] = [
-    { week_id: weekId(addMinutes(now, -30_240)), computed_at: addMinutes(now, -30_240).toISOString(), snapshot: demoSnapshot(weekId(addMinutes(now, -30_240)), { reliable_new_work_capacity_pct: 33, reactive_pct: 16, meeting_pct: 19, context_switch_score: 0.38 }) },
-    { week_id: weekId(addMinutes(now, -20_160)), computed_at: addMinutes(now, -20_160).toISOString(), snapshot: demoSnapshot(weekId(addMinutes(now, -20_160)), { reliable_new_work_capacity_pct: 26, reactive_pct: 24, meeting_pct: 25, context_switch_score: 0.49 }) },
-    { week_id: weekId(addMinutes(now, -10_080)), computed_at: addMinutes(now, -10_080).toISOString(), snapshot: demoSnapshot(weekId(addMinutes(now, -10_080)), { reliable_new_work_capacity_pct: 29, reactive_pct: 21, meeting_pct: 22, context_switch_score: 0.45 }) }
+    { week_id: weekId(addMinutes(now, -30_240)), computed_at: addMinutes(now, -30_240).toISOString(), snapshot: demoSnapshot(weekId(addMinutes(now, -30_240)), { reliable_new_work_capacity_pct: 33, reactive_pct: 16, meeting_pct: 19, context_switch_score: 0.38, allocated_pct: 86, deep_work_pct: 44 }) },
+    { week_id: weekId(addMinutes(now, -20_160)), computed_at: addMinutes(now, -20_160).toISOString(), snapshot: demoSnapshot(weekId(addMinutes(now, -20_160)), { reliable_new_work_capacity_pct: 26, reactive_pct: 24, meeting_pct: 25, context_switch_score: 0.49, allocated_pct: 95, deep_work_pct: 31 }) },
+    { week_id: weekId(addMinutes(now, -10_080)), computed_at: addMinutes(now, -10_080).toISOString(), snapshot: demoSnapshot(weekId(addMinutes(now, -10_080)), { reliable_new_work_capacity_pct: 29, reactive_pct: 21, meeting_pct: 22, context_switch_score: 0.45, allocated_pct: 90, deep_work_pct: 39 }) }
   ];
 
   const managerSummary = "This week centered on the capacity model, executive dashboard, and recurring operating metrics. Two unplanned investigations displaced some planned analysis, while fixed meetings and reporting consumed a meaningful share of the week. The current model indicates 22% reliable capacity for new planned work next week — on top of roughly 58% already committed, which keeps total load near the ~80% reliability knee — provided the warehouse access blocker clears and protected focus time remains intact. Two lower-confidence blocks should be reviewed before this summary is shared.";
