@@ -142,7 +142,7 @@ CARGO_BUILD_JOBS=2 npm run desktop:build
 
 ## How Capacity Is Calculated
 
-The deterministic v1 model starts with a 100% weekly baseline and subtracts:
+The deterministic model sums the week's already-committed load — the share of capacity that carries into next week:
 
 - recurring commitments
 - carryover risk from unverified, low-confidence work
@@ -150,23 +150,20 @@ The deterministic v1 model starts with a 100% weekly baseline and subtracts:
 - a fragmentation penalty
 - a work-in-progress penalty
 
-The result is clamped to 0-40%:
+Reliable new-work capacity is then the headroom that brings total utilization up to an ~80% target (the queueing "knee" past which delays grow sharply), clamped to 0-40%:
 
 ```text
-Reliable New Work Capacity =
-  clamp(
-    100
-    - recurring commitments
-    - carryover risk
-    - weighted reactive load
-    - fragmentation penalty
-    - WIP penalty,
-    0,
-    40
-  )
+Committed Utilization =
+  recurring commitments
+  + carryover risk
+  + weighted reactive load
+  + fragmentation penalty
+  + WIP penalty
+
+Reliable New Work Capacity = clamp(80 - Committed Utilization, 0, 40)
 ```
 
-This metric is not intended to represent free time. It estimates how much new planned work the following week can absorb without likely slippage.
+This metric is not intended to represent free time. It estimates how much new planned work the following week can absorb without likely slippage. The 40% cap guards against over-promising on a near-empty week.
 
 ## Project Structure
 
