@@ -329,7 +329,10 @@ export function analyzeCorrections(corrections: UserCorrection[]): CorrectionBia
     if (!BIAS_LABEL_FIELDS.has(correction.field)) continue;
     if (correction.old_value === correction.new_value) continue;
     labelCount += 1;
-    const key = `${correction.field} ${correction.old_value} ${correction.new_value}`;
+    // JSON-encode the (field, from, to) triple into the dedup key so distinct corrections can
+    // never alias on a shared delimiter (label values like "Planned analysis / project work"
+    // carry spaces and slashes), and the source stays plain text — no control-char separators.
+    const key = JSON.stringify([correction.field, correction.old_value, correction.new_value]);
     const existing = counts.get(key);
     if (existing) {
       existing.count += 1;
