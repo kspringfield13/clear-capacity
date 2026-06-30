@@ -102,3 +102,7 @@ This window delivered two major capacity-model upgrades, a full demo-staleness s
 **2 remaining NaN edge-case guards** (confirmed in code, loop-safe):
 1. Invalid-date comparisons silently mis-rank the activity ledger's app summaries — `lib/blocks.ts:48,59`
 2. Malformed `DURATION` mints an invalid calendar end date — `packages/integrations/src/calendar/outlookIcs.ts:116`
+
+---
+
+(email delivery: Gmail connector available but no send tool — draft created in kspringfield13@gmail.com inbox as best-effort delivery)
