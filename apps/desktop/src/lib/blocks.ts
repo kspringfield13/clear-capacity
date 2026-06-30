@@ -20,6 +20,16 @@ export function removeSeededCorrections(corrections: UserCorrection[]) {
   return corrections.filter((correction) => !/^wb-\d{3}$/.test(correction.work_block_id));
 }
 
+// A malformed `start_time` parses to NaN, which silently breaks ordering:
+// `NaN > x` is always false (the "latest" pick freezes) and `NaN - x` is NaN
+// (the sort comparator returns an undefined order). Treat an unparseable time
+// as the oldest possible so a bad timestamp can never win "latest" or scramble
+// the sort.
+function comparableStartMs(iso: string): number {
+  const ms = new Date(iso).getTime();
+  return Number.isFinite(ms) ? ms : Number.NEGATIVE_INFINITY;
+}
+
 export function summarizeRecentSessions(sessions: ActivitySession[], limit = 4) {
   const summaries = new Map<
     string,
@@ -45,7 +55,8 @@ export function summarizeRecentSessions(sessions: ActivitySession[], limit = 4) 
       return;
     }
 
-    const sessionIsNewer = new Date(session.start_time) > new Date(existing.latest_start_time);
+    const sessionIsNewer =
+      comparableStartMs(session.start_time) > comparableStartMs(existing.latest_start_time);
     summaries.set(session.app_name, {
       app_name: session.app_name,
       window_title: sessionIsNewer ? session.window_title : existing.window_title,
@@ -56,6 +67,15 @@ export function summarizeRecentSessions(sessions: ActivitySession[], limit = 4) 
   });
 
   return [...summaries.values()]
-    .sort((left, right) => new Date(right.latest_start_time).getTime() - new Date(left.latest_start_time).getTime())
+    .sort((left, right) => {
+      // Compare (not subtract) so two unparseable times don't yield NaN
+      // (-Infinity - -Infinity) and leave the order undefined.
+      const leftMs = comparableStartMs(left.latest_start_time);
+      const rightMs = comparableStartMs(right.latest_start_time);
+      if (leftMs === rightMs) {
+        return 0;
+      }
+      return rightMs > leftMs ? 1 : -1;
+    })
     .slice(0, limit);
 }
