@@ -5,6 +5,7 @@ import { workCategories, plannedStatuses, workModes } from "../../../../../packa
 import { fieldLabel, formatRange, humanizeCorrectionValue, pct, plannedStatusLabel } from "../../lib/format";
 import type { LearnedLabelMatch } from "../../lib/learnedLabels";
 import { ConfidenceChip } from "../common/ConfidenceChip";
+import { EvidenceDetails } from "../common/EvidenceDetails";
 
 // Provenance label derived from the `work_block_id` prefix — the same convention
 // `App.tsx` keys cross-source dedup off of (`calendar-outlook-` = calendar, `imported-`
@@ -190,29 +191,12 @@ export function BlockCard({
           </select>
         </label>
       </div>
-      <details className="evidence">
-        <summary>Why this estimate?</summary>
-        {block.evidence.length > 0 && (
-          <ul>
-            {block.evidence.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        )}
-        {block.derived_from.length > 0 && (
-          <div className="evidence-derived">
-            <p className="evidence-derived-label">Derived from</p>
-            <ul className="evidence-derived-list">
-              {block.derived_from.map((source) => (
-                <li key={source}><code>{source}</code></li>
-              ))}
-            </ul>
-          </div>
-        )}
-        {block.evidence.length === 0 && block.derived_from.length === 0 && (
-          <p className="evidence-empty">No inference detail recorded for this block.</p>
-        )}
-      </details>
+      <EvidenceDetails
+        summary="Why this estimate?"
+        evidence={block.evidence}
+        derivedFrom={block.derived_from}
+        emptyText="No inference detail recorded for this block."
+      />
       <div className="block-actions">
         <button type="button" className="block-confirm" onClick={() => onConfirm(block.work_block_id)}>
           <Check size={16} />

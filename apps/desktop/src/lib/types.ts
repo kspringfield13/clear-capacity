@@ -1,6 +1,6 @@
 import type { ShieldCheck } from "lucide-react";
 
-export type Screen = "setup" | "ledger" | "daily" | "weekly" | "forecast" | "trends" | "narrative" | "corrections" | "audit" | "sensitive" | "agent";
+export type Screen = "setup" | "ledger" | "daily" | "weekly" | "forecast" | "trends" | "narrative" | "corrections" | "audit" | "sensitive" | "agent" | "accelerate";
 export type WindowMode = "large" | "compact";
 export type PrimarySection = "today" | "week" | "history";
 

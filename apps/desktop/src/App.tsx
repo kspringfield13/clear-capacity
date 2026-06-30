@@ -272,6 +272,7 @@ export function App() {
     forecastTrackRecord,
     interruptionLoad,
     chatStakeholders,
+    accelerationSignals,
   } = derived;
 
   // Retain the latest computed snapshot per ISO week so cross-week trends and
@@ -1235,6 +1236,7 @@ export function App() {
         snapshotHistory={snapshotHistory}
         interruptionLoad={interruptionLoad}
         chatStakeholders={chatStakeholders}
+        accelerationSignals={accelerationSignals}
         onConfirm={confirmBlock}
         onExclude={excludeBlock}
         onRelabel={updateBlock}
