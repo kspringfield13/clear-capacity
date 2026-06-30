@@ -176,13 +176,13 @@ export function createDemoState(reference = new Date()): PersistedAppState {
       evidence: ["Recurring workbook and SQL export were active"], confidence: 0.97, user_verified: true
     }),
     workBlock(monday, "demo-retention", 2, 180, {
-      ...common, estimated_capacity_pct: 13, category: "Ad hoc stakeholder requests", mode: "Reactive",
+      ...common, estimated_capacity_pct: 8, category: "Ad hoc stakeholder requests", mode: "Reactive",
       planned_status: "unplanned", project_name: "Customer retention deep dive", stakeholder_group: "Customer Success",
       derived_from: ["demo-session-slack"], evidence: ["Slack request preceded a sustained SQL investigation"],
       confidence: 0.86, user_verified: true, notes: "Unplanned request received Wednesday."
     }),
     workBlock(monday, "demo-attribution", 3, 10, {
-      ...common, estimated_capacity_pct: 11, category: "Debugging / issue investigation", mode: "Reactive",
+      ...common, estimated_capacity_pct: 6, category: "Debugging / issue investigation", mode: "Reactive",
       planned_status: "unplanned", project_name: "Revenue attribution mismatch", stakeholder_group: "Data Platform",
       derived_from: ["demo-session-datagrip"], evidence: ["Query and issue-tracker context followed a data alert"],
       confidence: 0.89, user_verified: true
@@ -209,6 +209,28 @@ export function createDemoState(reference = new Date()): PersistedAppState {
       planned_status: "blocked", project_name: "Revenue attribution mismatch", stakeholder_group: "Marketing Analytics",
       derived_from: ["demo-session-jira"], evidence: ["Warehouse permission dependency remained unresolved"],
       confidence: 0.72, user_verified: false, blocker_flag: true, notes: "Waiting for warehouse role approval."
+    }),
+    // Three recurring, non-deep SQL/data-modeling chores — the manual query cleanup that repeats
+    // before every report. They give the deterministic Acceleration miner a recurring, tool-able
+    // time-sink to surface (the TOOL play). The two reactive blocks above were trimmed (13→8, 11→6)
+    // to absorb this added load, so the curated weekly capacity (22% reliable / 58% committed) holds.
+    workBlock(monday, "demo-sql-cleanup-1", 0, 420, {
+      ...common, estimated_capacity_pct: 3, category: "SQL / data modeling / query work", mode: "Fragmented",
+      planned_status: "unplanned", project_name: "Weekly operating metrics", derived_from: ["demo-session-sql-cleanup-mon"],
+      evidence: ["Reformatting and re-running the same metrics queries before the report", "DataGrip and a SQL export were active"],
+      confidence: 0.8, user_verified: true, notes: "Recurring manual query cleanup before the weekly report."
+    }),
+    workBlock(monday, "demo-sql-cleanup-2", 2, 360, {
+      ...common, estimated_capacity_pct: 2, category: "SQL / data modeling / query work", mode: "Fragmented",
+      planned_status: "unplanned", project_name: "Customer retention deep dive", stakeholder_group: "Customer Success",
+      derived_from: ["demo-session-sql-cleanup-wed"], evidence: ["Hand-formatting ad hoc retention queries", "Repeated edits to the same query template"],
+      confidence: 0.78, user_verified: true
+    }),
+    workBlock(monday, "demo-sql-cleanup-3", 3, 420, {
+      ...common, estimated_capacity_pct: 2, category: "SQL / data modeling / query work", mode: "Fragmented",
+      planned_status: "unplanned", project_name: "Revenue attribution mismatch", stakeholder_group: "Data Platform",
+      derived_from: ["demo-session-sql-cleanup-thu"], evidence: ["Rewriting attribution queries by hand to match the report layout"],
+      confidence: 0.78, user_verified: true
     })
   ];
 
@@ -227,6 +249,40 @@ export function createDemoState(reference = new Date()): PersistedAppState {
   threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
   threeDaysAgo.setHours(9, 15, 0, 0);
 
+  // Revenue-report rebuild: the user pulls numbers in Hex, refreshes the Looker dashboard, then
+  // posts to Teams — the same three-app handoff every reporting day. Unique apps (not used elsewhere)
+  // so the deterministic Acceleration miner surfaces exactly one AUTOMATE play. Each instance lands in
+  // a free slot on a fixed-hour past day, so it never overlaps the `now`-relative "today" samples
+  // (an overlap would interleave samples minute-by-minute and corrupt sessionization).
+  const reportRebuild = (day: Date, hour: number): ActiveWindowSample[] => {
+    const slot = new Date(day);
+    slot.setHours(hour, 0, 0, 0);
+    return [
+      ...samples("Hex", "Weekly revenue report - query", slot, 24),
+      ...samples("Looker", "Revenue dashboard refresh", addMinutes(slot, 30), 16),
+      ...samples("Teams", "Finance leadership - report post", addMinutes(slot, 50), 9)
+    ];
+  };
+
+  // 2pm reactive churn on yesterday: rapid app-hopping between a query, Slack, and Mail, all
+  // concentrated in the 14:00 hour — the evidence behind the TECHNIQUE play (a 2pm batching/focus tip).
+  const afternoonChurn = (() => {
+    const slot = (minute: number) => {
+      const date = new Date(yesterday);
+      date.setHours(14, minute, 0, 0);
+      return date;
+    };
+    return [
+      ...samples("DataGrip", "Attribution hotfix query", slot(0), 4),
+      ...samples("Slack", "#data-requests", slot(6), 3),
+      ...samples("Mail", "Stakeholder follow-ups", slot(12), 3),
+      ...samples("DataGrip", "Attribution hotfix query", slot(18), 4),
+      ...samples("Slack", "#exec-dashboard", slot(25), 3),
+      ...samples("Mail", "Stakeholder follow-ups", slot(31), 3),
+      ...samples("Slack", "#exec-dashboard", slot(37), 3)
+    ];
+  })();
+
   const activeWindowSamples = [
     // Today
     ...samples("Codex", "ClearCapacity - capacity model", activeStart, 47),
@@ -240,7 +296,12 @@ export function createDemoState(reference = new Date()): PersistedAppState {
     ...samples("Slack", "Data Platform - attribution mismatch", addMinutes(twoDaysAgo, 80), 22),
     // Three days ago
     ...samples("Codex", "Capacity model v2", threeDaysAgo, 38),
-    ...samples("Figma", "Executive capacity dashboard", addMinutes(threeDaysAgo, 50), 25)
+    ...samples("Figma", "Executive capacity dashboard", addMinutes(threeDaysAgo, 50), 25),
+    // Acceleration seeds: a recurring report-rebuild workflow (AUTOMATE) + a 2pm churn (TECHNIQUE).
+    ...reportRebuild(threeDaysAgo, 11),
+    ...reportRebuild(twoDaysAgo, 13),
+    ...reportRebuild(yesterday, 15),
+    ...afternoonChurn
   ];
 
   const calendarEvents: OutlookCalendarEvent[] = [
@@ -339,7 +400,7 @@ export function createDemoState(reference = new Date()): PersistedAppState {
 
   const auditEvents = [
     audit("calendar_import", importedAt, "Outlook calendar imported", "2 events parsed from outlook-export.ics", "outlook_ics", "local_only"),
-    audit("work_block_classification", addMinutes(now, -94), "Work sessions classified", "7 sessions became explainable work blocks", "openai_classifier"),
+    audit("work_block_classification", addMinutes(now, -94), "Work sessions classified", "10 sessions became explainable work blocks", "openai_classifier"),
     audit("visual_context", addMinutes(now, -82), "Visual context derived", "Capacity model implementation context added", "openai_vision"),
     audit("user_correction", addMinutes(now, -68), "Planned status", `${humanizeCorrectionValue("planned_status", "planned")} → ${humanizeCorrectionValue("planned_status", "unplanned")}`, "review_layer", "local_only"),
     audit("review_copilot", addMinutes(now, -41), "Review suggestions generated", "1 suggestion prepared for approval", "openai_review_copilot"),
