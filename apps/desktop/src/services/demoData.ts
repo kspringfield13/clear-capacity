@@ -378,7 +378,7 @@ export function createDemoState(reference = new Date()): PersistedAppState {
         risk_flags: ["Reactive requests may displace dashboard work", "Blocked attribution work could carry over"],
         recommended_actions: ["Reserve two 90-minute focus blocks", "Resolve access before Monday planning", "Batch new ad hoc requests"],
         assumptions: ["Meeting cadence stays stable", "No new production incident", "Access is restored by Tuesday"],
-        optimistic_capacity_pct: 34, likely_capacity_pct: 24, conservative_capacity_pct: 14
+        optimistic_capacity_pct: 34, likely_capacity_pct: 26, conservative_capacity_pct: 14
       }
     },
     forecastHistory: [
@@ -394,7 +394,7 @@ export function createDemoState(reference = new Date()): PersistedAppState {
           risk_flags: ["Reactive requests may displace planned analysis"],
           recommended_actions: ["Reserve a focus block", "Batch ad hoc requests"],
           assumptions: ["No new production incident", "Meeting cadence stays stable"],
-          optimistic_capacity_pct: 30, likely_capacity_pct: 24, conservative_capacity_pct: 13
+          optimistic_capacity_pct: 30, likely_capacity_pct: 26, conservative_capacity_pct: 13
         }
       },
       {
@@ -409,7 +409,7 @@ export function createDemoState(reference = new Date()): PersistedAppState {
           risk_flags: ["Blocked attribution work could carry over"],
           recommended_actions: ["Resolve access early", "Reserve two focus blocks"],
           assumptions: ["Access restored by Tuesday", "Meeting cadence stays stable"],
-          optimistic_capacity_pct: 23, likely_capacity_pct: 15, conservative_capacity_pct: 9
+          optimistic_capacity_pct: 23, likely_capacity_pct: 17, conservative_capacity_pct: 9
         }
       },
       {
@@ -423,7 +423,7 @@ export function createDemoState(reference = new Date()): PersistedAppState {
           risk_flags: ["Reactive requests may displace planned analysis"],
           recommended_actions: ["Reserve two focus blocks", "Batch ad hoc requests"],
           assumptions: ["No new production incident", "Meeting cadence stays stable"],
-          optimistic_capacity_pct: 39, likely_capacity_pct: 31, conservative_capacity_pct: 21
+          optimistic_capacity_pct: 39, likely_capacity_pct: 33, conservative_capacity_pct: 21
         }
       }
     ],
