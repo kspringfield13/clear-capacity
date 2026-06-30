@@ -15,6 +15,11 @@ import { StackedBar } from "../common/StackedBar";
 import { BarLine } from "../common/BarLine";
 import { RiskRow } from "../common/RiskRow";
 
+// The M/M/1 ~80% utilization "knee" the target-utilization model targets — mirrors
+// TARGET_UTILIZATION_PCT in packages/inference/src/capacity.ts. Drives the conditional
+// "Reliable new work" helper copy so it never claims headroom the model has clamped to 0.
+const RELIABILITY_KNEE_PCT = 80;
+
 // The headline metrics shown against the user's own rolling baseline. `scale` lifts the
 // 0–1 context-switch index onto the same /100 scale the RiskRow uses so its delta reads
 // in points like the percentages; `betterWhen` only drives the chip's color/arrow tone.
@@ -91,6 +96,13 @@ export function WeeklyCapacityScreen({
     const total = snapshot.category_allocation.reduce((acc, item) => acc + item.value, 0);
     return Math.max(0, 100 - total);
   }, [snapshot]);
+
+  // Reliable-new-work helper: when committed utilization is already at/over the knee, the model
+  // clamps reliable headroom to 0, so "room to the 80% knee" would contradict the 0% value shown.
+  const reliableHelper =
+    snapshot.committed_utilization_pct >= RELIABILITY_KNEE_PCT
+      ? `${pct(snapshot.committed_utilization_pct)} already committed · past the ${RELIABILITY_KNEE_PCT}% knee`
+      : `${pct(snapshot.committed_utilization_pct)} already committed · room to the ${RELIABILITY_KNEE_PCT}% knee`;
 
   // Rolling personal baselines from the weeks strictly before the one in view, so each
   // headline number reads against the user's own norm rather than an absolute scale.
@@ -199,7 +211,7 @@ export function WeeklyCapacityScreen({
         <MetricCard label="Allocated capacity" value={snapshot.allocated_pct} helper="Estimated distribution this week" />
         <MetricCard label="Effective planned work" value={snapshot.planned_pct} helper="Capacity spent on planned work" />
         <MetricCard label="Reactive load" value={snapshot.reactive_pct} helper="Unplanned support and interruption work" />
-        <MetricCard label="Reliable new work" value={snapshot.reliable_new_work_capacity_pct} helper={`${pct(snapshot.committed_utilization_pct)} already committed · room to the 80% knee`} showRing title="Past ~80% utilization, delays grow sharply — we hold back the last ~20% as buffer" />
+        <MetricCard label="Reliable new work" value={snapshot.reliable_new_work_capacity_pct} helper={reliableHelper} showRing title="Past ~80% utilization, delays grow sharply — we hold back the last ~20% as buffer" />
       </div>
 
       {baselineChips.length > 0 && (isCurrentWeek || viewedBlocks.length > 0) && (
