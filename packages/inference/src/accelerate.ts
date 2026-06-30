@@ -1,4 +1,9 @@
-import type { AccelerationSignal, ActivitySession } from "../../domain/src/models";
+import type {
+  AccelerationSignal,
+  ActivitySession,
+  WorkBlock,
+  WorkCategory
+} from "../../domain/src/models";
 
 /**
  * Deterministic Acceleration miner — turns observed work into evidence-cited
@@ -18,6 +23,29 @@ const MIN_RECURRENCES = 3;
  * deterministic model's current-week scoping.
  */
 const SAVINGS_FRACTION = 0.25;
+
+/**
+ * A standard 40h analyst week in minutes — the denominator `estimated_capacity_pct` is
+ * expressed against (see integrations' `capacityPctFromSpan`). Kept as a local const because
+ * the inference layer must NOT import from `apps/desktop` or the integrations package; mirror
+ * a change here if the baseline ever moves.
+ */
+const WEEKLY_BASELINE_MINUTES = 40 * 60;
+
+/** A category is "recurring" once it has been observed at least this many times in the week. */
+const MIN_TIMESINK_BLOCKS = MIN_RECURRENCES;
+
+/**
+ * Categories where an off-the-shelf tool or template has the most leverage: repetitive,
+ * low-craft work that is rarely deep-focus output. Membership (not order) gates a `tool`
+ * signal; the favored set comes straight from the B2 spec.
+ */
+const TOOLABLE_CATEGORIES: ReadonlySet<WorkCategory> = new Set<WorkCategory>([
+  "Recurring reporting",
+  "Admin / coordination",
+  "SQL / data modeling / query work",
+  "Dashboard development / edits"
+]);
 
 /** Djb2 — stable, deterministic id seed (mirrors the sessionizer's local helper). */
 function stableHash(value: string) {
@@ -40,6 +68,24 @@ function comparableStartMs(iso: string) {
 
 function finiteMinutes(value: number) {
   return Number.isFinite(value) ? value : 0;
+}
+
+/** Convert a block's `estimated_capacity_pct` (% of the week) back into minutes. */
+function minutesFromCapacityPct(pct: number) {
+  return (finiteMinutes(pct) / 100) * WEEKLY_BASELINE_MINUTES;
+}
+
+/** The project_name accounting for the most minutes in a tally, or null when none is set. */
+function dominantProject(projects: Map<string, number>) {
+  let best: string | null = null;
+  let bestMinutes = 0;
+  for (const [project, minutes] of projects) {
+    if (minutes > bestMinutes) {
+      best = project;
+      bestMinutes = minutes;
+    }
+  }
+  return best;
 }
 
 interface SequenceTally {
@@ -115,6 +161,121 @@ export function detectRepetitiveSequences(sessions: ActivitySession[]): Accelera
       });
     }
   }
+
+  return signals;
+}
+
+interface CategoryTally {
+  category: WorkCategory;
+  blockCount: number;
+  totalMinutes: number;
+  /** Minutes in blocks the user did NOT mark as deep work — the tool-able portion. */
+  lowDeepMinutes: number;
+  blockIds: string[];
+  /** project_name → minutes, so the signal can cite where the time concentrates. */
+  projects: Map<string, number>;
+}
+
+/**
+ * Detect recurring, low-deep-work time-sinks from the user's reviewed WorkBlocks and emit one
+ * `tool` signal per tool-able category that is both recurring (≥3 blocks) and dominated by
+ * non-deep work. Evidence cites the category, hours/week, the non-deep share, and the dominant
+ * project — derived labels and counts only, never window titles. Pure; dedup/ranking across
+ * detectors is the aggregator's job (B4).
+ *
+ * `sessions` is accepted for parity with the other detectors' signatures (B4 fans the same
+ * inputs across B1–B3); this miner works from the reviewed blocks, which already carry the
+ * category/mode/capacity labels it needs.
+ */
+export function detectTimeSinks(
+  blocks: WorkBlock[],
+  sessions: ActivitySession[]
+): AccelerationSignal[] {
+  void sessions;
+
+  const tallies = new Map<WorkCategory, CategoryTally>();
+
+  for (const block of blocks) {
+    if (!TOOLABLE_CATEGORIES.has(block.category)) {
+      continue;
+    }
+
+    const minutes = minutesFromCapacityPct(block.estimated_capacity_pct);
+
+    let tally = tallies.get(block.category);
+    if (!tally) {
+      tally = {
+        category: block.category,
+        blockCount: 0,
+        totalMinutes: 0,
+        lowDeepMinutes: 0,
+        blockIds: [],
+        projects: new Map()
+      };
+      tallies.set(block.category, tally);
+    }
+
+    tally.blockCount += 1;
+    tally.totalMinutes += minutes;
+    if (block.mode !== "Deep work") {
+      tally.lowDeepMinutes += minutes;
+    }
+    tally.blockIds.push(block.work_block_id);
+    if (block.project_name) {
+      tally.projects.set(block.project_name, (tally.projects.get(block.project_name) ?? 0) + minutes);
+    }
+  }
+
+  const signals: AccelerationSignal[] = [];
+
+  for (const tally of tallies.values()) {
+    // Recurring (observed ≥3 times) AND dominated by non-deep work — the tool-able profile.
+    if (tally.blockCount < MIN_TIMESINK_BLOCKS || tally.lowDeepMinutes <= 0) {
+      continue;
+    }
+
+    const estimatedSaved = Math.round(SAVINGS_FRACTION * tally.lowDeepMinutes);
+    if (estimatedSaved <= 0) {
+      continue;
+    }
+
+    // totalMinutes > 0 here because lowDeepMinutes > 0, so the share denominator is safe.
+    const hoursPerWeek = tally.totalMinutes / 60;
+    const lowDeepShare = tally.lowDeepMinutes / tally.totalMinutes;
+    const confidence = Math.min(
+      0.9,
+      0.5 + (tally.blockCount - MIN_TIMESINK_BLOCKS) * 0.08 + lowDeepShare * 0.1
+    );
+
+    const evidence = [
+      `${tally.category} took about ${hoursPerWeek.toFixed(1)}h across ${tally.blockCount} blocks`,
+      `${Math.round(lowDeepShare * 100)}% of that time was outside deep work — repetitive, tool-able effort`,
+      `Recurring: observed ${tally.blockCount} times (≥${MIN_TIMESINK_BLOCKS} marks a recurring pattern)`
+    ];
+    const topProject = dominantProject(tally.projects);
+    if (topProject) {
+      evidence.push(`Most of it sits in "${topProject}"`);
+    }
+
+    signals.push({
+      signal_id: `tool-${stableHash(`timesink:${tally.category}`)}`,
+      type: "tool",
+      title: `Time sink: ${tally.category}`,
+      detail: `${tally.category} is taking about ${hoursPerWeek.toFixed(1)}h/week, mostly outside deep work. A purpose-built tool or template could reclaim roughly ${estimatedSaved} min/week.`,
+      evidence,
+      estimated_minutes_saved_per_week: estimatedSaved,
+      confidence: Number(confidence.toFixed(2)),
+      derived_from: tally.blockIds
+    });
+  }
+
+  // Sensible standalone ordering (B4 re-ranks): biggest reclaimable time first, id as tie-break.
+  signals.sort((left, right) => {
+    if (left.estimated_minutes_saved_per_week !== right.estimated_minutes_saved_per_week) {
+      return right.estimated_minutes_saved_per_week - left.estimated_minutes_saved_per_week;
+    }
+    return left.signal_id < right.signal_id ? -1 : left.signal_id > right.signal_id ? 1 : 0;
+  });
 
   return signals;
 }
