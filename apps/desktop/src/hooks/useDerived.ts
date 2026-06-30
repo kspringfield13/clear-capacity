@@ -2,11 +2,13 @@ import { useMemo } from "react";
 import { analyzeInterruptionLoad, buildForecastTrackRecord, computeCapacityBaselines, computeWeeklyCapacitySnapshot, generateWeeklyNarrative, scoreForecastAccuracy, summarizeChatStakeholders, summarizeForecastAccuracy } from "../../../../packages/inference/src/capacity";
 import type { ChatStakeholderSummary, ForecastAccuracyTrend, ForecastTrackRecordEntry, InterruptionLoadAnalysis } from "../../../../packages/inference/src/capacity";
 import { sessionizeActiveWindowSamples } from "../../../../packages/inference/src/sessionizer/activeWindow";
+import { buildAccelerationSignals } from "../../../../packages/inference/src/accelerate";
 import type {
   WorkBlock,
   ActiveWindowSample,
   OutlookCalendarEvent,
   RawEvent,
+  AccelerationSignal,
 } from "../../../../packages/domain/src/models";
 import type { PersistedNarrativeRecord, PersistedForecastRecord, PersistedSnapshotRecord, ForecastAccuracyReview } from "../services/localStore";
 import { getCurrentIsoWeekId, getLocalDateKey, replaceIsoWeekIds } from "../lib/date";
@@ -116,10 +118,17 @@ export function useDerived(params: UseDerivedParams) {
     [chatEvents, currentWeekId]
   );
 
-  const interruptionLoad = useMemo<InterruptionLoadAnalysis | null>(() => {
-    const weekBlocks = blocks.filter((block) => block.week_id === currentWeekId);
-    return analyzeInterruptionLoad(weekChatEvents, weekBlocks);
-  }, [weekChatEvents, blocks, currentWeekId]);
+  // This week's reviewed blocks — shared by the interruption analysis and the Acceleration miner
+  // so neither re-filters the full ledger per render.
+  const weekBlocks = useMemo(
+    () => blocks.filter((block) => block.week_id === currentWeekId),
+    [blocks, currentWeekId]
+  );
+
+  const interruptionLoad = useMemo<InterruptionLoadAnalysis | null>(
+    () => analyzeInterruptionLoad(weekChatEvents, weekBlocks),
+    [weekChatEvents, weekBlocks]
+  );
 
   // Who the week's reactive chat work served — the collaboration view that pairs with the
   // interruption load. Same week-scoped, metadata-only chat events; null when no chat data.
@@ -155,6 +164,14 @@ export function useDerived(params: UseDerivedParams) {
     [activeWindowSamples]
   );
 
+  // Deterministic Acceleration signals — repetitive workflows, tool-able time-sinks, and
+  // context-switch hotspots mined from this week's reviewed blocks + the captured sessions,
+  // ranked by reclaimable time. No AI, no network, always on (the D-tasks add the opt-in AI layer).
+  const accelerationSignals = useMemo<AccelerationSignal[]>(
+    () => buildAccelerationSignals({ blocks: weekBlocks, sessions: activeWindowSessions }),
+    [weekBlocks, activeWindowSessions]
+  );
+
   const hasNarrativeEvidence =
     blocks.length > 0 || activeWindowSessions.length > 0 || calendarEvents.length > 0;
 
@@ -185,5 +202,6 @@ export function useDerived(params: UseDerivedParams) {
     forecastTrackRecord,
     interruptionLoad,
     chatStakeholders,
+    accelerationSignals,
   };
 }
