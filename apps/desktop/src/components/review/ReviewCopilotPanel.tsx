@@ -1,5 +1,6 @@
 import { Sparkles } from "lucide-react";
 import type { ReviewCopilotSuggestion } from "../../../../../packages/domain/src/models";
+import { reviewActionLabel } from "../../lib/format";
 import { InlineError } from "../common/InlineError";
 
 export function ReviewCopilotPanel({
@@ -50,7 +51,13 @@ export function ReviewCopilotPanel({
             <li key={suggestion.suggestion_id}>
               <div>
                 <strong>{suggestion.title}</strong>
-                <span>{suggestion.action} · {Math.round(suggestion.confidence * 100)}%</span>
+                <span>
+                  {reviewActionLabel(suggestion.action)} ·{" "}
+                  <span title="How confident the AI is in this suggested cleanup action">
+                    {Math.round(suggestion.confidence * 100)}%
+                    <span className="sr-only"> — how confident the AI is in this suggested cleanup action</span>
+                  </span>
+                </span>
               </div>
               <p>{suggestion.rationale}</p>
               <small>{suggestion.work_block_ids.length} block{suggestion.work_block_ids.length === 1 ? "" : "s"}</small>

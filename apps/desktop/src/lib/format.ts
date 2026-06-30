@@ -1,4 +1,4 @@
-import type { WorkBlock, WorkCategory, UserCorrection } from "../../../../packages/domain/src/models";
+import type { WorkBlock, WorkCategory, UserCorrection, ReviewCopilotAction } from "../../../../packages/domain/src/models";
 import type { AuditEventType } from "../../../../packages/domain/src/models";
 import type { ForecastAccuracyRating } from "../../../../packages/inference/src/capacity";
 
@@ -65,6 +65,19 @@ const PLANNED_STATUS_LABELS: Record<string, string> = {
 
 export function plannedStatusLabel(status: string): string {
   return PLANNED_STATUS_LABELS[status] ?? status;
+}
+
+const REVIEW_ACTION_LABELS: Record<ReviewCopilotAction, string> = {
+  confirm: "Confirm",
+  relabel: "Relabel",
+  exclude: "Exclude",
+  merge: "Merge blocks",
+  split: "Split block",
+  note: "Add note",
+};
+
+export function reviewActionLabel(action: ReviewCopilotAction): string {
+  return REVIEW_ACTION_LABELS[action] ?? action;
 }
 
 const PRIVACY_LABELS: Record<string, string> = {
