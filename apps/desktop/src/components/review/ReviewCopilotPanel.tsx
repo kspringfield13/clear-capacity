@@ -3,8 +3,31 @@ import type { ReviewCopilotSuggestion } from "../../../../../packages/domain/src
 import { reviewActionLabel } from "../../lib/format";
 import { InlineError } from "../common/InlineError";
 
+// Build the "which block(s) will this change" caption from the suggestion's
+// affected ids + a work_block_id → title lookup, so the proposed change is
+// reviewable in line with the app's cite-your-evidence convention. Names are
+// deduped (a merge can touch several blocks sharing one project_name) and
+// collapsed to the first two + "+K more" beyond that; `full` lists every name
+// for the hover `title`.
+function affectedBlocksLabel(
+  ids: string[],
+  blockTitles: Map<string, string>
+): { count: string; names: string; full: string } {
+  const count = `${ids.length} block${ids.length === 1 ? "" : "s"}`;
+  const names = Array.from(
+    new Set(ids.map((id) => blockTitles.get(id)).filter((t): t is string => Boolean(t)))
+  );
+  if (names.length === 0) {
+    return { count, names: "", full: count };
+  }
+  const shown =
+    names.length > 2 ? `${names.slice(0, 2).join(", ")}, +${names.length - 2} more` : names.join(", ");
+  return { count, names: shown, full: `${count} · ${names.join(", ")}` };
+}
+
 export function ReviewCopilotPanel({
   suggestions,
+  blockTitles,
   status,
   error,
   onGenerate,
@@ -12,6 +35,7 @@ export function ReviewCopilotPanel({
   onDismiss
 }: {
   suggestions: ReviewCopilotSuggestion[];
+  blockTitles: Map<string, string>;
   status: "idle" | "generating" | "error";
   error: string | null;
   onGenerate: () => void;
@@ -47,7 +71,9 @@ export function ReviewCopilotPanel({
         </div>
       ) : (
         <ol className="copilot-list">
-          {suggestions.map((suggestion) => (
+          {suggestions.map((suggestion) => {
+            const affected = affectedBlocksLabel(suggestion.work_block_ids, blockTitles);
+            return (
             <li key={suggestion.suggestion_id}>
               <div>
                 <strong>{suggestion.title}</strong>
@@ -60,13 +86,16 @@ export function ReviewCopilotPanel({
                 </span>
               </div>
               <p>{suggestion.rationale}</p>
-              <small>{suggestion.work_block_ids.length} block{suggestion.work_block_ids.length === 1 ? "" : "s"}</small>
+              <small title={affected.full}>
+                {affected.names ? `${affected.count} · ${affected.names}` : affected.count}
+              </small>
               <div className="copilot-actions">
                 <button type="button" aria-label={`Apply suggestion: ${suggestion.title}`} onClick={() => onApply(suggestion)}>Apply Suggestion</button>
                 <button type="button" aria-label={`Dismiss suggestion: ${suggestion.title}`} onClick={() => onDismiss(suggestion.suggestion_id)}>Dismiss Suggestion</button>
               </div>
             </li>
-          ))}
+            );
+          })}
         </ol>
       )}
     </section>

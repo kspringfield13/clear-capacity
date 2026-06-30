@@ -56,6 +56,16 @@ export function DailyReviewScreen({
   // pre-applied from these learned preferences.
   const correctionBiases = useMemo(() => analyzeCorrections(corrections).biases, [corrections]);
 
+  // work_block_id → display title (project_name, the BlockCard headline) so the
+  // Review Copilot panel can name WHICH block each suggestion touches.
+  const blockTitles = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const block of blocks) {
+      map.set(block.work_block_id, block.project_name);
+    }
+    return map;
+  }, [blocks]);
+
   if (blocks.length === 0) {
     return (
       <section className="screen review-screen">
@@ -142,6 +152,7 @@ export function DailyReviewScreen({
 
       <ReviewCopilotPanel
         suggestions={reviewSuggestions}
+        blockTitles={blockTitles}
         status={reviewCopilotStatus}
         error={reviewCopilotError}
         onGenerate={onGenerateReviewSuggestions}
