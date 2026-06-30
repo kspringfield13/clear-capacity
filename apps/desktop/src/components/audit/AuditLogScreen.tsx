@@ -7,7 +7,7 @@ import { AuditEventRow } from "./AuditEventRow";
 import { EmptyState } from "../common/EmptyState";
 
 export function AuditLogScreen({ auditEvents }: { auditEvents: AuditEvent[] }) {
-  type AuditFilter = "all" | "capture" | "session" | "visual" | "calendar" | "chat" | "correction" | "classifier" | "copilot" | "forecast" | "narrative" | "privacy" | "onboarding";
+  type AuditFilter = "all" | "capture" | "session" | "visual" | "calendar" | "chat" | "correction" | "classifier" | "copilot" | "forecast" | "narrative" | "acceleration" | "privacy" | "onboarding";
   const [filter, setFilter] = useState<AuditFilter>("all");
   const [query, setQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -23,6 +23,7 @@ export function AuditLogScreen({ auditEvents }: { auditEvents: AuditEvent[] }) {
     { id: "copilot", label: "Copilot" },
     { id: "forecast", label: "Forecast" },
     { id: "narrative", label: "Narrative" },
+    { id: "acceleration", label: "Acceleration" },
     { id: "privacy", label: "Privacy" },
     { id: "onboarding", label: "Onboarding" }
   ];
@@ -38,6 +39,7 @@ export function AuditLogScreen({ auditEvents }: { auditEvents: AuditEvent[] }) {
     copilot: (event) => event.type === "review_copilot",
     forecast: (event) => event.type === "forecast_agent",
     narrative: (event) => event.type === "narrative_generation",
+    acceleration: (event) => event.type === "acceleration_engine",
     privacy: (event) =>
       event.type === "privacy_pause" ||
       event.type === "privacy_resume" ||

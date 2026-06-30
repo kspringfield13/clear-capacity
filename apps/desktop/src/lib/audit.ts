@@ -1,4 +1,4 @@
-import type { AuditEvent, PrivacyLevel } from "../../../../packages/domain/src/models";
+import type { AccelerationSignal, AuditEvent, PrivacyLevel } from "../../../../packages/domain/src/models";
 
 export function createAuditEvent(
   input: Omit<AuditEvent, "event_id" | "timestamp"> & { timestamp?: string }
@@ -37,6 +37,39 @@ export function createChatImportAuditEvent(input: {
       stored_locally: true,
       sent_to_cloud: false,
       message_text: false
+    }
+  });
+}
+
+/**
+ * Build the audit event for a user action on an Acceleration Play (save or dismiss).
+ * Plays are mined from the user's observed work, so the event is `derived_only`: its
+ * details carry only the signal id, play type, derived source ids, and the estimated
+ * minutes — never raw window titles (the miner never emits them; `window_titles: false`
+ * affirms the invariant). The deterministic miner re-derives plays continuously, so only
+ * the DISCRETE user actions are logged here; the AI-synthesis "generated" event lands in
+ * the opt-in AI layer (D2), where a network call makes it the discrete action to record.
+ */
+export function createAccelerationPlayAuditEvent(input: {
+  action: "saved" | "dismissed";
+  signal: AccelerationSignal;
+}): AuditEvent {
+  const { action, signal } = input;
+  return createAuditEvent({
+    type: "acceleration_engine",
+    source: "acceleration_engine",
+    title: action === "saved" ? "Acceleration play saved" : "Acceleration play dismissed",
+    summary: `${action === "saved" ? "Saved" : "Dismissed"} the "${signal.title}" play (~${signal.estimated_minutes_saved_per_week} min/week)`,
+    privacy_level: "derived_only",
+    details: {
+      action,
+      signal_id: signal.signal_id,
+      play_type: signal.type,
+      estimated_minutes_saved_per_week: signal.estimated_minutes_saved_per_week,
+      derived_from: signal.derived_from,
+      window_titles: false,
+      stored_locally: true,
+      sent_to_cloud: false
     }
   });
 }

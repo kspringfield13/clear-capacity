@@ -427,7 +427,7 @@ export function createDemoState(reference = new Date()): PersistedAppState {
 
   return {
     version: 1, blocks, calendarEvents, chatEvents, activeWindowSamples, auditEvents, corrections, reviewSuggestions,
-    visualContextEnabled: true, visualContextInsights, managerSummaryText: managerSummary,
+    visualContextEnabled: true, visualContextInsights, dismissedPlayIds: [], savedPlayIds: [], managerSummaryText: managerSummary,
     generatedForecast: {
       generated_at: addMinutes(now, -31).toISOString(), generated_for_week: weekId(addMinutes(now, 10_080)),
       trigger: "manual", model: "OpenAI forecast agent", prompt_version: "clear-capacity-forecast-agent-v1",

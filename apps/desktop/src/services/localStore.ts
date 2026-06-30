@@ -88,6 +88,10 @@ export interface PersistedAppState {
   snapshotHistory: PersistedSnapshotRecord[];
   visualContextEnabled: boolean;
   visualContextInsights: VisualContextInsight[];
+  /** signal_ids of Acceleration Plays the user dismissed (hidden across reloads). */
+  dismissedPlayIds: string[];
+  /** signal_ids of Acceleration Plays the user saved for later. */
+  savedPlayIds: string[];
   managerSummaryText: string | null;
   generatedNarrative: PersistedNarrativeRecord | null;
   lastNarrativeAutoRunDate: string | null;
@@ -173,6 +177,11 @@ function parseSnapshotHistory(value: unknown): PersistedSnapshotRecord[] {
   );
 }
 
+function parseStringIdList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is string => typeof entry === "string");
+}
+
 function parseChatEvents(value: unknown): RawEvent[] {
   if (!Array.isArray(value)) return [];
   return value.filter(
@@ -223,6 +232,8 @@ export async function readPersistedState(): Promise<PersistedAppState | null> {
         snapshotHistory: parseSnapshotHistory(parsed.snapshotHistory),
         visualContextEnabled: typeof parsed.visualContextEnabled === "boolean" ? parsed.visualContextEnabled : false,
         visualContextInsights: Array.isArray(parsed.visualContextInsights) ? (parsed.visualContextInsights as VisualContextInsight[]) : [],
+        dismissedPlayIds: parseStringIdList(parsed.dismissedPlayIds),
+        savedPlayIds: parseStringIdList(parsed.savedPlayIds),
         managerSummaryText: typeof parsed.managerSummaryText === "string" ? parsed.managerSummaryText : null,
         generatedNarrative: isRecord(parsed.generatedNarrative) && isRecord(parsed.generatedNarrative.narrative) ? (parsed.generatedNarrative as unknown as PersistedNarrativeRecord) : null,
         lastNarrativeAutoRunDate: typeof parsed.lastNarrativeAutoRunDate === "string" ? parsed.lastNarrativeAutoRunDate : null,
@@ -269,6 +280,8 @@ export async function readPersistedState(): Promise<PersistedAppState | null> {
       visualContextInsights: Array.isArray(parsed.visualContextInsights)
         ? (parsed.visualContextInsights as VisualContextInsight[])
         : [],
+      dismissedPlayIds: parseStringIdList(parsed.dismissedPlayIds),
+      savedPlayIds: parseStringIdList(parsed.savedPlayIds),
       managerSummaryText:
         typeof parsed.managerSummaryText === "string" ? parsed.managerSummaryText : null,
       generatedNarrative:

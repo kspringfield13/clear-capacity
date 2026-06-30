@@ -27,6 +27,8 @@ interface PersistableState {
   snapshotHistory: PersistedSnapshotRecord[];
   visualContextEnabled: boolean;
   visualContextInsights: VisualContextInsight[];
+  dismissedPlayIds: string[];
+  savedPlayIds: string[];
   managerSummaryText: string | null;
   generatedNarrative: PersistedNarrativeRecord | null;
   lastNarrativeAutoRunDate: string | null;
@@ -62,6 +64,8 @@ export function usePersistence(state: PersistableState) {
     persistData.snapshotHistory,
     persistData.visualContextEnabled,
     persistData.visualContextInsights,
+    persistData.dismissedPlayIds,
+    persistData.savedPlayIds,
     persistData.managerSummaryText,
     persistData.generatedNarrative,
     persistData.lastNarrativeAutoRunDate,
