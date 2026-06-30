@@ -4,6 +4,7 @@ import { outlookEventsToWorkBlocks, parseOutlookIcs } from "../../../packages/in
 import { importChatExport } from "../../../packages/integrations/src/chat/chatExport";
 import { dedupeChatCallsAgainstCalendar } from "../../../packages/integrations/src/chat/callDedup";
 import type {
+  AccelerationSignal,
   ActiveWindowSample,
   AuditEvent,
   RawEvent,
@@ -29,7 +30,7 @@ import {
   getLocalDateKey,
 } from "./lib/date";
 import { fieldLabel, humanizeCorrectionValue } from "./lib/format";
-import { createAuditEvent, createChatImportAuditEvent } from "./lib/audit";
+import { createAccelerationPlayAuditEvent, createAuditEvent, createChatImportAuditEvent } from "./lib/audit";
 import { removeSeededCorrections, removeSeededWorkBlocks } from "./lib/blocks";
 import { useDerived } from "./hooks/useDerived";
 import { usePersistence } from "./hooks/usePersistence";
@@ -93,6 +94,8 @@ export function App() {
         setChatEvents(data.chatEvents ?? []);
         setVisualContextEnabled(data.visualContextEnabled ?? false);
         setVisualContextInsights(data.visualContextInsights ?? []);
+        setDismissedPlayIds(data.dismissedPlayIds ?? []);
+        setSavedPlayIds(data.savedPlayIds ?? []);
         setAiConfig(data.aiConfig ?? null);
         setRetentionDays(data.retentionDays ?? null);
         setOnboardingDismissed(data.onboardingDismissed ?? false);
@@ -148,6 +151,14 @@ export function App() {
   );
   const [visualContextInsights, setVisualContextInsights] = useState<VisualContextInsight[]>(
     () => persistedSnapshot?.visualContextInsights ?? []
+  );
+  // signal_ids of Acceleration Plays the user dismissed / saved. The miner re-derives
+  // plays each render, so these persisted id sets are how a dismiss/save survives a reload.
+  const [dismissedPlayIds, setDismissedPlayIds] = useState<string[]>(
+    () => persistedSnapshot?.dismissedPlayIds ?? []
+  );
+  const [savedPlayIds, setSavedPlayIds] = useState<string[]>(
+    () => persistedSnapshot?.savedPlayIds ?? []
   );
   const [managerSummaryText, setManagerSummaryText] = useState<string | null>(
     () => (initialBlocks.length > 0 || persistedSnapshot?.generatedNarrative ? persistedSnapshot?.managerSummaryText ?? null : null)
@@ -225,6 +236,8 @@ export function App() {
     snapshotHistory,
     visualContextEnabled,
     visualContextInsights,
+    dismissedPlayIds,
+    savedPlayIds,
     aiConfig,
     managerSummaryText,
     generatedNarrative,
@@ -737,6 +750,46 @@ export function App() {
     ].slice(-1000));
   }
 
+  // User dismissed an Acceleration Play — hide it across reloads and log the discrete
+  // action. The play's evidence is derived-only (app names/counts/ids, never window
+  // titles), so the audit event is `derived_only`. No-op if already dismissed.
+  function dismissPlay(signal: AccelerationSignal) {
+    if (dismissedPlayIds.includes(signal.signal_id)) return;
+    setDismissedPlayIds((current) =>
+      current.includes(signal.signal_id) ? current : [...current, signal.signal_id]
+    );
+    if (isDemoMode) return;
+    setAuditEvents((current) =>
+      [...current, createAccelerationPlayAuditEvent({ action: "dismissed", signal })].slice(-1000)
+    );
+  }
+
+  // Un-dismiss every hidden Play (the "Restore" affordance on the Acceleration screen).
+  // Reversing a hide is not a discrete decision worth its own audit line, so it stays
+  // unlogged (mirrors the unsave path below).
+  function restoreDismissedPlays() {
+    setDismissedPlayIds([]);
+  }
+
+  // User saved an Acceleration Play for later. Only the save (adding) transition is
+  // audited — the Play's derived-only evidence makes it a `derived_only` event. No-op
+  // if already saved so re-renders never double-log.
+  function savePlay(signal: AccelerationSignal) {
+    if (savedPlayIds.includes(signal.signal_id)) return;
+    setSavedPlayIds((current) =>
+      current.includes(signal.signal_id) ? current : [...current, signal.signal_id]
+    );
+    if (isDemoMode) return;
+    setAuditEvents((current) =>
+      [...current, createAccelerationPlayAuditEvent({ action: "saved", signal })].slice(-1000)
+    );
+  }
+
+  // Remove a Play from the saved set (an undo of a save) — not audited.
+  function unsavePlay(signalId: string) {
+    setSavedPlayIds((current) => current.filter((id) => id !== signalId));
+  }
+
   // User dismissed the first-run getting-started card. Persisted so the nudge stays
   // gone across reloads, and logged once as a discrete, low-noise user action.
   function dismissOnboarding() {
@@ -978,6 +1031,8 @@ export function App() {
     setVisualContextEnabled(true);
     setVisualContextInsights([]);
     setVisualContextAttemptedSessionIds([]);
+    setDismissedPlayIds([]);
+    setSavedPlayIds([]);
     setRetentionDays(null);
     setOnboardingDismissed(false);
     setManagerSummaryText(null);
@@ -1237,6 +1292,12 @@ export function App() {
         interruptionLoad={interruptionLoad}
         chatStakeholders={chatStakeholders}
         accelerationSignals={accelerationSignals}
+        dismissedPlayIds={dismissedPlayIds}
+        savedPlayIds={savedPlayIds}
+        onDismissPlay={dismissPlay}
+        onSavePlay={savePlay}
+        onUnsavePlay={unsavePlay}
+        onRestoreDismissedPlays={restoreDismissedPlays}
         onConfirm={confirmBlock}
         onExclude={excludeBlock}
         onRelabel={updateBlock}

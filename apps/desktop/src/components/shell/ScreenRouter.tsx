@@ -45,6 +45,12 @@ interface ScreenRouterProps {
   interruptionLoad: InterruptionLoadAnalysis | null;
   chatStakeholders: ChatStakeholderSummary | null;
   accelerationSignals: AccelerationSignal[];
+  dismissedPlayIds: string[];
+  savedPlayIds: string[];
+  onDismissPlay: (signal: AccelerationSignal) => void;
+  onSavePlay: (signal: AccelerationSignal) => void;
+  onUnsavePlay: (signalId: string) => void;
+  onRestoreDismissedPlays: () => void;
   onConfirm: (blockId: string) => void;
   onExclude: (blockId: string) => void;
   onRelabel: (blockId: string, field: keyof WorkBlock, value: WorkBlock[keyof WorkBlock]) => void;
@@ -132,6 +138,12 @@ export function ScreenRouter({
   interruptionLoad,
   chatStakeholders,
   accelerationSignals,
+  dismissedPlayIds,
+  savedPlayIds,
+  onDismissPlay,
+  onSavePlay,
+  onUnsavePlay,
+  onRestoreDismissedPlays,
   onConfirm,
   onExclude,
   onRelabel,
@@ -350,6 +362,12 @@ export function ScreenRouter({
       {active === "accelerate" && (
         <AccelerationScreen
           signals={accelerationSignals}
+          dismissedPlayIds={dismissedPlayIds}
+          savedPlayIds={savedPlayIds}
+          onDismissPlay={onDismissPlay}
+          onSavePlay={onSavePlay}
+          onUnsavePlay={onUnsavePlay}
+          onRestoreDismissedPlays={onRestoreDismissedPlays}
           hasWorkBlocks={blocks.length > 0}
           onOpenScreen={onOpenScreen}
         />
