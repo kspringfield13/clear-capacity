@@ -677,11 +677,25 @@ export function generateWeeklyNarrative(
     ? "Reactive support is constraining delivery capacity."
     : "Planned work is moving, with manageable reactive load.";
 
+  // `committed_utilization_pct` is an unbounded sum of penalties, so a busy week can land at or
+  // past the ~80% utilization knee — and there `reliable_new_work_capacity_pct` clamps to 0. The
+  // headroom copy must respect that boundary rather than always promising the week stays "near the
+  // knee where reliability holds" (it doesn't — the user is over it). Branch both clauses on the
+  // same threshold the clamp uses, mirroring the Weekly "Reliable new work" card's past/room
+  // wording, and interpolate `TARGET_UTILIZATION_PCT` so the prose and the clamp can't drift.
+  const overKnee = snapshot.committed_utilization_pct >= TARGET_UTILIZATION_PCT;
+  const reliabilityClause = overKnee
+    ? `reliable new-work capacity is estimated at ${snapshot.reliable_new_work_capacity_pct}% — already past the ~${TARGET_UTILIZATION_PCT}% utilization knee where delivery reliability degrades`
+    : `reliable new-work capacity is estimated at ${snapshot.reliable_new_work_capacity_pct}% — enough to stay near the ~${TARGET_UTILIZATION_PCT}% utilization knee where delivery reliability holds`;
+  const managerKneeClause = overKnee
+    ? `putting total load past the ~${TARGET_UTILIZATION_PCT}% reliability knee, so new work should wait until committed load drops`
+    : `keeping total load near the ~${TARGET_UTILIZATION_PCT}% reliability knee`;
+
   return {
     week_id: snapshot.week_id,
     headline,
-    summary_text: `Estimated allocation reached ${snapshot.allocated_pct}% of a standard 40-hour week. Planned work accounted for ${snapshot.planned_pct}%, reactive work for ${snapshot.reactive_pct}%, and meetings for ${snapshot.meeting_pct}%. About ${snapshot.committed_utilization_pct}% of next week is already committed (recurring work, carryover, reactive load and fragmentation), so reliable new-work capacity is estimated at ${snapshot.reliable_new_work_capacity_pct}% — enough to stay near the ~80% utilization knee where delivery reliability holds.`,
+    summary_text: `Estimated allocation reached ${snapshot.allocated_pct}% of a standard 40-hour week. Planned work accounted for ${snapshot.planned_pct}%, reactive work for ${snapshot.reactive_pct}%, and meetings for ${snapshot.meeting_pct}%. About ${snapshot.committed_utilization_pct}% of next week is already committed (recurring work, carryover, reactive load and fragmentation), so ${reliabilityClause}.`,
     key_drivers: topDrivers,
-    manager_ready_summary: `This week appears to have ${snapshot.reliable_new_work_capacity_pct}% reliable capacity for new planned work next week, on top of roughly ${snapshot.committed_utilization_pct}% already committed — keeping total load near the ~80% reliability knee. The main constraints are reactive load, recurring commitments, carryover risk, and fragmentation. The estimate confidence is ${Math.round(snapshot.summary_confidence * 100)}%, and the user should review low-confidence blocks before sharing.`
+    manager_ready_summary: `This week appears to have ${snapshot.reliable_new_work_capacity_pct}% reliable capacity for new planned work next week, on top of roughly ${snapshot.committed_utilization_pct}% already committed — ${managerKneeClause}. The main constraints are reactive load, recurring commitments, carryover risk, and fragmentation. The estimate confidence is ${Math.round(snapshot.summary_confidence * 100)}%, and the user should review low-confidence blocks before sharing.`
   };
 }
