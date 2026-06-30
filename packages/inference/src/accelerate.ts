@@ -422,3 +422,107 @@ export function detectContextSwitchHotspots(sessions: ActivitySession[]): Accele
 
   return signals;
 }
+
+/** Cap the surfaced Plays to a focused, reviewable set — the highest-leverage signals only. */
+const MAX_ACCELERATION_SIGNALS = 6;
+
+export interface AccelerationMiningInput {
+  blocks: WorkBlock[];
+  sessions: ActivitySession[];
+}
+
+/** Rank weight: expected minutes reclaimed, discounted by how sure the miner is. */
+function signalScore(signal: AccelerationSignal) {
+  return signal.estimated_minutes_saved_per_week * signal.confidence;
+}
+
+/**
+ * Deterministic rank order: highest score first, then raw reclaimable minutes, then signal_id —
+ * so the merge is stable regardless of which detector emitted a tied pair.
+ */
+function compareSignals(left: AccelerationSignal, right: AccelerationSignal) {
+  const leftScore = signalScore(left);
+  const rightScore = signalScore(right);
+  if (leftScore !== rightScore) {
+    return rightScore - leftScore;
+  }
+  if (left.estimated_minutes_saved_per_week !== right.estimated_minutes_saved_per_week) {
+    return right.estimated_minutes_saved_per_week - left.estimated_minutes_saved_per_week;
+  }
+  return left.signal_id < right.signal_id ? -1 : left.signal_id > right.signal_id ? 1 : 0;
+}
+
+/** True when every member of `a` is also in `b` (a ⊆ b). Callers guard against an empty `a`. */
+function isSubsetOrEqual(a: Set<string>, b: Set<string>) {
+  for (const value of a) {
+    if (!b.has(value)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * The single entry point the UI/derived layer consumes: run all three deterministic miners
+ * (B1 repetitive sequences, B2 time-sinks, B3 context-switch hotspots), dedupe, rank by
+ * `estimated_minutes_saved_per_week × confidence` (descending), and cap to a focused top-N.
+ *
+ * Dedup has two layers: (1) defensive signal_id dedup (detectors mint unique ids today, but a
+ * future detector could collide — keep the higher-ranked on a clash); (2) nested-evidence collapse
+ * for `automate` signals only — B1 intentionally emits BOTH the 2-gram and the 3-gram of the same
+ * app flow, so when one signal's cited sessions are wholly contained in another's, keep only the
+ * top-ranked of that nested cluster. The collapse is restricted to `automate` because that is the
+ * only detector that overlaps by design: `tool` signals own disjoint per-category block sets and
+ * `technique` signals are one-per-hour, so a generic nested collapse could wrongly drop a distinct
+ * hotspot whose sessions happen to overlap another's.
+ */
+export function buildAccelerationSignals(input: AccelerationMiningInput): AccelerationSignal[] {
+  const { blocks, sessions } = input;
+
+  const mined = [
+    ...detectRepetitiveSequences(sessions),
+    ...detectTimeSinks(blocks, sessions),
+    ...detectContextSwitchHotspots(sessions)
+  ];
+
+  const byId = new Map<string, AccelerationSignal>();
+  for (const signal of mined) {
+    const existing = byId.get(signal.signal_id);
+    // compareSignals < 0 ⇒ `signal` outranks `existing`, so the higher-ranked one survives a clash.
+    if (!existing || compareSignals(signal, existing) < 0) {
+      byId.set(signal.signal_id, signal);
+    }
+  }
+
+  const ranked = [...byId.values()].sort(compareSignals);
+
+  const kept: AccelerationSignal[] = [];
+  for (const candidate of ranked) {
+    if (kept.length >= MAX_ACCELERATION_SIGNALS) {
+      break;
+    }
+    const candidateEvidence = new Set(candidate.derived_from);
+    const dominated =
+      candidate.type === "automate" &&
+      candidateEvidence.size > 0 &&
+      kept.some((keptSignal) => {
+        if (keptSignal.type !== "automate") {
+          return false;
+        }
+        const keptEvidence = new Set(keptSignal.derived_from);
+        if (keptEvidence.size === 0) {
+          return false;
+        }
+        // Nested either direction ⇒ the same underlying flow; the already-kept signal outranks it.
+        return (
+          isSubsetOrEqual(candidateEvidence, keptEvidence) ||
+          isSubsetOrEqual(keptEvidence, candidateEvidence)
+        );
+      });
+    if (!dominated) {
+      kept.push(candidate);
+    }
+  }
+
+  return kept.slice(0, MAX_ACCELERATION_SIGNALS);
+}
