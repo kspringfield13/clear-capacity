@@ -647,7 +647,12 @@ export function AgentScreen({
                   {!isCurrentStream && m.content && (
                     <div className="agent-message-meta">
                       <time>{m.createdAt ? new Date(m.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : ""}</time>
-                      <button type="button" onClick={() => void copyMessage(m)} title="Copy response" aria-label="Copy response">
+                      <button
+                        type="button"
+                        onClick={() => void copyMessage(m)}
+                        title={copiedMessageId === m.id ? "Copied" : "Copy response"}
+                        aria-label={copiedMessageId === m.id ? "Copied" : "Copy response"}
+                      >
                         {copiedMessageId === m.id ? <Check size={13} /> : <Copy size={13} />}
                       </button>
                       {m.role === "assistant" && m.analysisSummary && (
