@@ -133,25 +133,29 @@ export function ForecastAgentPanel({
       ) : (
         <>
           <div className="forecast-summary">
-            <div>
+            <div title="The AI's refined primary estimate of next week's reliable new-work capacity, shown with how confident the forecast is.">
               <span>AI reliable estimate</span>
               <strong>{pct(forecast.reliable_new_work_capacity_pct)}</strong>
               <small>{Math.round(forecast.confidence * 100)}% forecast confidence</small>
+              <span className="sr-only">The AI's refined primary estimate of next week's reliable new-work capacity, shown with how confident the forecast is.</span>
             </div>
-            <div>
+            <div title="The protected low-end figure to plan and commit against if the flagged risks don't clear.">
               <span>Conservative</span>
               <strong>{pct(forecast.conservative_capacity_pct)}</strong>
               <small>protected planning case</small>
+              <span className="sr-only">The protected low-end figure to plan and commit against if the flagged risks don't clear.</span>
             </div>
-            <div>
+            <div title="The expected-case capacity, the middle of the conservative-to-optimistic range.">
               <span>Likely</span>
               <strong>{pct(forecast.likely_capacity_pct)}</strong>
               <small>expected case</small>
+              <span className="sr-only">The expected-case capacity, the middle of the conservative-to-optimistic range.</span>
             </div>
-            <div>
+            <div title="The high-end capacity available only if the flagged risks clear.">
               <span>Optimistic</span>
               <strong>{pct(forecast.optimistic_capacity_pct)}</strong>
               <small>if risks clear</small>
+              <span className="sr-only">The high-end capacity available only if the flagged risks clear.</span>
             </div>
           </div>
           <p className="forecast-baseline-note">
