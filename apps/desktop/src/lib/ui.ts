@@ -9,14 +9,15 @@ export const screenLabels: Record<string, string> = {
   corrections: "Corrections",
   audit: "Audit History",
   sensitive: "Flagged Captures",
-  agent: "Agent"
+  agent: "Agent",
+  accelerate: "Acceleration"
 };
 
 export function primarySectionForScreen(screen: string): string | null {
   if (screen === "daily") return "today";
   if (screen === "weekly" || screen === "forecast" || screen === "trends" || screen === "narrative") return "week";
   if (screen === "ledger" || screen === "corrections" || screen === "audit" || screen === "sensitive") return "history";
-  if (screen === "agent") return "agent";
+  if (screen === "agent" || screen === "accelerate") return "agent";
   return null;
 }
 
@@ -36,6 +37,13 @@ export function sectionViews(section: string | null) {
       { id: "corrections" as const, label: "Corrections" },
       { id: "audit" as const, label: "Audit" },
       { id: "sensitive" as const, label: "Flagged" }
+    ];
+  }
+
+  if (section === "agent") {
+    return [
+      { id: "agent" as const, label: "Ask" },
+      { id: "accelerate" as const, label: "Accelerate" }
     ];
   }
 

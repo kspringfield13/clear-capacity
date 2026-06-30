@@ -1,4 +1,4 @@
-import type { WorkBlock, WorkCategory, UserCorrection, ReviewCopilotAction } from "../../../../packages/domain/src/models";
+import type { WorkBlock, WorkCategory, UserCorrection, ReviewCopilotAction, AccelerationPlayType } from "../../../../packages/domain/src/models";
 import type { AuditEventType } from "../../../../packages/domain/src/models";
 import type { ForecastAccuracyRating } from "../../../../packages/inference/src/capacity";
 
@@ -86,6 +86,16 @@ const REVIEW_ACTION_LABELS: Record<ReviewCopilotAction, string> = {
 
 export function reviewActionLabel(action: ReviewCopilotAction): string {
   return REVIEW_ACTION_LABELS[action] ?? action;
+}
+
+const ACCELERATION_TYPE_LABELS: Record<AccelerationPlayType, string> = {
+  automate: "Automate",
+  tool: "Tool",
+  technique: "Technique",
+};
+
+export function accelerationTypeLabel(type: AccelerationPlayType): string {
+  return ACCELERATION_TYPE_LABELS[type] ?? type;
 }
 
 const PRIVACY_LABELS: Record<string, string> = {

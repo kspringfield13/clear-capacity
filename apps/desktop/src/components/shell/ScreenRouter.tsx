@@ -9,6 +9,7 @@ import type {
   VisualContextInsight,
   WorkBlock,
   AIConfig,
+  AccelerationSignal,
 } from "../../../../../packages/domain/src/models";
 import type { PersistedForecastRecord, PersistedNarrativeRecord, ForecastAccuracyReview, PersistedSnapshotRecord } from "../../services/localStore";
 import type { computeWeeklyCapacitySnapshot, generateWeeklyNarrative, ChatStakeholderSummary, ForecastAccuracyTrend, ForecastTrackRecordEntry, InterruptionLoadAnalysis } from "../../../../../packages/inference/src/capacity";
@@ -25,6 +26,7 @@ import { NarrativeScreen } from "../narrative/NarrativeScreen";
 import { AuditLogScreen } from "../audit/AuditLogScreen";
 import { SensitiveReviewScreen } from "../audit/SensitiveReviewScreen";
 import { AgentScreen } from "../agent/AgentScreen";
+import { AccelerationScreen } from "../accelerate/AccelerationScreen";
 import type { OnboardingStep } from "../common/OnboardingCard";
 import type { ProactiveAlert, ProactiveAlertSettings } from "../../lib/proactiveAlerts";
 import type { PushToast } from "../../hooks/useToasts";
@@ -42,6 +44,7 @@ interface ScreenRouterProps {
   snapshotHistory: PersistedSnapshotRecord[];
   interruptionLoad: InterruptionLoadAnalysis | null;
   chatStakeholders: ChatStakeholderSummary | null;
+  accelerationSignals: AccelerationSignal[];
   onConfirm: (blockId: string) => void;
   onExclude: (blockId: string) => void;
   onRelabel: (blockId: string, field: keyof WorkBlock, value: WorkBlock[keyof WorkBlock]) => void;
@@ -128,6 +131,7 @@ export function ScreenRouter({
   snapshotHistory,
   interruptionLoad,
   chatStakeholders,
+  accelerationSignals,
   onConfirm,
   onExclude,
   onRelabel,
@@ -341,6 +345,13 @@ export function ScreenRouter({
         <SensitiveReviewScreen
           visualContextInsights={visualContextInsights}
           onDiscardInsight={onDiscardInsight}
+        />
+      )}
+      {active === "accelerate" && (
+        <AccelerationScreen
+          signals={accelerationSignals}
+          hasWorkBlocks={blocks.length > 0}
+          onOpenScreen={onOpenScreen}
         />
       )}
       {active === "agent" && (

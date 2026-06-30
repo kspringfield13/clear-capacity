@@ -1921,7 +1921,8 @@ h3 {
 /* The weekly capacity + forecast views flow top-to-bottom and scroll as a
    whole page, rather than cramming fixed-height panels that clip internally. */
 .capacity-screen,
-.forecast-screen {
+.forecast-screen,
+.acceleration-screen {
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -1935,7 +1936,8 @@ h3 {
    `background` shorthand, which would otherwise reset it to transparent. */
 .capacity-screen,
 .forecast-screen,
-.settings-screen {
+.settings-screen,
+.acceleration-screen {
   background:
     linear-gradient(var(--background) 30%, transparent) 0 0 / 100% 24px no-repeat local,
     linear-gradient(transparent, var(--background) 70%) 0 100% / 100% 40px no-repeat local,
@@ -1945,8 +1947,138 @@ h3 {
 }
 
 .capacity-screen > *,
-.forecast-screen > * {
+.forecast-screen > *,
+.acceleration-screen > * {
   flex: 0 0 auto;
+}
+
+/* Acceleration ("Plays") surface — deterministic recipes mined from observed work. */
+.acceleration-screen .screen-subhead strong {
+  color: var(--text);
+}
+
+.acceleration-total {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text-subtle);
+}
+
+.acceleration-total > div {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.acceleration-total strong {
+  color: var(--text);
+  font-size: 16px;
+}
+
+.acceleration-total small {
+  color: var(--text-subtle);
+  font-size: 11px;
+}
+
+.play-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+  padding-bottom: 6px;
+}
+
+.play-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.play-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.play-type-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.play-type-chip.automate {
+  color: var(--info);
+}
+
+.play-type-chip.tool {
+  color: var(--success);
+}
+
+.play-type-chip.technique {
+  color: var(--warning);
+}
+
+.play-confidence {
+  font-size: 12px;
+  color: var(--text-subtle);
+}
+
+.play-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.play-detail {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-subtle);
+}
+
+.play-saving {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--surface-muted);
+}
+
+.play-saving-icon {
+  color: var(--success);
+}
+
+.play-saving strong {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.play-saving span {
+  font-size: 12px;
+  color: var(--text-subtle);
+}
+
+.play-evidence {
+  margin-top: 2px;
 }
 
 .ledger-screen .activity-capture-panel {
