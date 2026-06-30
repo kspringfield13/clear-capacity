@@ -401,6 +401,13 @@ export function WeeklyCapacityScreen({
               )}
             </p>
           )}
+          {interruptionLoad.after_hours_message_count > 0 && (
+            <p className="interruption-peak-note">
+              <strong>{interruptionLoad.after_hours_pct}%</strong> of reactive messages
+              ({interruptionLoad.after_hours_message_count} of {interruptionLoad.message_count})
+              arrived outside core hours (8am–6pm) — chat bleeding into personal time.
+            </p>
+          )}
         </section>
       )}
 

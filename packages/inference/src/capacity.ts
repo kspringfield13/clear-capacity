@@ -391,7 +391,23 @@ export interface InterruptionLoadAnalysis {
    * null when there are fewer than 2 active days (no quieter day to contrast against the peak).
    */
   calm_day: string | null;
+  /** Reactive messages that landed outside core hours (before 08:00 / at-or-after 18:00 local). */
+  after_hours_message_count: number;
+  /**
+   * Share (0–100) of reactive messages that landed after hours; 0 only when there is no after-hours
+   * volume, floored to 1 when there is any (so a non-zero count never displays alongside "0%").
+   */
+  after_hours_pct: number;
 }
+
+// Core working-hour window (local time) for the after-hours reactive-load signal. Reactive chat
+// that starts before 08:00 or at/after 18:00 is attributed to "after hours" — work bleeding into
+// personal time, an unsustainable-pace cue (Pencavel's diminishing-returns-past-long-hours point,
+// docs/heuristics-vs-research.md §5, applied to *when* the load lands, not just how much). Hand-set
+// boundary — there is no per-user schedule yet; a burst is bucketed by its START hour, consistent
+// with the weekday bucketing below.
+const CORE_HOURS_START = 8;
+const CORE_HOURS_END = 18;
 
 const WEEKDAY_NAMES = [
   "Sunday",
@@ -426,6 +442,7 @@ export function analyzeInterruptionLoad(
   const dayMessages = new Map<number, number>();
   let messageCount = 0;
   let mentionCount = 0;
+  let afterHoursMessages = 0;
   let activeMs = 0;
   for (const event of chatEvents) {
     if (event.source_type !== "chat") continue;
@@ -444,8 +461,15 @@ export function analyzeInterruptionLoad(
     // reactive volume — a malformed 0-message burst on a separate day can't inflate the count
     // (or trip the ≥2-day footnote gate) into implying activity it didn't carry.
     if (messages > 0) {
-      const dayIndex = new Date(start).getDay();
+      const startDate = new Date(start);
+      const dayIndex = startDate.getDay();
       dayMessages.set(dayIndex, (dayMessages.get(dayIndex) ?? 0) + messages);
+      // Attribute the burst's messages to "after hours" by its start hour, mirroring the weekday
+      // bucketing — a metadata-only sustainability cue, never message text.
+      const startHour = startDate.getHours();
+      if (startHour < CORE_HOURS_START || startHour >= CORE_HOURS_END) {
+        afterHoursMessages += messages;
+      }
     }
   }
   if (bursts.length === 0) return null;
@@ -516,7 +540,12 @@ export function analyzeInterruptionLoad(
     active_day_count: dayMessages.size,
     peak_day: peakDayIndex >= 0 ? WEEKDAY_NAMES[peakDayIndex] : null,
     peak_day_message_count: peakDayMessages,
-    calm_day: calmDayIndex >= 0 ? WEEKDAY_NAMES[calmDayIndex] : null
+    calm_day: calmDayIndex >= 0 ? WEEKDAY_NAMES[calmDayIndex] : null,
+    after_hours_message_count: afterHoursMessages,
+    // Floor to 1% when there is any after-hours volume so the footnote (gated on the count) never
+    // shows "0%" beside a non-zero count. messageCount ≥ afterHoursMessages > 0 here, so safe.
+    after_hours_pct:
+      afterHoursMessages > 0 ? Math.max(1, Math.round((afterHoursMessages / messageCount) * 100)) : 0
   };
 }
 
