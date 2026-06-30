@@ -50,6 +50,7 @@ interface ScreenRouterProps {
   onboardingSteps: OnboardingStep[];
   showOnboarding: boolean;
   onDismissOnboarding: () => void;
+  onReplayWalkthrough: () => void;
   // setup screen
   visualContextEnabled: boolean;
   setVisualContextEnabled: (value: boolean) => void;
@@ -134,6 +135,7 @@ export function ScreenRouter({
   onboardingSteps,
   showOnboarding,
   onDismissOnboarding,
+  onReplayWalkthrough,
   visualContextEnabled,
   setVisualContextEnabled,
   visualContextInsights,
@@ -231,6 +233,7 @@ export function ScreenRouter({
           setRetentionDays={setRetentionDays}
           proactiveAlertSettings={proactiveAlertSettings}
           onProactiveAlertSettingsChange={onProactiveAlertSettingsChange}
+          onReplayWalkthrough={onReplayWalkthrough}
         />
       )}
       {active === "ledger" && (

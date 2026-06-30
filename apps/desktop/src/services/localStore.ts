@@ -97,6 +97,8 @@ export interface PersistedAppState {
   retentionDays: number | null;
   /** Whether the user dismissed the first-run getting-started card. */
   onboardingDismissed: boolean;
+  /** Whether the user has finished (or skipped) the first-run app walkthrough. */
+  walkthroughCompleted: boolean;
   /** Opt-in configuration for proactive menu-bar alerts. */
   proactiveAlertSettings: ProactiveAlertSettings;
   /** Throttle/dedup bookkeeping for proactive OS notifications. */
@@ -228,6 +230,7 @@ export async function readPersistedState(): Promise<PersistedAppState | null> {
         aiConfig: isRecord(parsed.aiConfig) ? (parsed.aiConfig as unknown as AIConfig) : null,
         retentionDays: parseRetentionDays(parsed.retentionDays),
         onboardingDismissed: typeof parsed.onboardingDismissed === "boolean" ? parsed.onboardingDismissed : false,
+        walkthroughCompleted: typeof parsed.walkthroughCompleted === "boolean" ? parsed.walkthroughCompleted : false,
         proactiveAlertSettings: parseProactiveAlertSettings(parsed.proactiveAlertSettings),
         proactiveAlertRuntime: parseProactiveAlertRuntime(parsed.proactiveAlertRuntime)
       };
@@ -278,6 +281,7 @@ export async function readPersistedState(): Promise<PersistedAppState | null> {
       aiConfig: isRecord(parsed.aiConfig) ? (parsed.aiConfig as unknown as AIConfig) : null,
       retentionDays: parseRetentionDays(parsed.retentionDays),
       onboardingDismissed: typeof parsed.onboardingDismissed === "boolean" ? parsed.onboardingDismissed : false,
+      walkthroughCompleted: typeof parsed.walkthroughCompleted === "boolean" ? parsed.walkthroughCompleted : false,
       proactiveAlertSettings: parseProactiveAlertSettings(parsed.proactiveAlertSettings),
       proactiveAlertRuntime: parseProactiveAlertRuntime(parsed.proactiveAlertRuntime)
     };

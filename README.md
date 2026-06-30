@@ -5,6 +5,46 @@ ClearCapacity is a local-first macOS workload intelligence prototype for analyst
 > [!IMPORTANT]
 > ClearCapacity is an early prototype, not a production monitoring or workforce-management system. Capacity estimates are planning aids and should be reviewed by the user before they are shared or used for decisions.
 
+## Install on a Mac (easiest path)
+
+Sharing this with a friend? Hand them the project folder (or the repository
+link) and point them at the guided installer. It checks for and installs the
+prerequisites it can't find (Xcode Command Line Tools, Homebrew, Node.js, and
+Rust), builds the app, and drops **ClearCapacity.app** into `/Applications` —
+with a friendly, step-by-step terminal walkthrough the whole way.
+
+**Option A — double-click (no terminal needed):**
+
+1. Open the project folder in Finder, go into the `scripts` folder.
+2. Double-click **`install.command`**. Terminal opens and runs the installer.
+3. Answer the prompts (it asks before installing anything or using your password).
+
+> The first time, macOS may say `install.command` "cannot be opened because it
+> is from an unidentified developer." Right-click it → **Open** → **Open**, or
+> allow it once under System Settings → Privacy & Security.
+
+**Option B — one line in Terminal:**
+
+```bash
+bash scripts/install.command
+```
+
+Either way, the installer ends by explaining the first launch: ClearCapacity
+lives in the **menu bar** (not the Dock), macOS will ask for **Accessibility**
+permission (so the app can see which app is in the foreground — never your
+keystrokes or screen), and a short **in-app walkthrough** points out where
+everything is.
+
+> [!NOTE]
+> This build is compiled from source on the friend's own Mac, so it doesn't need
+> an Apple Developer signature. Nothing is sent anywhere during install, and AI
+> features stay optional and opt-in. Re-running `install.command` updates an
+> existing install to a newer build.
+
+Prefer to set things up by hand, or developing on the app? See
+[Quick Start](#quick-start) and [Run the Desktop App](#run-the-desktop-app)
+below.
+
 ## Why ClearCapacity
 
 Analyst workload is often split across planned projects, recurring reporting, meetings, reactive requests, debugging, and coordination. Conventional task lists capture only part of that work. ClearCapacity explores a more complete workflow:
