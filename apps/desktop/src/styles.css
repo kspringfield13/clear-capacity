@@ -8877,3 +8877,205 @@ html[data-theme="dark"] .agent-active .pause-button:hover {
     transform: translateY(0);
   }
 }
+
+/* ---------------------------------------------------------------------------
+   First-run walkthrough overlay (WalkthroughOverlay.tsx)
+   --------------------------------------------------------------------------- */
+.walkthrough {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+}
+
+/* Full-screen dim for centered (welcome/finish) steps that have no anchor. */
+.walkthrough-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+/* Anchored steps: the huge box-shadow spread dims everything except the
+   highlighted nav button, leaving a crisp "hole" around it. */
+.walkthrough-spotlight {
+  position: fixed;
+  border-radius: 12px;
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+  transition: top 0.2s ease, left 0.2s ease, width 0.2s ease, height 0.2s ease;
+}
+
+.walkthrough-card {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 18px 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-elevated);
+  box-shadow: var(--shadow);
+  color: var(--text);
+}
+
+.walkthrough-card.is-centered {
+  top: 50%;
+  left: 50%;
+  width: 360px;
+  transform: translate(-50%, -50%);
+}
+
+.walkthrough-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  color: var(--text-subtle);
+  background: transparent;
+  cursor: pointer;
+}
+
+.walkthrough-close:hover {
+  color: var(--text);
+  background: var(--surface-muted);
+}
+
+.walkthrough-title {
+  padding-right: 28px;
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.walkthrough-body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.walkthrough-progress {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.walkthrough-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border-strong);
+  transition: background 0.2s ease;
+}
+
+.walkthrough-dot.is-active {
+  background: var(--accent);
+}
+
+.walkthrough-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.walkthrough-nav {
+  display: flex;
+  gap: 8px;
+}
+
+.walkthrough-skip {
+  border: 0;
+  background: transparent;
+  color: var(--text-subtle);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.walkthrough-skip:hover {
+  color: var(--text-muted);
+}
+
+.walkthrough-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 560;
+  cursor: pointer;
+}
+
+.walkthrough-btn:hover {
+  border-color: var(--border-strong);
+}
+
+.walkthrough-btn.is-primary {
+  border-color: var(--border-strong);
+  background: var(--accent);
+  color: var(--background);
+}
+
+.walkthrough-btn.is-primary:hover {
+  background: var(--accent-muted);
+}
+
+/* "Replay walkthrough" row in Settings. */
+.settings-walkthrough-replay {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.settings-walkthrough-replay > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-walkthrough-replay strong {
+  font-size: 13px;
+  font-weight: 620;
+  color: var(--text);
+}
+
+.settings-walkthrough-replay span {
+  font-size: 12px;
+  color: var(--text-subtle);
+}
+
+.ghost-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 560;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.ghost-action:hover {
+  border-color: var(--border-strong);
+}

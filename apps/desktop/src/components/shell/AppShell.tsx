@@ -98,6 +98,10 @@ export function AppShell({
                 onClick={() => setActive(item.screen)}
                 title={item.shortcut ? `${item.label} (${item.shortcut})` : undefined}
                 aria-keyshortcuts={item.shortcutKey}
+                // Walkthrough anchor. The Settings entry here is hidden on
+                // desktop, so its tour highlight lives on the always-visible
+                // `.settings-button` below instead.
+                data-tour={isSettings ? undefined : item.id}
                 type="button"
               >
                 <Icon size={18} />
@@ -137,7 +141,7 @@ export function AppShell({
           {paused ? <Moon size={18} /> : <Pause size={18} />}
           <span>{paused ? "Resume Tracking" : "Pause Tracking"}</span>
         </button>
-        <button className={active === "setup" ? "settings-button is-active" : "settings-button"} type="button" onClick={() => setActive("setup")} title="Settings (⌘9)" aria-keyshortcuts="Meta+9">
+        <button className={active === "setup" ? "settings-button is-active" : "settings-button"} type="button" onClick={() => setActive("setup")} title="Settings (⌘9)" aria-keyshortcuts="Meta+9" data-tour="setup">
           <Settings size={17} />
           <span>Settings</span>
         </button>

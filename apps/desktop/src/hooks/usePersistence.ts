@@ -34,6 +34,7 @@ interface PersistableState {
   aiConfig: AIConfig | null;
   retentionDays: number | null;
   onboardingDismissed: boolean;
+  walkthroughCompleted: boolean;
   proactiveAlertSettings: ProactiveAlertSettings;
   proactiveAlertRuntime: ProactiveAlertRuntime;
   isDemoMode: boolean;
@@ -68,6 +69,7 @@ export function usePersistence(state: PersistableState) {
     persistData.aiConfig,
     persistData.retentionDays,
     persistData.onboardingDismissed,
+    persistData.walkthroughCompleted,
     persistData.proactiveAlertSettings,
     persistData.proactiveAlertRuntime,
     isDemoMode,

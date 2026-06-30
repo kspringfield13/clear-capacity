@@ -60,6 +60,7 @@ import { AppShell } from "./components/shell/AppShell";
 import { buildToolbarActions } from "./lib/toolbarActions";
 import { ScreenRouter } from "./components/shell/ScreenRouter";
 import { buildOnboardingSteps } from "./components/common/OnboardingCard";
+import { WalkthroughOverlay } from "./components/onboarding/WalkthroughOverlay";
 import type { Screen, WindowMode } from "./lib/types";
 
 export function App() {
@@ -95,6 +96,7 @@ export function App() {
         setAiConfig(data.aiConfig ?? null);
         setRetentionDays(data.retentionDays ?? null);
         setOnboardingDismissed(data.onboardingDismissed ?? false);
+        setWalkthroughCompleted(data.walkthroughCompleted ?? false);
         setManagerSummaryText(data.managerSummaryText ?? null);
         setGeneratedNarrative(data.generatedNarrative ?? null);
         setLastNarrativeAutoRunDate(data.lastNarrativeAutoRunDate ?? null);
@@ -140,6 +142,9 @@ export function App() {
   );
   const [onboardingDismissed, setOnboardingDismissed] = useState<boolean>(
     () => persistedSnapshot?.onboardingDismissed ?? false
+  );
+  const [walkthroughCompleted, setWalkthroughCompleted] = useState<boolean>(
+    () => persistedSnapshot?.walkthroughCompleted ?? false
   );
   const [visualContextInsights, setVisualContextInsights] = useState<VisualContextInsight[]>(
     () => persistedSnapshot?.visualContextInsights ?? []
@@ -227,6 +232,7 @@ export function App() {
     paused,
     retentionDays,
     onboardingDismissed,
+    walkthroughCompleted,
     proactiveAlertSettings,
     proactiveAlertRuntime,
     isDemoMode,
@@ -752,6 +758,39 @@ export function App() {
     ].slice(-1000));
   }
 
+  // First-run app walkthrough finished or skipped. Persisted so the overlay
+  // stays gone across reloads, and logged once as a discrete onboarding action.
+  // `outcome` distinguishes a completed tour from an early skip in the audit
+  // trail without adding a second event type.
+  function endWalkthrough(outcome: "completed" | "skipped") {
+    if (walkthroughCompleted) return;
+    setWalkthroughCompleted(true);
+    if (isDemoMode) return;
+    setAuditEvents((current) => [
+      ...current,
+      createAuditEvent({
+        type: "onboarding",
+        source: "walkthrough",
+        title: outcome === "completed" ? "App walkthrough completed" : "App walkthrough skipped",
+        summary:
+          outcome === "completed"
+            ? "The first-run guided tour of the app was completed by the user."
+            : "The first-run guided tour of the app was skipped by the user.",
+        privacy_level: "local_only",
+        details: {
+          outcome,
+          stored_locally: true,
+          sent_to_cloud: false
+        }
+      })
+    ].slice(-1000));
+  }
+
+  // Let the user replay the guided tour from Settings.
+  function replayWalkthrough() {
+    setWalkthroughCompleted(false);
+  }
+
   // User-initiated retention-window change. Logged once as a discrete privacy
   // action (the background per-sample expiry deliberately stays unlogged).
   function changeRetentionDays(value: number | null) {
@@ -1143,6 +1182,9 @@ export function App() {
     [paused, activeWindowSamples.length, calendarEvents.length, aiConfig?.apiKey, blocks.length]
   );
   const showOnboarding = !isDemoMode && !onboardingDismissed && blocks.length === 0;
+  // The guided tour spotlights the sidebar nav, so it only runs in the full
+  // window (the compact menu-bar widget has no nav) and never in demo mode.
+  const showWalkthrough = !isDemoMode && windowMode === "large" && !walkthroughCompleted;
 
   const toolbarActions = buildToolbarActions({
     active,
@@ -1251,8 +1293,15 @@ export function App() {
         auditEvents={auditEvents}
         todayKey={todayKey}
         currentWeekRangeLabel={currentWeekRangeLabel}
+        onReplayWalkthrough={replayWalkthrough}
         pushToast={pushToast}
       />
+      {showWalkthrough && (
+        <WalkthroughOverlay
+          onComplete={() => endWalkthrough("completed")}
+          onSkip={() => endWalkthrough("skipped")}
+        />
+      )}
     </AppShell>
   );
 }

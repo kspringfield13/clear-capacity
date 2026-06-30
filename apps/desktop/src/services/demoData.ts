@@ -443,6 +443,7 @@ export function createDemoState(reference = new Date()): PersistedAppState {
     aiConfig: null,
     retentionDays: 30,
     onboardingDismissed: false,
+    walkthroughCompleted: true,
     proactiveAlertSettings: DEFAULT_PROACTIVE_ALERT_SETTINGS,
     proactiveAlertRuntime: EMPTY_PROACTIVE_ALERT_RUNTIME
   };

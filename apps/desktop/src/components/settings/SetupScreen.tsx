@@ -7,6 +7,7 @@ import {
   CalendarSync,
   CheckCircle2,
   ChevronRight,
+  Compass,
   Download,
   ExternalLink,
   Eye,
@@ -109,6 +110,7 @@ export function SetupScreen({
   setRetentionDays,
   proactiveAlertSettings,
   onProactiveAlertSettingsChange,
+  onReplayWalkthrough,
 }: {
   paused: boolean;
   setPaused: (value: boolean) => void;
@@ -132,6 +134,7 @@ export function SetupScreen({
   setRetentionDays: (value: number | null) => void;
   proactiveAlertSettings: ProactiveAlertSettings;
   onProactiveAlertSettingsChange: (value: ProactiveAlertSettings) => void;
+  onReplayWalkthrough: () => void;
 }) {
   const steps = buildOnboardingSteps({
     trackingActive: !paused && activeWindowSamples.length > 0,
@@ -263,6 +266,17 @@ export function SetupScreen({
       </div>
 
       {!allDone && <OnboardingCard steps={steps} />}
+
+      <div className="settings-walkthrough-replay">
+        <div>
+          <strong>App walkthrough</strong>
+          <span>Replay the guided tour of the main sections.</span>
+        </div>
+        <button className="ghost-action" type="button" onClick={onReplayWalkthrough}>
+          <Compass size={15} />
+          <span>Replay walkthrough</span>
+        </button>
+      </div>
 
       <section className="privacy-summary">
         <div className={paused ? "privacy-state is-paused" : "privacy-state"}>
