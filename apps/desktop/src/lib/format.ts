@@ -151,6 +151,7 @@ export function auditTypeLabel(type: AuditEventType) {
     privacy_pause: "Privacy",
     privacy_resume: "Privacy",
     retention_policy: "Privacy",
+    acceleration_engine: "Acceleration",
     onboarding: "Onboarding"
   };
 

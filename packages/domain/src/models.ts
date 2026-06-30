@@ -76,6 +76,7 @@ export type AuditEventType =
   | "privacy_resume"
   | "retention_policy"
   | "proactive_alert"
+  | "acceleration_engine"
   | "onboarding";
 
 export interface AuditEvent {
@@ -186,6 +187,37 @@ export interface ForecastAgentResult {
   optimistic_capacity_pct: number;
   likely_capacity_pct: number;
   conservative_capacity_pct: number;
+}
+
+export type AccelerationPlayType = "automate" | "tool" | "technique";
+
+/**
+ * Output of the deterministic acceleration miner (`packages/inference/src/accelerate.ts`).
+ * Derived locally from observed work — app-name sequences, category/duration/time-of-day
+ * stats, and counts — with full evidence and a conservative estimate of time it could save.
+ * Privacy: `evidence` carries derived signals only (app names, counts, minutes), NEVER raw
+ * window titles; `derived_from` lists the source ids (session/work-block ids) it was mined from.
+ */
+export interface AccelerationSignal {
+  signal_id: string;
+  type: AccelerationPlayType;
+  title: string;
+  detail: string;
+  evidence: string[];
+  estimated_minutes_saved_per_week: number;
+  confidence: number;
+  derived_from: string[];
+}
+
+/**
+ * A presentable Acceleration "Play" card. Extends a mined signal with the optional AI-authored
+ * payload: a generated skill `recipe` (AUTOMATE), `recommended_tools` (TOOL), and the user's
+ * dismissed state. Deterministic-rendered cards leave `recipe` null and `recommended_tools` empty.
+ */
+export interface AccelerationPlay extends AccelerationSignal {
+  recipe: string | null;
+  recommended_tools: string[];
+  dismissed: boolean;
 }
 
 export interface VisualContextInsight {
