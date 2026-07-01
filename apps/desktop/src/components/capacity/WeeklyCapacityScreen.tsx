@@ -6,7 +6,7 @@ import type { PersistedSnapshotRecord } from "../../services/localStore";
 import { computeWeeklyCapacitySnapshot, computeCapacityBaselines } from "../../../../../packages/inference/src/capacity";
 import type { ChatStakeholderSummary, InterruptionLoadAnalysis } from "../../../../../packages/inference/src/capacity";
 import { categoryColors } from "../../../../../packages/domain/src/taxonomy";
-import { pct } from "../../lib/format";
+import { pct, formatHourOfDay } from "../../lib/format";
 import { addDays, getCurrentIsoWeekId, getBusinessWeekRangeLabel } from "../../lib/date";
 import { EmptyState } from "../common/EmptyState";
 import { OnboardingCard, type OnboardingStep } from "../common/OnboardingCard";
@@ -399,7 +399,11 @@ export function WeeklyCapacityScreen({
           </ul>
           {interruptionLoad.peak_day && interruptionLoad.active_day_count >= 2 && (
             <p className="interruption-peak-note">
-              Reactive load peaked on <strong>{interruptionLoad.peak_day}</strong> —{" "}
+              Reactive load peaked on <strong>{interruptionLoad.peak_day}</strong>
+              {interruptionLoad.peak_hour !== null && (
+                <> around <strong>{formatHourOfDay(interruptionLoad.peak_hour)}</strong></>
+              )}{" "}
+              —{" "}
               {interruptionLoad.peak_day_message_count}{" "}
               {interruptionLoad.peak_day_message_count === 1 ? "message" : "messages"} across{" "}
               {interruptionLoad.active_day_count} active days.{" "}
