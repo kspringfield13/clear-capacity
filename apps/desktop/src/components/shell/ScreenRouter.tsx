@@ -9,6 +9,7 @@ import type {
   VisualContextInsight,
   WorkBlock,
   AIConfig,
+  AccelerationPlay,
   AccelerationSignal,
 } from "../../../../../packages/domain/src/models";
 import type { PersistedForecastRecord, PersistedNarrativeRecord, ForecastAccuracyReview, PersistedSnapshotRecord } from "../../services/localStore";
@@ -44,13 +45,20 @@ interface ScreenRouterProps {
   snapshotHistory: PersistedSnapshotRecord[];
   interruptionLoad: InterruptionLoadAnalysis | null;
   chatStakeholders: ChatStakeholderSummary | null;
-  accelerationSignals: AccelerationSignal[];
+  accelerationPlays: AccelerationPlay[];
   dismissedPlayIds: string[];
   savedPlayIds: string[];
   onDismissPlay: (signal: AccelerationSignal) => void;
   onSavePlay: (signal: AccelerationSignal) => void;
   onUnsavePlay: (signalId: string) => void;
   onRestoreDismissedPlays: () => void;
+  // acceleration AI synthesis (opt-in)
+  accelerationStatus: "idle" | "generating" | "error";
+  accelerationError: string | null;
+  onGenerateAccelerationPlays: () => void;
+  accelerationConfigured: boolean;
+  accelerationGeneratedAt: string | null;
+  hasAuthoredPlays: boolean;
   onConfirm: (blockId: string) => void;
   onExclude: (blockId: string) => void;
   onRelabel: (blockId: string, field: keyof WorkBlock, value: WorkBlock[keyof WorkBlock]) => void;
@@ -137,13 +145,19 @@ export function ScreenRouter({
   snapshotHistory,
   interruptionLoad,
   chatStakeholders,
-  accelerationSignals,
+  accelerationPlays,
   dismissedPlayIds,
   savedPlayIds,
   onDismissPlay,
   onSavePlay,
   onUnsavePlay,
   onRestoreDismissedPlays,
+  accelerationStatus,
+  accelerationError,
+  onGenerateAccelerationPlays,
+  accelerationConfigured,
+  accelerationGeneratedAt,
+  hasAuthoredPlays,
   onConfirm,
   onExclude,
   onRelabel,
@@ -361,7 +375,7 @@ export function ScreenRouter({
       )}
       {active === "accelerate" && (
         <AccelerationScreen
-          signals={accelerationSignals}
+          signals={accelerationPlays}
           dismissedPlayIds={dismissedPlayIds}
           savedPlayIds={savedPlayIds}
           onDismissPlay={onDismissPlay}
@@ -370,6 +384,12 @@ export function ScreenRouter({
           onRestoreDismissedPlays={onRestoreDismissedPlays}
           hasWorkBlocks={blocks.length > 0}
           onOpenScreen={onOpenScreen}
+          generateStatus={accelerationStatus}
+          generateError={accelerationError}
+          onGenerateSkills={onGenerateAccelerationPlays}
+          aiConfigured={accelerationConfigured}
+          generatedAt={accelerationGeneratedAt}
+          hasAuthoredPlays={hasAuthoredPlays}
         />
       )}
       {active === "agent" && (

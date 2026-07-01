@@ -5,6 +5,7 @@ import {
   Lightbulb,
   Rocket,
   RotateCcw,
+  Settings,
   Sparkles,
   Upload,
   Wrench,
@@ -13,11 +14,12 @@ import {
   Zap,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import type { AccelerationSignal, AccelerationPlayType } from "../../../../../packages/domain/src/models";
+import type { AccelerationPlay, AccelerationSignal, AccelerationPlayType } from "../../../../../packages/domain/src/models";
 import type { Screen } from "../../lib/types";
-import { accelerationTypeLabel } from "../../lib/format";
+import { accelerationTypeLabel, formatAuditTime } from "../../lib/format";
 import { EmptyState } from "../common/EmptyState";
 import { EvidenceDetails } from "../common/EvidenceDetails";
+import { InlineError } from "../common/InlineError";
 
 const TYPE_ICONS: Record<AccelerationPlayType, LucideIcon> = {
   automate: Workflow,
@@ -40,7 +42,7 @@ function PlayCard({
   onUnsave,
   onDismiss,
 }: {
-  signal: AccelerationSignal;
+  signal: AccelerationPlay;
   isSaved: boolean;
   onSave: (signal: AccelerationSignal) => void;
   onUnsave: (signalId: string) => void;
@@ -83,6 +85,24 @@ function PlayCard({
           — estimated time this could reclaim each week, a conservative planning aid you can review below, not a guarantee
         </span>
       </div>
+      {signal.recommended_tools.length > 0 && (
+        <div className="play-tools">
+          <span className="play-tools-label">Recommended tools</span>
+          <ul className="play-tool-chips">
+            {signal.recommended_tools.map((tool) => (
+              <li key={tool} className="play-tool-chip">
+                {tool}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {signal.recipe && (
+        <details className="play-recipe">
+          <summary>Skill recipe</summary>
+          <div className="play-recipe-body">{signal.recipe}</div>
+        </details>
+      )}
       <EvidenceDetails
         summary="Why this play?"
         evidence={signal.evidence}
@@ -125,8 +145,14 @@ export function AccelerationScreen({
   onRestoreDismissedPlays,
   hasWorkBlocks,
   onOpenScreen,
+  generateStatus,
+  generateError,
+  onGenerateSkills,
+  aiConfigured,
+  generatedAt,
+  hasAuthoredPlays,
 }: {
-  signals: AccelerationSignal[];
+  signals: AccelerationPlay[];
   dismissedPlayIds: string[];
   savedPlayIds: string[];
   onDismissPlay: (signal: AccelerationSignal) => void;
@@ -135,6 +161,12 @@ export function AccelerationScreen({
   onRestoreDismissedPlays: () => void;
   hasWorkBlocks: boolean;
   onOpenScreen: (screen: Screen) => void;
+  generateStatus: "idle" | "generating" | "error";
+  generateError: string | null;
+  onGenerateSkills: () => void;
+  aiConfigured: boolean;
+  generatedAt: string | null;
+  hasAuthoredPlays: boolean;
 }) {
   const dismissed = useMemo(() => new Set(dismissedPlayIds), [dismissedPlayIds]);
   const saved = useMemo(() => new Set(savedPlayIds), [savedPlayIds]);
@@ -244,6 +276,45 @@ export function AccelerationScreen({
           </span>
         </div>
       </div>
+      <div className="acceleration-synth">
+        {aiConfigured ? (
+          <>
+            <button
+              type="button"
+              className="primary-action"
+              disabled={generateStatus === "generating"}
+              onClick={onGenerateSkills}
+              title="Send the derived signals above (app-name flows and counts only — never window titles) to your configured AI to author step-by-step skill recipes and tool picks"
+            >
+              <Sparkles size={16} aria-hidden />
+              <span>
+                {generateStatus === "generating"
+                  ? "Authoring skills…"
+                  : hasAuthoredPlays
+                    ? "Regenerate skills"
+                    : "Generate skills"}
+              </span>
+            </button>
+            <p className="acceleration-synth-note">
+              {generatedAt
+                ? `AI skills generated ${formatAuditTime(generatedAt)}. Only derived signals are sent — never raw window titles.`
+                : "Optional: author runnable skill recipes and tool picks from the plays above. Only derived signals are sent — never raw window titles."}
+            </p>
+          </>
+        ) : (
+          <div className="acceleration-synth-hint">
+            <p>
+              Add an AI key in Settings to author runnable skill recipes and tool picks from these
+              plays. The plays above are always available without AI.
+            </p>
+            <button type="button" className="secondary-action" onClick={() => onOpenScreen("setup")}>
+              <Settings size={16} aria-hidden />
+              <span>Open Settings</span>
+            </button>
+          </div>
+        )}
+      </div>
+      {generateError && <InlineError message={generateError} onRetry={onGenerateSkills} />}
       <div className="play-grid">
         {visibleSignals.map((signal) => (
           <PlayCard

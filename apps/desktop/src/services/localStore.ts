@@ -19,6 +19,7 @@ import {
   type ProactiveAlertRuntime,
   type ProactiveAlertSettings,
 } from "../lib/proactiveAlerts";
+import type { AuthoredAccelerationPlay } from "./accelerationSchema";
 
 const STORE_FILE = "clear-capacity.store";
 const STATE_KEY = "appState";
@@ -42,6 +43,21 @@ export interface PersistedForecastRecord {
   generated_at: string;
   generated_for_week: string;
   trigger: "manual";
+  model: string;
+  prompt_version: string;
+}
+
+/**
+ * The AI-authored Acceleration Plays from the most recent opt-in synthesis run
+ * (D2's `useAcceleration`). The deterministic miner re-derives its signals each
+ * render, so only the authored payload is persisted here (keyed back to each
+ * signal by `signal_id`); the hook merges it onto the live signals. Latest run
+ * wins. Mirrors `PersistedForecastRecord`.
+ */
+export interface PersistedAccelerationRecord {
+  plays: AuthoredAccelerationPlay[];
+  generated_at: string;
+  generated_for_week: string;
   model: string;
   prompt_version: string;
 }
@@ -92,6 +108,8 @@ export interface PersistedAppState {
   dismissedPlayIds: string[];
   /** signal_ids of Acceleration Plays the user saved for later. */
   savedPlayIds: string[];
+  /** Latest AI-authored Acceleration Plays (opt-in synthesis); null until generated. */
+  generatedPlays: PersistedAccelerationRecord | null;
   managerSummaryText: string | null;
   generatedNarrative: PersistedNarrativeRecord | null;
   lastNarrativeAutoRunDate: string | null;
@@ -182,6 +200,19 @@ function parseStringIdList(value: unknown): string[] {
   return value.filter((entry): entry is string => typeof entry === "string");
 }
 
+/**
+ * Validate the persisted AI-authored Acceleration record. Requires a real `plays`
+ * array and the record metadata; a malformed blob degrades to `null` (the screen
+ * then just renders the deterministic signals). The `plays` entries are trusted as
+ * the shape the schema/hook already validated at write time.
+ */
+function parseAccelerationRecord(value: unknown): PersistedAccelerationRecord | null {
+  if (!isRecord(value) || !Array.isArray(value.plays) || typeof value.generated_for_week !== "string") {
+    return null;
+  }
+  return value as unknown as PersistedAccelerationRecord;
+}
+
 function parseChatEvents(value: unknown): RawEvent[] {
   if (!Array.isArray(value)) return [];
   return value.filter(
@@ -234,6 +265,7 @@ export async function readPersistedState(): Promise<PersistedAppState | null> {
         visualContextInsights: Array.isArray(parsed.visualContextInsights) ? (parsed.visualContextInsights as VisualContextInsight[]) : [],
         dismissedPlayIds: parseStringIdList(parsed.dismissedPlayIds),
         savedPlayIds: parseStringIdList(parsed.savedPlayIds),
+        generatedPlays: parseAccelerationRecord(parsed.generatedPlays),
         managerSummaryText: typeof parsed.managerSummaryText === "string" ? parsed.managerSummaryText : null,
         generatedNarrative: isRecord(parsed.generatedNarrative) && isRecord(parsed.generatedNarrative.narrative) ? (parsed.generatedNarrative as unknown as PersistedNarrativeRecord) : null,
         lastNarrativeAutoRunDate: typeof parsed.lastNarrativeAutoRunDate === "string" ? parsed.lastNarrativeAutoRunDate : null,
@@ -282,6 +314,7 @@ export async function readPersistedState(): Promise<PersistedAppState | null> {
         : [],
       dismissedPlayIds: parseStringIdList(parsed.dismissedPlayIds),
       savedPlayIds: parseStringIdList(parsed.savedPlayIds),
+      generatedPlays: parseAccelerationRecord(parsed.generatedPlays),
       managerSummaryText:
         typeof parsed.managerSummaryText === "string" ? parsed.managerSummaryText : null,
       generatedNarrative:
