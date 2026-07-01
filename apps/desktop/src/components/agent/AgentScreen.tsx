@@ -520,10 +520,16 @@ export function AgentScreen({
   };
 
   async function copyMessage(message: AgentChatMessage) {
-    await navigator.clipboard.writeText(message.content);
-    setCopiedMessageId(message.id);
-    window.setTimeout(() => setCopiedMessageId(null), 1200);
-    pushToast({ tone: "success", message: "Copied to clipboard" });
+    try {
+      // Non-optional so a missing clipboard (insecure webview) throws into the catch
+      // rather than silently no-op'ing while we falsely announce success.
+      await navigator.clipboard.writeText(message.content);
+      setCopiedMessageId(message.id);
+      window.setTimeout(() => setCopiedMessageId(null), 1200);
+      pushToast({ tone: "success", message: "Copied to clipboard" });
+    } catch {
+      pushToast({ tone: "error", message: "Couldn't copy to the clipboard" });
+    }
   }
 
   function loadEarlierMessages() {
