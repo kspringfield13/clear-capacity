@@ -82,6 +82,8 @@ export function useAcceleration({
           type: play.type,
           detail: typeof play.detail === "string" ? play.detail : "",
           recipe: typeof play.recipe === "string" ? play.recipe : null,
+          skill_name: typeof play.skill_name === "string" ? play.skill_name : null,
+          skill_description: typeof play.skill_description === "string" ? play.skill_description : null,
           // Dedup so duplicate tool names can't produce duplicate React keys on render.
           recommended_tools: Array.isArray(play.recommended_tools)
             ? Array.from(new Set(play.recommended_tools.filter((tool): tool is string => typeof tool === "string")))

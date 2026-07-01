@@ -420,6 +420,8 @@ export function App() {
         ...signal,
         detail: match?.detail?.trim() ? match.detail : signal.detail,
         recipe: match?.recipe ?? null,
+        skill_name: match?.skill_name ?? null,
+        skill_description: match?.skill_description ?? null,
         recommended_tools: match?.recommended_tools ?? [],
         // A matched play means the opt-in AI pass authored this signal's guidance (re-whitelisted
         // to currently-mined ids upstream), so the card can attribute the prose to the AI.
@@ -872,6 +874,10 @@ export function App() {
       recommended_tools: play.recommended_tools,
       estimated_minutes_saved_per_week: play.estimated_minutes_saved_per_week,
       saved_at: new Date().toISOString(),
+      // Snapshot the Agent Skills authoring fields so the library can export a valid SKILL.md
+      // even after the signal is retired (null when the play was rendered deterministically).
+      skill_name: play.skill_name,
+      skill_description: play.skill_description,
     };
     setSavedSkills((current) => [
       ...current.filter((existing) => existing.signal_id !== skill.signal_id),

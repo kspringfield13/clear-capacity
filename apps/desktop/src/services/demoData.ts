@@ -439,6 +439,9 @@ export function createDemoState(reference = new Date()): PersistedAppState {
         recommended_tools: ["Hex scheduled runs", "Looker API export"],
         estimated_minutes_saved_per_week: 37,
         saved_at: addMinutes(now, -240).toISOString(),
+        skill_name: "weekly-revenue-report",
+        skill_description:
+          "Rebuilds the weekly revenue report from the Hex → Looker → Teams handoff. Use at the start of each week to draft the update before the Monday review.",
       },
     ],
     managerSummaryText: managerSummary,

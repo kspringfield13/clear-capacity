@@ -52,11 +52,11 @@ export function buildAccelerationPrompt({
     acceleration_signals: signals.map(summarizeSignal),
     output_rules: {
       automate:
-        "For type 'automate', author a concrete, runnable skill recipe (clear ordered steps grounded in the cited app flow) in the `recipe` field; leave `recommended_tools` empty.",
+        "For type 'automate', author a concrete, runnable skill recipe (clear ordered imperative steps grounded in the cited app flow) in the `recipe` field; leave `recommended_tools` empty. Also author it as a reusable Agent Skill (Anthropic SKILL.md standard): set `skill_name` to a short hyphenated slug (lowercase, only a-z, 0-9, and hyphens; e.g. 'weekly-revenue-report'), and `skill_description` to one or two sentences, in the third person, describing what the skill does AND when to use it (the triggering condition) so it can be matched later — keep it under ~300 characters.",
       tool:
-        "For type 'tool', list specific named tools in `recommended_tools` matched to the observed time-sink; set `recipe` to null.",
+        "For type 'tool', list specific named tools in `recommended_tools` matched to the observed time-sink; set `recipe`, `skill_name`, and `skill_description` to null.",
       technique:
-        "For type 'technique', refine `detail` into one actionable trick tied to the observed anti-pattern; set `recipe` to null and `recommended_tools` empty.",
+        "For type 'technique', refine `detail` into one actionable trick tied to the observed anti-pattern; set `recipe`, `skill_name`, and `skill_description` to null and `recommended_tools` empty.",
       detail: "Sharpen `detail` to a concise, specific description the analyst can act on.",
       estimated_minutes_saved_per_week:
         "Keep within or below the signal's estimate unless the evidence clearly supports more.",

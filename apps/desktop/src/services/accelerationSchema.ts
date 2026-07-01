@@ -19,7 +19,7 @@ import type { AccelerationPlayType } from "../../../../packages/domain/src/model
  */
 
 export const ACCELERATION_INSTRUCTIONS =
-  "You are the ClearCapacity Acceleration synthesizer. You receive derived signals mined from an analyst's observed work (app-name flows, category/time-of-day stats, counts) — never raw window titles. For each signal, author one practical, evidence-grounded Play: a concrete runnable skill recipe for AUTOMATE signals, specific named tools for TOOL signals, and an actionable trick for TECHNIQUE signals. Echo each signal's id and type unchanged. Keep time-saved estimates conservative and grounded in the cited evidence. Return only JSON matching the requested schema.";
+  "You are the ClearCapacity Acceleration synthesizer. You receive derived signals mined from an analyst's observed work (app-name flows, category/time-of-day stats, counts) — never raw window titles. For each signal, author one practical, evidence-grounded Play: a concrete runnable skill recipe for AUTOMATE signals, specific named tools for TOOL signals, and an actionable trick for TECHNIQUE signals. For AUTOMATE signals, author the recipe as a reusable Agent Skill in Anthropic's SKILL.md style: propose a short hyphenated skill_name (lowercase, a-z/0-9/hyphens only) and a skill_description that states in the third person what the skill does AND when to use it (the triggering condition), then write the recipe body as clear imperative, numbered steps. Set skill_name/skill_description to null for TOOL and TECHNIQUE. Echo each signal's id and type unchanged. Keep time-saved estimates conservative and grounded in the cited evidence. Return only JSON matching the requested schema.";
 
 // Mirror of `AccelerationPlayType` so the strict enum stays in sync with the domain union.
 const accelerationPlayTypes: readonly AccelerationPlayType[] = ["automate", "tool", "technique"];
@@ -39,6 +39,8 @@ export const accelerationSchema = {
           "type",
           "detail",
           "recipe",
+          "skill_name",
+          "skill_description",
           "recommended_tools",
           "estimated_minutes_saved_per_week",
           "confidence"
@@ -49,6 +51,11 @@ export const accelerationSchema = {
           detail: { type: "string" },
           // A runnable skill recipe for AUTOMATE plays; null for TOOL/TECHNIQUE.
           recipe: { type: ["string", "null"] },
+          // Agent Skills (SKILL.md) authoring fields for AUTOMATE plays; null otherwise.
+          // `skill_name` is a short hyphenated slug; `skill_description` states what the skill
+          // does and WHEN to use it (the SKILL.md triggering description).
+          skill_name: { type: ["string", "null"] },
+          skill_description: { type: ["string", "null"] },
           // Specific tool names for TOOL plays; empty for AUTOMATE/TECHNIQUE.
           recommended_tools: {
             type: "array",
@@ -72,6 +79,8 @@ export interface AuthoredAccelerationPlay {
   type: AccelerationPlayType;
   detail: string;
   recipe: string | null;
+  skill_name: string | null;
+  skill_description: string | null;
   recommended_tools: string[];
   estimated_minutes_saved_per_week: number;
   confidence: number;
