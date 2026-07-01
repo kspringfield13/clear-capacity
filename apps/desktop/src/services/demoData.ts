@@ -427,7 +427,21 @@ export function createDemoState(reference = new Date()): PersistedAppState {
 
   return {
     version: 1, blocks, calendarEvents, chatEvents, activeWindowSamples, auditEvents, corrections, reviewSuggestions,
-    visualContextEnabled: true, visualContextInsights, dismissedPlayIds: [], savedPlayIds: [], generatedPlays: null, managerSummaryText: managerSummary,
+    visualContextEnabled: true, visualContextInsights, dismissedPlayIds: [], savedPlayIds: [], generatedPlays: null,
+    savedSkills: [
+      {
+        signal_id: "automate-demo-revenue-report",
+        play_type: "automate",
+        title: "Automate the weekly revenue-report rebuild",
+        detail: "The Hex → Looker → Teams handoff recurs every Monday — a saved skill can regenerate the draft before you sit down.",
+        recipe:
+          "1. Pull the week's revenue rows from the Hex notebook (query: weekly_revenue_v3).\n2. Refresh the Looker dashboard tiles and export the summary block.\n3. Draft the Teams update: headline number, WoW delta, and the two biggest movers.\n4. Flag anything outside ±10% for a human check before sending.",
+        recommended_tools: ["Hex scheduled runs", "Looker API export"],
+        estimated_minutes_saved_per_week: 37,
+        saved_at: addMinutes(now, -240).toISOString(),
+      },
+    ],
+    managerSummaryText: managerSummary,
     generatedForecast: {
       generated_at: addMinutes(now, -31).toISOString(), generated_for_week: weekId(addMinutes(now, 10_080)),
       trigger: "manual", model: "OpenAI forecast agent", prompt_version: "clear-capacity-forecast-agent-v1",

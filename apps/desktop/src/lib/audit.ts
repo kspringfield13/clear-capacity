@@ -42,24 +42,36 @@ export function createChatImportAuditEvent(input: {
 }
 
 /**
- * Build the audit event for a user action on an Acceleration Play (save or dismiss).
- * Plays are mined from the user's observed work, so the event is `derived_only`: its
- * details carry only the signal id, play type, derived source ids, and the estimated
- * minutes — never raw window titles (the miner never emits them; `window_titles: false`
- * affirms the invariant). The deterministic miner re-derives plays continuously, so only
- * the DISCRETE user actions are logged here; the AI-synthesis "generated" event lands in
- * the opt-in AI layer (D2), where a network call makes it the discrete action to record.
+ * Build the audit event for a discrete user action on an Acceleration Play: bookmark
+ * (`saved`), hide (`dismissed`), or snapshot its generated recipe into the Saved Skills
+ * library (`saved_to_library`). Plays are mined from the user's observed work, so the event
+ * is `derived_only`: its details carry only the signal id, play type, derived source ids,
+ * and the estimated minutes — never raw window titles (the miner never emits them;
+ * `window_titles: false` affirms the invariant). The deterministic miner re-derives plays
+ * continuously, so only the DISCRETE user actions are logged here; the AI-synthesis
+ * "generated" event lands in the opt-in AI layer (D2), where a network call makes it the
+ * discrete action to record.
  */
 export function createAccelerationPlayAuditEvent(input: {
-  action: "saved" | "dismissed";
+  action: "saved" | "dismissed" | "saved_to_library";
   signal: AccelerationSignal;
 }): AuditEvent {
   const { action, signal } = input;
+  const titles: Record<typeof action, string> = {
+    saved: "Acceleration play saved",
+    dismissed: "Acceleration play dismissed",
+    saved_to_library: "Acceleration skill saved to library"
+  };
+  const summaries: Record<typeof action, string> = {
+    saved: `Saved the "${signal.title}" play`,
+    dismissed: `Dismissed the "${signal.title}" play`,
+    saved_to_library: `Saved the "${signal.title}" skill recipe to your library`
+  };
   return createAuditEvent({
     type: "acceleration_engine",
     source: "acceleration_engine",
-    title: action === "saved" ? "Acceleration play saved" : "Acceleration play dismissed",
-    summary: `${action === "saved" ? "Saved" : "Dismissed"} the "${signal.title}" play (~${signal.estimated_minutes_saved_per_week} min/week)`,
+    title: titles[action],
+    summary: `${summaries[action]} (~${signal.estimated_minutes_saved_per_week} min/week)`,
     privacy_level: "derived_only",
     details: {
       action,

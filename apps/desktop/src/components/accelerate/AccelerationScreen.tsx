@@ -1,7 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   Bookmark,
   BookmarkCheck,
+  Check,
+  Copy,
+  Library,
   Lightbulb,
   Rocket,
   RotateCcw,
@@ -17,6 +20,7 @@ import type { LucideIcon } from "lucide-react";
 import type { AccelerationPlay, AccelerationSignal, AccelerationPlayType } from "../../../../../packages/domain/src/models";
 import type { Screen } from "../../lib/types";
 import { accelerationTypeLabel, formatAuditTime } from "../../lib/format";
+import type { PushToast } from "../../hooks/useToasts";
 import { EmptyState } from "../common/EmptyState";
 import { EvidenceDetails } from "../common/EvidenceDetails";
 import { InlineError } from "../common/InlineError";
@@ -38,19 +42,42 @@ const TYPE_TOOLTIPS: Record<AccelerationPlayType, string> = {
 function PlayCard({
   signal,
   isSaved,
+  isInLibrary,
   onSave,
   onUnsave,
+  onSaveSkill,
+  onRemoveSkill,
   onDismiss,
+  pushToast,
 }: {
   signal: AccelerationPlay;
   isSaved: boolean;
+  isInLibrary: boolean;
   onSave: (signal: AccelerationSignal) => void;
   onUnsave: (signalId: string) => void;
+  onSaveSkill: (play: AccelerationPlay) => void;
+  onRemoveSkill: (signalId: string) => void;
   onDismiss: (signal: AccelerationSignal) => void;
+  pushToast: PushToast;
 }) {
   const Icon = TYPE_ICONS[signal.type];
   const savedLabel = `~${signal.estimated_minutes_saved_per_week} min`;
   const confidencePct = Math.round(signal.confidence * 100);
+  const [recipeCopied, setRecipeCopied] = useState(false);
+
+  async function copyRecipe() {
+    if (!signal.recipe) return;
+    try {
+      // Non-optional so a missing clipboard (insecure webview) throws into the catch
+      // rather than silently no-op'ing while we falsely announce success.
+      await navigator.clipboard.writeText(signal.recipe);
+      setRecipeCopied(true);
+      window.setTimeout(() => setRecipeCopied(false), 1200);
+      pushToast({ tone: "success", message: "Recipe copied to clipboard" });
+    } catch {
+      pushToast({ tone: "error", message: "Couldn't copy to the clipboard" });
+    }
+  }
 
   return (
     <article className="play-card">
@@ -101,6 +128,32 @@ function PlayCard({
         <details className="play-recipe">
           <summary>Skill recipe</summary>
           <div className="play-recipe-body">{signal.recipe}</div>
+          <div className="play-recipe-actions">
+            <button
+              type="button"
+              className="play-recipe-action"
+              title={recipeCopied ? "Copied" : "Copy this recipe to the clipboard"}
+              aria-label={recipeCopied ? "Recipe copied to clipboard" : "Copy this recipe to the clipboard"}
+              onClick={() => void copyRecipe()}
+            >
+              {recipeCopied ? <Check size={13} aria-hidden /> : <Copy size={13} aria-hidden />}
+              <span>{recipeCopied ? "Copied" : "Copy"}</span>
+            </button>
+            <button
+              type="button"
+              className={`play-recipe-action${isInLibrary ? " is-saved" : ""}`}
+              aria-pressed={isInLibrary}
+              title={
+                isInLibrary
+                  ? "Saved to your skills library — select again to remove"
+                  : "Save this recipe to your skills library so it survives regeneration"
+              }
+              onClick={() => (isInLibrary ? onRemoveSkill(signal.signal_id) : onSaveSkill(signal))}
+            >
+              <Library size={13} aria-hidden />
+              <span>{isInLibrary ? "In library" : "Save to library"}</span>
+            </button>
+          </div>
         </details>
       )}
       <EvidenceDetails
@@ -139,11 +192,15 @@ export function AccelerationScreen({
   signals,
   dismissedPlayIds,
   savedPlayIds,
+  savedSkillIds,
   onDismissPlay,
   onSavePlay,
   onUnsavePlay,
+  onSaveSkill,
+  onRemoveSkill,
   onRestoreDismissedPlays,
   hasWorkBlocks,
+  savedSkillCount,
   onOpenScreen,
   generateStatus,
   generateError,
@@ -151,15 +208,20 @@ export function AccelerationScreen({
   aiConfigured,
   generatedAt,
   hasAuthoredPlays,
+  pushToast,
 }: {
   signals: AccelerationPlay[];
   dismissedPlayIds: string[];
   savedPlayIds: string[];
+  savedSkillIds: string[];
   onDismissPlay: (signal: AccelerationSignal) => void;
   onSavePlay: (signal: AccelerationSignal) => void;
   onUnsavePlay: (signalId: string) => void;
+  onSaveSkill: (play: AccelerationPlay) => void;
+  onRemoveSkill: (signalId: string) => void;
   onRestoreDismissedPlays: () => void;
   hasWorkBlocks: boolean;
+  savedSkillCount: number;
   onOpenScreen: (screen: Screen) => void;
   generateStatus: "idle" | "generating" | "error";
   generateError: string | null;
@@ -167,9 +229,11 @@ export function AccelerationScreen({
   aiConfigured: boolean;
   generatedAt: string | null;
   hasAuthoredPlays: boolean;
+  pushToast: PushToast;
 }) {
   const dismissed = useMemo(() => new Set(dismissedPlayIds), [dismissedPlayIds]);
   const saved = useMemo(() => new Set(savedPlayIds), [savedPlayIds]);
+  const inLibrary = useMemo(() => new Set(savedSkillIds), [savedSkillIds]);
   // Hide dismissed plays. Dismiss is keyed by the deterministic `signal_id`, so a hidden
   // play stays hidden as the miner re-derives — until the user restores it.
   const visibleSignals = useMemo(
@@ -263,6 +327,14 @@ export function AccelerationScreen({
               </span>
             </button>
           )}
+          {savedSkillCount > 0 && (
+            <button type="button" className="acceleration-restore" onClick={() => onOpenScreen("skills")}>
+              <Library size={13} aria-hidden />
+              <span>
+                View {savedSkillCount} saved {savedSkillCount === 1 ? "skill" : "skills"}
+              </span>
+            </button>
+          )}
         </div>
         <div className="acceleration-total" title="Combined estimated time the plays below could reclaim each week">
           <Sparkles size={16} aria-hidden />
@@ -320,9 +392,13 @@ export function AccelerationScreen({
             key={signal.signal_id}
             signal={signal}
             isSaved={saved.has(signal.signal_id)}
+            isInLibrary={inLibrary.has(signal.signal_id)}
             onSave={onSavePlay}
             onUnsave={onUnsavePlay}
+            onSaveSkill={onSaveSkill}
+            onRemoveSkill={onRemoveSkill}
             onDismiss={onDismissPlay}
+            pushToast={pushToast}
           />
         ))}
       </div>

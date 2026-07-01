@@ -11,6 +11,7 @@ import type {
   AIConfig,
   AccelerationPlay,
   AccelerationSignal,
+  SavedSkill,
 } from "../../../../../packages/domain/src/models";
 import type { PersistedForecastRecord, PersistedNarrativeRecord, ForecastAccuracyReview, PersistedSnapshotRecord } from "../../services/localStore";
 import type { computeWeeklyCapacitySnapshot, generateWeeklyNarrative, ChatStakeholderSummary, ForecastAccuracyTrend, ForecastTrackRecordEntry, InterruptionLoadAnalysis } from "../../../../../packages/inference/src/capacity";
@@ -28,6 +29,7 @@ import { AuditLogScreen } from "../audit/AuditLogScreen";
 import { SensitiveReviewScreen } from "../audit/SensitiveReviewScreen";
 import { AgentScreen } from "../agent/AgentScreen";
 import { AccelerationScreen } from "../accelerate/AccelerationScreen";
+import { SavedSkillsScreen } from "../accelerate/SavedSkillsScreen";
 import type { OnboardingStep } from "../common/OnboardingCard";
 import type { ProactiveAlert, ProactiveAlertSettings } from "../../lib/proactiveAlerts";
 import type { PushToast } from "../../hooks/useToasts";
@@ -52,6 +54,11 @@ interface ScreenRouterProps {
   onSavePlay: (signal: AccelerationSignal) => void;
   onUnsavePlay: (signalId: string) => void;
   onRestoreDismissedPlays: () => void;
+  // saved skills library
+  savedSkills: SavedSkill[];
+  savedSkillIds: string[];
+  onSaveSkill: (play: AccelerationPlay) => void;
+  onRemoveSkill: (signalId: string) => void;
   // acceleration AI synthesis (opt-in)
   accelerationStatus: "idle" | "generating" | "error";
   accelerationError: string | null;
@@ -152,6 +159,10 @@ export function ScreenRouter({
   onSavePlay,
   onUnsavePlay,
   onRestoreDismissedPlays,
+  savedSkills,
+  savedSkillIds,
+  onSaveSkill,
+  onRemoveSkill,
   accelerationStatus,
   accelerationError,
   onGenerateAccelerationPlays,
@@ -378,11 +389,15 @@ export function ScreenRouter({
           signals={accelerationPlays}
           dismissedPlayIds={dismissedPlayIds}
           savedPlayIds={savedPlayIds}
+          savedSkillIds={savedSkillIds}
           onDismissPlay={onDismissPlay}
           onSavePlay={onSavePlay}
           onUnsavePlay={onUnsavePlay}
+          onSaveSkill={onSaveSkill}
+          onRemoveSkill={onRemoveSkill}
           onRestoreDismissedPlays={onRestoreDismissedPlays}
           hasWorkBlocks={blocks.length > 0}
+          savedSkillCount={savedSkills.length}
           onOpenScreen={onOpenScreen}
           generateStatus={accelerationStatus}
           generateError={accelerationError}
@@ -390,6 +405,15 @@ export function ScreenRouter({
           aiConfigured={accelerationConfigured}
           generatedAt={accelerationGeneratedAt}
           hasAuthoredPlays={hasAuthoredPlays}
+          pushToast={pushToast}
+        />
+      )}
+      {active === "skills" && (
+        <SavedSkillsScreen
+          savedSkills={savedSkills}
+          onRemoveSkill={onRemoveSkill}
+          onOpenScreen={onOpenScreen}
+          pushToast={pushToast}
         />
       )}
       {active === "agent" && (

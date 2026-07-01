@@ -10,6 +10,7 @@ import type {
   AuditEvent,
   RawEvent,
   ReviewCopilotSuggestion,
+  SavedSkill,
   UserCorrection,
   VisualContextInsight,
   WorkBlock,
@@ -99,6 +100,7 @@ export function App() {
         setDismissedPlayIds(data.dismissedPlayIds ?? []);
         setSavedPlayIds(data.savedPlayIds ?? []);
         setGeneratedPlays(data.generatedPlays ?? null);
+        setSavedSkills(data.savedSkills ?? []);
         setAiConfig(data.aiConfig ?? null);
         setRetentionDays(data.retentionDays ?? null);
         setOnboardingDismissed(data.onboardingDismissed ?? false);
@@ -167,6 +169,11 @@ export function App() {
   // the deterministic signals (which re-derive each render) and merged back on by signal_id.
   const [generatedPlays, setGeneratedPlays] = useState<PersistedAccelerationRecord | null>(
     () => persistedSnapshot?.generatedPlays ?? null
+  );
+  // Durable snapshots of AUTOMATE recipes the user saved to their skills library. Keyed
+  // by the source signal_id (re-saving upserts), these survive regeneration and re-mining.
+  const [savedSkills, setSavedSkills] = useState<SavedSkill[]>(
+    () => persistedSnapshot?.savedSkills ?? []
   );
   const [managerSummaryText, setManagerSummaryText] = useState<string | null>(
     () => (initialBlocks.length > 0 || persistedSnapshot?.generatedNarrative ? persistedSnapshot?.managerSummaryText ?? null : null)
@@ -247,6 +254,7 @@ export function App() {
     dismissedPlayIds,
     savedPlayIds,
     generatedPlays,
+    savedSkills,
     aiConfig,
     managerSummaryText,
     generatedNarrative,
@@ -417,6 +425,10 @@ export function App() {
       };
     });
   }, [accelerationSignals, generatedPlays]);
+
+  // signal_ids currently in the saved-skills library — lets the Acceleration cards mark
+  // which recipes are already saved without re-scanning the array per card.
+  const savedSkillIds = useMemo(() => savedSkills.map((skill) => skill.signal_id), [savedSkills]);
 
   const { narrativeGenerationStatus, narrativeGenerationError, regenerateNarrative, resetNarrative } =
     useNarrativeGeneration({
@@ -841,6 +853,38 @@ export function App() {
     setSavedPlayIds((current) => current.filter((id) => id !== signalId));
   }
 
+  // Snapshot an AUTOMATE Play's AI-authored recipe into the durable skills library. Storing
+  // the recipe TEXT (not just the signal_id) is what makes a generated skill reusable beyond
+  // the session — it survives regeneration and the miner retiring the signal. Upserts by
+  // signal_id (re-saving refreshes the snapshot). No-op without a recipe; the discrete save is
+  // audited `derived_only` (the recipe is AI-authored from derived signals, never window titles).
+  function saveSkill(play: AccelerationPlay) {
+    if (!play.recipe) return;
+    const skill: SavedSkill = {
+      signal_id: play.signal_id,
+      play_type: play.type,
+      title: play.title,
+      detail: play.detail,
+      recipe: play.recipe,
+      recommended_tools: play.recommended_tools,
+      estimated_minutes_saved_per_week: play.estimated_minutes_saved_per_week,
+      saved_at: new Date().toISOString(),
+    };
+    setSavedSkills((current) => [
+      ...current.filter((existing) => existing.signal_id !== skill.signal_id),
+      skill,
+    ]);
+    if (isDemoMode) return;
+    setAuditEvents((current) =>
+      [...current, createAccelerationPlayAuditEvent({ action: "saved_to_library", signal: play })].slice(-1000)
+    );
+  }
+
+  // Remove a skill from the library (an undo of a save) — not audited, mirroring unsavePlay.
+  function removeSkill(signalId: string) {
+    setSavedSkills((current) => current.filter((skill) => skill.signal_id !== signalId));
+  }
+
   // User dismissed the first-run getting-started card. Persisted so the nudge stays
   // gone across reloads, and logged once as a discrete, low-noise user action.
   function dismissOnboarding() {
@@ -1085,6 +1129,7 @@ export function App() {
     setDismissedPlayIds([]);
     setSavedPlayIds([]);
     setGeneratedPlays(null);
+    setSavedSkills([]);
     setRetentionDays(null);
     setOnboardingDismissed(false);
     setManagerSummaryText(null);
@@ -1351,6 +1396,10 @@ export function App() {
         onSavePlay={savePlay}
         onUnsavePlay={unsavePlay}
         onRestoreDismissedPlays={restoreDismissedPlays}
+        savedSkills={savedSkills}
+        savedSkillIds={savedSkillIds}
+        onSaveSkill={saveSkill}
+        onRemoveSkill={removeSkill}
         accelerationStatus={accelerationStatus}
         accelerationError={accelerationError}
         onGenerateAccelerationPlays={() => void generateAccelerationPlays()}

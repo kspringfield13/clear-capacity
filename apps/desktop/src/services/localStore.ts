@@ -6,6 +6,7 @@ import type {
   OutlookCalendarEvent,
   RawEvent,
   ReviewCopilotSuggestion,
+  SavedSkill,
   VisualContextInsight,
   WeeklyCapacitySnapshot,
   WeeklyNarrative,
@@ -110,6 +111,8 @@ export interface PersistedAppState {
   savedPlayIds: string[];
   /** Latest AI-authored Acceleration Plays (opt-in synthesis); null until generated. */
   generatedPlays: PersistedAccelerationRecord | null;
+  /** User-saved acceleration skill recipes (durable snapshots, survive regeneration). */
+  savedSkills: SavedSkill[];
   managerSummaryText: string | null;
   generatedNarrative: PersistedNarrativeRecord | null;
   lastNarrativeAutoRunDate: string | null;
@@ -213,6 +216,23 @@ function parseAccelerationRecord(value: unknown): PersistedAccelerationRecord | 
   return value as unknown as PersistedAccelerationRecord;
 }
 
+/**
+ * Validate the persisted saved-skills library. Requires each entry to carry a string
+ * `signal_id` and a non-empty `recipe` (the recipe text is the whole point of the
+ * snapshot); malformed/recipe-less entries are dropped. The remaining fields are trusted
+ * as the shape the save handler wrote.
+ */
+function parseSavedSkills(value: unknown): SavedSkill[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (entry): entry is SavedSkill =>
+      isRecord(entry) &&
+      typeof entry.signal_id === "string" &&
+      typeof entry.recipe === "string" &&
+      entry.recipe.length > 0
+  );
+}
+
 function parseChatEvents(value: unknown): RawEvent[] {
   if (!Array.isArray(value)) return [];
   return value.filter(
@@ -266,6 +286,7 @@ export async function readPersistedState(): Promise<PersistedAppState | null> {
         dismissedPlayIds: parseStringIdList(parsed.dismissedPlayIds),
         savedPlayIds: parseStringIdList(parsed.savedPlayIds),
         generatedPlays: parseAccelerationRecord(parsed.generatedPlays),
+        savedSkills: parseSavedSkills(parsed.savedSkills),
         managerSummaryText: typeof parsed.managerSummaryText === "string" ? parsed.managerSummaryText : null,
         generatedNarrative: isRecord(parsed.generatedNarrative) && isRecord(parsed.generatedNarrative.narrative) ? (parsed.generatedNarrative as unknown as PersistedNarrativeRecord) : null,
         lastNarrativeAutoRunDate: typeof parsed.lastNarrativeAutoRunDate === "string" ? parsed.lastNarrativeAutoRunDate : null,
@@ -315,6 +336,7 @@ export async function readPersistedState(): Promise<PersistedAppState | null> {
       dismissedPlayIds: parseStringIdList(parsed.dismissedPlayIds),
       savedPlayIds: parseStringIdList(parsed.savedPlayIds),
       generatedPlays: parseAccelerationRecord(parsed.generatedPlays),
+      savedSkills: parseSavedSkills(parsed.savedSkills),
       managerSummaryText:
         typeof parsed.managerSummaryText === "string" ? parsed.managerSummaryText : null,
       generatedNarrative:
