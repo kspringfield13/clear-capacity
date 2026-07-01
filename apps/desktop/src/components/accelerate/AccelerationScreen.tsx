@@ -252,9 +252,8 @@ export function AccelerationScreen({
           <h1>Ways to reclaim your week.</h1>
           <p className="screen-subhead">
             Mined locally from your observed work — no AI, no network. {visibleSignals.length}{" "}
-            {visibleSignals.length === 1 ? "play" : "plays"} could reclaim roughly{" "}
-            <strong>{totalSaved} min/week</strong>. Each cites the evidence it was derived from; review
-            before you act.
+            {visibleSignals.length === 1 ? "play" : "plays"}, each citing the evidence it was derived
+            from; review before you act.
           </p>
           {dismissedCount > 0 && (
             <button type="button" className="acceleration-restore" onClick={onRestoreDismissedPlays}>
