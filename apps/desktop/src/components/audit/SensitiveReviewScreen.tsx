@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { ShieldAlert, Trash2 } from "lucide-react";
 import type { VisualContextInsight } from "../../../../../packages/domain/src/models";
 import { formatAuditTime, privacyLevelLabel } from "../../lib/format";
 import { EmptyState } from "../common/EmptyState";
+import { ConfirmDialog } from "../common/ConfirmDialog";
 
 export function SensitiveReviewScreen({
   visualContextInsights,
@@ -10,9 +12,15 @@ export function SensitiveReviewScreen({
   visualContextInsights: VisualContextInsight[];
   onDiscardInsight: (insightId: string) => void;
 }) {
+  const [pendingDiscardId, setPendingDiscardId] = useState<string | null>(null);
+
   const flagged = visualContextInsights
     .filter((insight) => insight.sensitive_content_detected)
     .sort((left, right) => new Date(right.captured_at).getTime() - new Date(left.captured_at).getTime());
+
+  const pendingInsight = pendingDiscardId
+    ? flagged.find((insight) => insight.insight_id === pendingDiscardId) ?? null
+    : null;
 
   return (
     <section className="screen sensitive-screen">
@@ -58,7 +66,7 @@ export function SensitiveReviewScreen({
               <button
                 type="button"
                 className="secondary-action sensitive-discard"
-                onClick={() => onDiscardInsight(insight.insight_id)}
+                onClick={() => setPendingDiscardId(insight.insight_id)}
                 aria-label={`Discard flagged capture from ${insight.app_name}`}
               >
                 <Trash2 size={15} />
@@ -68,6 +76,19 @@ export function SensitiveReviewScreen({
           ))
         )}
       </div>
+
+      {pendingInsight && (
+        <ConfirmDialog
+          title="Discard this flagged capture?"
+          description={`This permanently removes the flagged ${pendingInsight.app_name} capture ("${pendingInsight.activity_summary}") from local storage and records the action in your audit history. It can't be undone.`}
+          confirmLabel="Discard capture"
+          onConfirm={() => {
+            onDiscardInsight(pendingInsight.insight_id);
+            setPendingDiscardId(null);
+          }}
+          onCancel={() => setPendingDiscardId(null)}
+        />
+      )}
     </section>
   );
 }
