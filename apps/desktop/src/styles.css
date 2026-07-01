@@ -3177,6 +3177,21 @@ select {
   color: var(--text-muted);
 }
 
+/* "repeated N×" badge on Corrections rows whose (field, old→new) triple recurs — a subtle
+   info-tinted pill that marks the systematic relabels the model already weighs as bias. It sits
+   inline right after the change; the timestamp keeps its own `margin-left:auto` right-alignment. */
+.history-list li .correction-repeat {
+  flex: 0 0 auto;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+  color: var(--info);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .history-list time {
   flex: 0 0 auto;
   margin-left: auto;
