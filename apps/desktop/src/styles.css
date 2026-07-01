@@ -4511,6 +4511,10 @@ select {
   color: #a78bfa;
 }
 
+.trend-meeting {
+  color: #f59e0b;
+}
+
 .risk-list {
   display: grid;
   gap: 9px;

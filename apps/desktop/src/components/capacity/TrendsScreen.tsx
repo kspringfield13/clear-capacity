@@ -13,13 +13,14 @@ import { ForecastTrackRecord } from "./ForecastTrackRecord";
 
 type Snapshot = ReturnType<typeof computeWeeklyCapacitySnapshot>;
 
-// The four headline series tracked across weeks. `className` drives the line/dot
+// The headline series tracked across weeks. `className` drives the line/dot
 // colour through CSS (currentColor) so the palette stays in the design system.
 const SERIES = [
   { key: "allocated_pct", label: "Allocated", className: "trend-allocated", betterWhen: "neutral" },
   { key: "reactive_pct", label: "Reactive", className: "trend-reactive", betterWhen: "lower" },
   { key: "deep_work_pct", label: "Deep work", className: "trend-deep", betterWhen: "higher" },
   { key: "reliable_new_work_capacity_pct", label: "Reliable capacity", className: "trend-reliable", betterWhen: "higher" },
+  { key: "meeting_pct", label: "Meeting density", className: "trend-meeting", betterWhen: "lower" },
 ] as const satisfies ReadonlyArray<{
   key: keyof Snapshot;
   label: string;
@@ -122,7 +123,7 @@ export function TrendsScreen({
         <EmptyState
           icon={LineChart}
           title="No multi-week trend to show."
-          description="ClearCapacity retains one capacity snapshot per ISO week. As more weeks complete, this view plots allocated, reactive, deep-work, and reliable-capacity percentages over time."
+          description="ClearCapacity retains one capacity snapshot per ISO week. As more weeks complete, this view plots allocated, reactive, deep-work, reliable-capacity, and meeting-density percentages over time."
         >
           <button className="primary-action" type="button" onClick={() => onOpenScreen("weekly")}>
             <Upload size={16} />
@@ -140,7 +141,8 @@ export function TrendsScreen({
           <p className="eyebrow">Capacity trends</p>
           <h1>Your workload across the last {weeks.length} weeks.</h1>
           <p className="screen-subhead">
-            Allocated, reactive, deep-work, and reliable new-work capacity, week over week.
+            Allocated, reactive, deep-work, reliable new-work capacity, and meeting density, week
+            over week.
             {forecastAccuracyTrend
               ? ` Forecasts have averaged ${forecastAccuracyTrend.mean_abs_error_pts} pts of error over the last ${forecastAccuracyTrend.week_count} ${
                   forecastAccuracyTrend.week_count === 1 ? "week" : "weeks"
