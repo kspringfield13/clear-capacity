@@ -302,6 +302,14 @@ export interface WeeklyCapacitySnapshot {
   carryover_risk_pct: number;
   wip_load_score: number;
   context_switch_score: number;
+  /**
+   * Concrete percentage-point cost the `context_switch_score` / `wip_load_score` indices
+   * contribute to `committed_utilization_pct` (fragmentation = score × 12, WIP = score × 10).
+   * Surfaced so the abstract 0–100 index reads as "context-switching is costing ~N% of your
+   * committed week" rather than a bare "/100".
+   */
+  fragmentation_penalty_pct: number;
+  wip_penalty_pct: number;
   summary_confidence: number;
   category_allocation: Array<{ label: WorkCategory; value: number }>;
   work_mode_allocation: Array<{ label: WorkMode; value: number }>;
