@@ -4,6 +4,7 @@ import { outlookEventsToWorkBlocks, parseOutlookIcs } from "../../../packages/in
 import { importChatExport } from "../../../packages/integrations/src/chat/chatExport";
 import { dedupeChatCallsAgainstCalendar } from "../../../packages/integrations/src/chat/callDedup";
 import type {
+  AccelerationPlay,
   AccelerationSignal,
   ActiveWindowSample,
   AuditEvent,
@@ -21,7 +22,7 @@ import {
   writePersistedState,
   writeThemePreference
 } from "./services/localStore";
-import type { AppTheme, PersistedAppState, PersistedForecastRecord, PersistedNarrativeRecord, PersistedSnapshotRecord } from "./services/localStore";
+import type { AppTheme, PersistedAccelerationRecord, PersistedAppState, PersistedForecastRecord, PersistedNarrativeRecord, PersistedSnapshotRecord } from "./services/localStore";
 import { createDemoState } from "./services/demoData";
 import {
   addDays,
@@ -39,6 +40,7 @@ import { useActiveWindow } from "./hooks/useActiveWindow";
 import { useClassification } from "./hooks/useClassification";
 import { useReviewCopilot } from "./hooks/useReviewCopilot";
 import { useForecastAgent } from "./hooks/useForecastAgent";
+import { useAcceleration } from "./hooks/useAcceleration";
 import { useNarrativeGeneration } from "./hooks/useNarrativeGeneration";
 import { useVisualContext } from "./hooks/useVisualContext";
 import { useProactiveAlerts } from "./hooks/useProactiveAlerts";
@@ -96,6 +98,7 @@ export function App() {
         setVisualContextInsights(data.visualContextInsights ?? []);
         setDismissedPlayIds(data.dismissedPlayIds ?? []);
         setSavedPlayIds(data.savedPlayIds ?? []);
+        setGeneratedPlays(data.generatedPlays ?? null);
         setAiConfig(data.aiConfig ?? null);
         setRetentionDays(data.retentionDays ?? null);
         setOnboardingDismissed(data.onboardingDismissed ?? false);
@@ -159,6 +162,11 @@ export function App() {
   );
   const [savedPlayIds, setSavedPlayIds] = useState<string[]>(
     () => persistedSnapshot?.savedPlayIds ?? []
+  );
+  // Latest AI-authored Acceleration Plays (opt-in synthesis). Persisted separately from
+  // the deterministic signals (which re-derive each render) and merged back on by signal_id.
+  const [generatedPlays, setGeneratedPlays] = useState<PersistedAccelerationRecord | null>(
+    () => persistedSnapshot?.generatedPlays ?? null
   );
   const [managerSummaryText, setManagerSummaryText] = useState<string | null>(
     () => (initialBlocks.length > 0 || persistedSnapshot?.generatedNarrative ? persistedSnapshot?.managerSummaryText ?? null : null)
@@ -238,6 +246,7 @@ export function App() {
     visualContextInsights,
     dismissedPlayIds,
     savedPlayIds,
+    generatedPlays,
     aiConfig,
     managerSummaryText,
     generatedNarrative,
@@ -379,6 +388,36 @@ export function App() {
     setAuditEvents,
   });
 
+  const { accelerationStatus, accelerationError, generateAccelerationPlays, resetAcceleration } =
+    useAcceleration({
+      isDemoMode,
+      signals: accelerationSignals,
+      currentWeekId,
+      currentWeekRangeLabel,
+      aiConfig,
+      setGeneratedPlays,
+      setAuditEvents,
+    });
+
+  // Merge the AI-authored payload onto the live deterministic signals by signal_id. The
+  // deterministic figures (title, estimate, confidence, evidence) stay authoritative — the
+  // AI only overlays the polish: a sharpened `detail`, a runnable `recipe` (AUTOMATE), and
+  // `recommended_tools` (TOOL). Without a generated record every play renders deterministically
+  // (recipe null / no tools). Authored entries for a signal no longer mined are simply ignored.
+  const accelerationPlays = useMemo<AccelerationPlay[]>(() => {
+    const authored = new Map((generatedPlays?.plays ?? []).map((play) => [play.signal_id, play]));
+    return accelerationSignals.map((signal) => {
+      const match = authored.get(signal.signal_id);
+      return {
+        ...signal,
+        detail: match?.detail?.trim() ? match.detail : signal.detail,
+        recipe: match?.recipe ?? null,
+        recommended_tools: match?.recommended_tools ?? [],
+        dismissed: false,
+      };
+    });
+  }, [accelerationSignals, generatedPlays]);
+
   const { narrativeGenerationStatus, narrativeGenerationError, regenerateNarrative, resetNarrative } =
     useNarrativeGeneration({
       isDemoMode,
@@ -421,6 +460,18 @@ export function App() {
     }
     prevForecastError.current = forecastError;
   }, [forecastError, pushToast, generateForecastAgent]);
+
+  const prevAccelerationError = useRef<string | null>(null);
+  useEffect(() => {
+    if (accelerationError && accelerationError !== prevAccelerationError.current) {
+      pushToast({
+        tone: "error",
+        message: accelerationError,
+        action: { label: "Retry", onClick: () => void generateAccelerationPlays() },
+      });
+    }
+    prevAccelerationError.current = accelerationError;
+  }, [accelerationError, pushToast, generateAccelerationPlays]);
 
   const prevNarrativeError = useRef<string | null>(null);
   useEffect(() => {
@@ -1033,6 +1084,7 @@ export function App() {
     setVisualContextAttemptedSessionIds([]);
     setDismissedPlayIds([]);
     setSavedPlayIds([]);
+    setGeneratedPlays(null);
     setRetentionDays(null);
     setOnboardingDismissed(false);
     setManagerSummaryText(null);
@@ -1044,6 +1096,7 @@ export function App() {
     resetClassification();
     resetReviewCopilot();
     resetForecast();
+    resetAcceleration();
     resetVisualContext();
     setImportError(null);
     setChatImportError(null);
@@ -1291,13 +1344,19 @@ export function App() {
         snapshotHistory={snapshotHistory}
         interruptionLoad={interruptionLoad}
         chatStakeholders={chatStakeholders}
-        accelerationSignals={accelerationSignals}
+        accelerationPlays={accelerationPlays}
         dismissedPlayIds={dismissedPlayIds}
         savedPlayIds={savedPlayIds}
         onDismissPlay={dismissPlay}
         onSavePlay={savePlay}
         onUnsavePlay={unsavePlay}
         onRestoreDismissedPlays={restoreDismissedPlays}
+        accelerationStatus={accelerationStatus}
+        accelerationError={accelerationError}
+        onGenerateAccelerationPlays={() => void generateAccelerationPlays()}
+        accelerationConfigured={Boolean(aiConfig?.apiKey?.trim())}
+        accelerationGeneratedAt={generatedPlays?.generated_at ?? null}
+        hasAuthoredPlays={(generatedPlays?.plays.length ?? 0) > 0}
         onConfirm={confirmBlock}
         onExclude={excludeBlock}
         onRelabel={updateBlock}

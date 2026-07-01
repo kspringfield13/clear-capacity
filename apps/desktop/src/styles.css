@@ -2132,6 +2132,102 @@ h3 {
   text-decoration: underline;
 }
 
+/* Opt-in AI synthesis control (Generate skills) beneath the header. */
+.acceleration-synth {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-bottom: 4px;
+}
+
+.acceleration-synth-note {
+  margin: 0;
+  flex: 1 1 220px;
+  font-size: 12px;
+  color: var(--text-subtle);
+}
+
+.acceleration-synth-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-muted);
+}
+
+.acceleration-synth-hint p {
+  margin: 0;
+  flex: 1 1 220px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* AI-authored TOOL recommendations. */
+.play-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.play-tools-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+.play-tool-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.play-tool-chip {
+  padding: 2px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-elevated);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* AI-authored AUTOMATE skill recipe (collapsible). */
+.play-recipe {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-muted);
+  padding: 8px 12px;
+}
+
+.play-recipe > summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--text-muted);
+}
+
+.play-recipe[open] > summary {
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.play-recipe-body {
+  white-space: pre-wrap;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text);
+}
+
 .ledger-screen .activity-capture-panel {
   flex: 0 0 auto;
 }
