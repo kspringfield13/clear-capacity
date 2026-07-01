@@ -457,6 +457,13 @@ export function WeeklyCapacityScreen({
               )}
             </p>
           )}
+          {interruptionLoad.concentration_is_clustered && (
+            <p className="interruption-peak-note">
+              <strong>{interruptionLoad.concentration_pct}%</strong> of your reactive load clustered
+              into your busiest {interruptionLoad.concentration_day_count} days — batching it into
+              set windows could reclaim focus.
+            </p>
+          )}
           {interruptionLoad.after_hours_message_count > 0 && (
             <p className="interruption-peak-note">
               <strong>{interruptionLoad.after_hours_pct}%</strong> of reactive messages

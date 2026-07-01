@@ -425,6 +425,27 @@ export interface InterruptionLoadAnalysis {
    * null when there are fewer than 2 active days (no quieter day to contrast against the peak).
    */
   calm_day: string | null;
+  /**
+   * How many top active days `concentration_pct` covers — `min(2, active_day_count)`. Names the
+   * cluster so the caller can say "your busiest N days" without recomputing.
+   */
+  concentration_day_count: number;
+  /**
+   * Share (0–100) of the week's reactive message volume that landed in the busiest
+   * `concentration_day_count` active days — how *clustered* (vs. evenly spread) the reactive load
+   * was. A heavy cluster is batchable; an even spread is endemic. 100 for a single-active-day week
+   * (its one day holds everything); the caller gates any "batchable" note on there being quieter
+   * days left AND the share exceeding an even spread. 0 only when there is no message volume.
+   */
+  concentration_pct: number;
+  /**
+   * Whether the reactive load is *clustered* enough to be worth flagging as batchable: the busiest
+   * one-or-two days hold a share ≥`CONCENTRATION_MARGIN_PCT` points above an even spread AND there
+   * are quieter days left to protect (`active_day_count > concentration_day_count`). False for a
+   * roughly-flat week (top days lead only trivially) or when there aren't enough active days to
+   * contrast — so the caller can gate the "batchable" note on this one boolean.
+   */
+  concentration_is_clustered: boolean;
   /** Reactive messages that landed outside core hours (before 08:00 / at-or-after 18:00 local). */
   after_hours_message_count: number;
   /**
@@ -442,6 +463,12 @@ export interface InterruptionLoadAnalysis {
 // with the weekday bucketing below.
 const CORE_HOURS_START = 8;
 const CORE_HOURS_END = 18;
+
+// A reactive load counts as "clustered" (worth flagging as batchable) when its busiest one-or-two
+// active days hold a message share at least this many points above an even spread across all active
+// days — enough of a lump that the remaining days are meaningfully quieter and protectable. Below
+// this margin the top days lead only trivially (a roughly flat week), so surfacing it would be noise.
+const CONCENTRATION_MARGIN_PCT = 15;
 
 const WEEKDAY_NAMES = [
   "Sunday",
@@ -563,6 +590,29 @@ export function analyzeInterruptionLoad(
     }
   }
 
+  // How concentrated the reactive load is across the active days: the share of total reactive
+  // message volume that landed in the busiest one-or-two days. An even spread is endemic (hard to
+  // batch); a heavy cluster in a day or two is batchable — the caller can suggest protecting the
+  // rest. Take the top min(2, active days) so a single-active-day week reports its one day and a
+  // multi-day week its worst two. Sum of `dayMessages` values equals `messageCount` (both count
+  // only message-bearing bursts), so the share can never exceed 100.
+  const sortedDayVolumes = [...dayMessages.values()].sort((left, right) => right - left);
+  const concentrationDayCount = Math.min(2, sortedDayVolumes.length);
+  const concentratedMessages = sortedDayVolumes
+    .slice(0, concentrationDayCount)
+    .reduce((sum, volume) => sum + volume, 0);
+  const concentrationPct =
+    messageCount > 0 ? Math.round((concentratedMessages / messageCount) * 100) : 0;
+  // Clustered only when the top days lead an even spread by a real margin AND quieter days remain —
+  // i.e. `active_day_count (= dayMessages.size) > concentrationDayCount`, which forces ≥3 active days
+  // (so `concentrationDayCount` is 2). Decide it here so the view just reads one boolean, mirroring
+  // how the mention/after-hours floors are computed in this function rather than in the screen.
+  const evenSharePct =
+    dayMessages.size > 0 ? Math.round((concentrationDayCount / dayMessages.size) * 100) : 0;
+  const concentrationIsClustered =
+    dayMessages.size > concentrationDayCount &&
+    concentrationPct >= evenSharePct + CONCENTRATION_MARGIN_PCT;
+
   // Scope deep-work blocks to the chat window so the interleave denominator reflects the period
   // chat could actually have fragmented, not the user's entire history.
   const windowStart = Math.min(...bursts.map((burst) => burst.start));
@@ -609,6 +659,9 @@ export function analyzeInterruptionLoad(
     peak_day_message_count: peakDayMessages,
     peak_hour: peakHourIndex >= 0 ? peakHourIndex : null,
     calm_day: calmDayIndex >= 0 ? WEEKDAY_NAMES[calmDayIndex] : null,
+    concentration_day_count: concentrationDayCount,
+    concentration_pct: concentrationPct,
+    concentration_is_clustered: concentrationIsClustered,
     after_hours_message_count: afterHoursMessages,
     // Floor to 1% when there is any after-hours volume so the footnote (gated on the count) never
     // shows "0%" beside a non-zero count. messageCount ≥ afterHoursMessages > 0 here, so safe.
