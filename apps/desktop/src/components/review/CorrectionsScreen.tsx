@@ -42,14 +42,29 @@ export function CorrectionsScreen({
     );
   };
 
+  // Count how often each identical (field, old→new) relabel recurs so a systematic pattern the
+  // model already weighs (see `analyzeCorrections` in capacity.ts) stands out from a one-off tweak.
+  // Keyed by a JSON-encoded triple — matching the inference dedup key — so values with spaces or
+  // slashes can never alias, and no-op edits (old === new) are ignored.
+  const repeatCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const correction of corrections) {
+      if (correction.old_value === correction.new_value) continue;
+      const key = JSON.stringify([correction.field, correction.old_value, correction.new_value]);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    return counts;
+  }, [corrections]);
+
   const rows = useMemo(() => {
     return [...corrections]
       .sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime())
       .map((correction) => {
         const block = blocks.find((candidate) => candidate.work_block_id === correction.work_block_id);
-        return { correction, project: block?.project_name ?? correction.old_value };
+        const key = JSON.stringify([correction.field, correction.old_value, correction.new_value]);
+        return { correction, project: block?.project_name ?? correction.old_value, repeatCount: repeatCounts.get(key) ?? 0 };
       });
-  }, [corrections, blocks]);
+  }, [corrections, blocks, repeatCounts]);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -144,7 +159,7 @@ export function CorrectionsScreen({
         </EmptyState>
       ) : (
         <ol className="history-list corrections-list">
-          {filtered.map(({ correction, project }) => (
+          {filtered.map(({ correction, project, repeatCount }) => (
             <li key={correction.correction_id}>
               <span className="correction-field">{fieldLabel(correction.field)}</span>
               <span className="correction-project" title={project}>{project}</span>
@@ -156,6 +171,15 @@ export function CorrectionsScreen({
                 <ArrowRight size={12} />
                 <span className="correction-new">{humanizeCorrectionValue(correction.field, correction.new_value)}</span>
               </span>
+              {repeatCount >= 2 && (
+                <span
+                  className="correction-repeat"
+                  title={`You've made this exact change ${repeatCount} times — a systematic pattern the model already weighs as bias.`}
+                >
+                  repeated {repeatCount}×
+                  <span className="sr-only"> — this exact relabel recurs across your corrections, so the model treats it as a systematic bias rather than a one-off tweak.</span>
+                </span>
+              )}
               <time>{formatAuditTime(correction.timestamp)}</time>
             </li>
           ))}
