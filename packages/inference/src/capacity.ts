@@ -390,6 +390,12 @@ export interface InterruptionLoadAnalysis {
   /** Reactive messages on `peak_day` (metadata count only); 0 when `peak_day` is null. */
   peak_day_message_count: number;
   /**
+   * Local hour (0–23) reactive volume concentrated in ON the peak day — the time-of-day axis the
+   * weekday peak can't show. Non-null exactly when `peak_day` is non-null (the peak day always
+   * carries ≥1 message-bearing hour), so it renders alongside the peak-day note.
+   */
+  peak_hour: number | null;
+  /**
    * Lowest-volume *active* weekday (local time) — the quietest day to protect for deep work;
    * null when there are fewer than 2 active days (no quieter day to contrast against the peak).
    */
@@ -443,6 +449,10 @@ export function analyzeInterruptionLoad(
   // Reactive message volume bucketed by local weekday (0–6) so we can name the day focus took the
   // most chat pressure. Local time is the right semantic — the user's sense of "Wednesday".
   const dayMessages = new Map<number, number>();
+  // Reactive message volume bucketed by (local weekday, local hour) via `dayIndex * 24 + hour`, so
+  // once the peak day is known we can name the hour reactive load concentrated in ON that day —
+  // the time-of-day axis, not conflated with any other day's hourly pattern.
+  const dayHourMessages = new Map<number, number>();
   let messageCount = 0;
   let mentionCount = 0;
   let afterHoursMessages = 0;
@@ -470,6 +480,10 @@ export function analyzeInterruptionLoad(
       // Attribute the burst's messages to "after hours" by its start hour, mirroring the weekday
       // bucketing — a metadata-only sustainability cue, never message text.
       const startHour = startDate.getHours();
+      dayHourMessages.set(
+        dayIndex * 24 + startHour,
+        (dayHourMessages.get(dayIndex * 24 + startHour) ?? 0) + messages
+      );
       if (startHour < CORE_HOURS_START || startHour >= CORE_HOURS_END) {
         afterHoursMessages += messages;
       }
@@ -487,6 +501,23 @@ export function analyzeInterruptionLoad(
     if (total > peakDayMessages) {
       peakDayMessages = total;
       peakDayIndex = dayIndex;
+    }
+  }
+
+  // Within the peak day, name the local hour reactive volume concentrated in — the time-of-day the
+  // user is likeliest to lose focus, an axis the weekday peak alone can't surface. Iterate hours
+  // ascending with strict `>` so ties resolve to the earlier hour deterministically. The peak day
+  // always carries ≥1 message-bearing hour bucket, so `peakHourIndex` is set whenever `peakDayIndex`
+  // is — i.e. `peak_hour` is non-null exactly when `peak_day` is.
+  let peakHourIndex = -1;
+  let peakHourMessages = 0;
+  if (peakDayIndex >= 0) {
+    for (let hour = 0; hour < 24; hour += 1) {
+      const total = dayHourMessages.get(peakDayIndex * 24 + hour) ?? 0;
+      if (total > peakHourMessages) {
+        peakHourMessages = total;
+        peakHourIndex = hour;
+      }
     }
   }
 
@@ -543,6 +574,7 @@ export function analyzeInterruptionLoad(
     active_day_count: dayMessages.size,
     peak_day: peakDayIndex >= 0 ? WEEKDAY_NAMES[peakDayIndex] : null,
     peak_day_message_count: peakDayMessages,
+    peak_hour: peakHourIndex >= 0 ? peakHourIndex : null,
     calm_day: calmDayIndex >= 0 ? WEEKDAY_NAMES[calmDayIndex] : null,
     after_hours_message_count: afterHoursMessages,
     // Floor to 1% when there is any after-hours volume so the footnote (gated on the count) never

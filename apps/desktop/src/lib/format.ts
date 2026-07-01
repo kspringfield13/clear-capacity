@@ -27,6 +27,14 @@ export function formatRange(block: WorkBlock) {
   return `${head} (${Math.round((endMs - startMs) / 60000)} min)`;
 }
 
+/** A 12-hour clock label for a local hour bucket (0–23), e.g. 0 → "12am", 14 → "2pm". */
+export function formatHourOfDay(hour: number): string {
+  const normalized = ((Math.round(hour) % 24) + 24) % 24;
+  const meridiem = normalized < 12 ? "am" : "pm";
+  const twelve = normalized % 12 === 0 ? 12 : normalized % 12;
+  return `${twelve}${meridiem}`;
+}
+
 export function compactCategory(category: WorkCategory) {
   return category.replace(" / ", " / ").replace(" stakeholder ", " ");
 }
