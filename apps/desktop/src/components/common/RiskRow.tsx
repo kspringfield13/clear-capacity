@@ -3,6 +3,7 @@ export function RiskRow({
   value,
   tooltip,
   hint,
+  caption,
   displayValue,
   dangerActive,
 }: {
@@ -10,6 +11,7 @@ export function RiskRow({
   value: number;
   tooltip?: string;
   hint?: string;
+  caption?: string;
   displayValue?: number;
   dangerActive?: boolean;
 }) {
@@ -46,6 +48,7 @@ export function RiskRow({
         {shown}
         {hint && <span className="risk-hint">{hint}</span>}
       </strong>
+      {caption && <p className="risk-caption">{caption}</p>}
     </div>
   );
 }

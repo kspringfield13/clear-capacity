@@ -336,12 +336,22 @@ export function WeeklyCapacityScreen({
               value={snapshot.context_switch_score}
               tooltip="Task-switching cost index: 0 = minimal, 100 = very high burden"
               hint="/100"
+              caption={
+                snapshot.fragmentation_penalty_pct > 0
+                  ? `Costs ~${pct(snapshot.fragmentation_penalty_pct)} of your committed week`
+                  : undefined
+              }
             />
             <RiskRow
               label="WIP overload"
               value={snapshot.wip_load_score}
               tooltip="Parallel work-in-progress pressure: 0 = manageable, 100 = critical"
               hint="/100"
+              caption={
+                snapshot.wip_penalty_pct > 0
+                  ? `Costs ~${pct(snapshot.wip_penalty_pct)} of your committed week`
+                  : undefined
+              }
             />
             <RiskRow
               label="Carryover risk"

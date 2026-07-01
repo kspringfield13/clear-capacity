@@ -50,6 +50,8 @@ function demoSnapshot(week: string, overrides: Partial<WeeklyCapacitySnapshot>):
     carryover_risk_pct: 18,
     wip_load_score: 0.52,
     context_switch_score: 0.44,
+    fragmentation_penalty_pct: 5,
+    wip_penalty_pct: 5,
     summary_confidence: 0.82,
     category_allocation: [],
     work_mode_allocation: [],

@@ -148,6 +148,8 @@ export function computeWeeklyCapacitySnapshot(
     carryover_risk_pct: carryoverRiskPct,
     wip_load_score: Number(wipLoadScore.toFixed(2)),
     context_switch_score: Number(contextSwitchScore.toFixed(2)),
+    fragmentation_penalty_pct: fragmentationPenalty,
+    wip_penalty_pct: wipPenalty,
     summary_confidence: Number(averageConfidence.toFixed(2)),
     category_allocation: allocationBy<WorkCategory>(workCategories, included, (block) => block.category),
     work_mode_allocation: allocationBy<WorkMode>(workModes, included, (block) => block.mode)

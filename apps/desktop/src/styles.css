@@ -2722,6 +2722,13 @@ h3 {
   margin-left: 1px;
 }
 
+.risk-caption {
+  grid-column: 1 / -1;
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
 .tag-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.8fr) minmax(0, 0.75fr) minmax(0, 0.75fr);
