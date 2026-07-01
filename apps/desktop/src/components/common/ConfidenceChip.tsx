@@ -1,5 +1,5 @@
 export function ConfidenceChip({ value }: { value: number }) {
-  if (value === 0) {
+  if (value === 0 || !Number.isFinite(value)) {
     return <span className="confidence unscored">Unscored</span>;
   }
   const pct = Math.round(value * 100);
