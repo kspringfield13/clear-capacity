@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, LineChart, Minus, Upload } from "lucide-react";
 import type { Screen } from "../../lib/types";
 import type { PersistedSnapshotRecord } from "../../services/localStore";
@@ -66,6 +66,10 @@ export function TrendsScreen({
   // peers — mirrors the Weekly StackedBar legend↔segment crosslink, since the
   // four lines cross and colour alone can't disambiguate them.
   const [hoveredSeries, setHoveredSeries] = useState<string | null>(null);
+
+  // Stable id linking the chart's `aria-describedby` to the visually-hidden data
+  // table below, so keyboard/screen-reader users reach every week/series value.
+  const dataTableId = useId();
 
   // Merge retained weekly snapshots with the live current-week snapshot (current
   // week wins), newest-last, capped to the trend window.
@@ -191,6 +195,7 @@ export function TrendsScreen({
           preserveAspectRatio="none"
           role="img"
           aria-label={`Line chart of weekly capacity metrics across the last ${weeks.length} weeks`}
+          aria-describedby={dataTableId}
         >
           {Y_TICKS.map((tick) => (
             <g key={tick}>
@@ -253,6 +258,36 @@ export function TrendsScreen({
             );
           })}
         </svg>
+
+        {/* Visually-hidden equivalent of the chart: the per-week, per-series
+            values are otherwise reachable only through hover-only SVG <title>
+            tooltips. Purely additive — no visual change. */}
+        <table id={dataTableId} className="sr-only">
+          <caption>
+            Weekly capacity values across the last {weeks.length} weeks, as percentages of a
+            40-hour week.
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Week</th>
+              {SERIES.map((series) => (
+                <th scope="col" key={series.key}>
+                  {series.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {weeks.map((week) => (
+              <tr key={week.week_id}>
+                <th scope="row">{formatIsoWeekLabel(week.week_id)}</th>
+                {SERIES.map((series) => (
+                  <td key={series.key}>{pct(Math.round(week.snapshot[series.key]))}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </section>
 
       <ForecastTrackRecord entries={forecastTrackRecord} />
