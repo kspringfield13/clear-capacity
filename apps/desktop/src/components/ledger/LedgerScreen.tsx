@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Search, PieChart, Monitor, X } from "lucide-react";
 import type {
   WorkBlock,
@@ -47,26 +47,39 @@ export function LedgerScreen({
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const classifiedSessionIds = new Set(blocks.flatMap((block) => block.derived_from));
-  const unclassifiedSessionCount = activeWindowSessions.filter(
-    (session) => !classifiedSessionIds.has(session.session_id) && session.sample_count >= 2
-  ).length;
+  const classifiedSessionIds = useMemo(
+    () => new Set(blocks.flatMap((block) => block.derived_from)),
+    [blocks]
+  );
+  const unclassifiedSessionCount = useMemo(
+    () =>
+      activeWindowSessions.filter(
+        (session) => !classifiedSessionIds.has(session.session_id) && session.sample_count >= 2
+      ).length,
+    [activeWindowSessions, classifiedSessionIds]
+  );
 
-  const q = searchQuery.trim().toLowerCase();
-  const visibleBlocks = q
-    ? blocks.filter((b) =>
-        b.project_name.toLowerCase().includes(q) ||
-        (b.stakeholder_group ?? "").toLowerCase().includes(q) ||
-        b.category.toLowerCase().includes(q) ||
-        b.mode.toLowerCase().includes(q)
-      )
-    : blocks;
+  const visibleBlocks = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return q
+      ? blocks.filter((b) =>
+          b.project_name.toLowerCase().includes(q) ||
+          (b.stakeholder_group ?? "").toLowerCase().includes(q) ||
+          b.category.toLowerCase().includes(q) ||
+          b.mode.toLowerCase().includes(q)
+        )
+      : blocks;
+  }, [blocks, searchQuery]);
 
-  const current = blocks.length > 0
-    ? blocks.reduce((best, b) =>
-        (b.end_time || b.start_time) > (best.end_time || best.start_time) ? b : best
-      )
-    : undefined;
+  const current = useMemo(
+    () =>
+      blocks.length > 0
+        ? blocks.reduce((best, b) =>
+            (b.end_time || b.start_time) > (best.end_time || best.start_time) ? b : best
+          )
+        : undefined,
+    [blocks]
+  );
   return (
     <section className="screen ledger-screen">
       <div className="screen-header compact">
