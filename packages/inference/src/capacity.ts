@@ -30,6 +30,14 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
+// Take the last `n` entries of an array — the rolling-window tail used by the accuracy-trend and
+// baseline rollups. Guards `n <= 0` explicitly: `array.slice(-0)` is `slice(0)`, which returns the
+// WHOLE array rather than an empty tail, so a non-positive window must short-circuit to `[]`.
+function sliceLastN<T>(items: T[], n: number): T[] {
+  if (n <= 0) return [];
+  return items.slice(-n);
+}
+
 function sum(blocks: WorkBlock[], predicate: (block: WorkBlock) => boolean) {
   return blocks.filter(predicate).reduce((total, block) => total + block.estimated_capacity_pct, 0);
 }
@@ -201,9 +209,10 @@ export function summarizeForecastAccuracy(
   scored: { week_id: string; predicted_pct: number; actual_pct: number }[]
 ): ForecastAccuracyTrend | null {
   if (scored.length === 0) return null;
-  const window = [...scored]
-    .sort((left, right) => left.week_id.localeCompare(right.week_id))
-    .slice(-ACCURACY_TREND_WINDOW_WEEKS);
+  const window = sliceLastN(
+    [...scored].sort((left, right) => left.week_id.localeCompare(right.week_id)),
+    ACCURACY_TREND_WINDOW_WEEKS
+  );
   const totalError = window.reduce(
     (sum, item) => sum + scoreForecastAccuracy(item.predicted_pct, item.actual_pct).error_pts,
     0
@@ -269,9 +278,10 @@ function median(values: number[]): number | null {
  * median toward itself.
  */
 export function computeCapacityBaselines(history: WeeklyCapacitySnapshot[]): CapacityBaselines {
-  const window = [...history]
-    .sort((left, right) => left.week_id.localeCompare(right.week_id))
-    .slice(-BASELINE_WINDOW_WEEKS);
+  const window = sliceLastN(
+    [...history].sort((left, right) => left.week_id.localeCompare(right.week_id)),
+    BASELINE_WINDOW_WEEKS
+  );
   return {
     week_count: window.length,
     reactive_pct: median(window.map((snapshot) => snapshot.reactive_pct)),
