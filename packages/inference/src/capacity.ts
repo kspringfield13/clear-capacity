@@ -194,6 +194,7 @@ export function scoreForecastAccuracy(predictedPct: number, actualPct: number): 
 export interface ForecastAccuracyTrend {
   week_count: number;
   mean_abs_error_pts: number; // mean absolute point error over the window
+  mean_signed_error_pts: number; // mean signed error (predicted - actual; positive = over-predicts)
 }
 
 const ACCURACY_TREND_WINDOW_WEEKS = 8;
@@ -215,13 +216,17 @@ export function summarizeForecastAccuracy(
     [...scored].sort((left, right) => left.week_id.localeCompare(right.week_id)),
     ACCURACY_TREND_WINDOW_WEEKS
   );
-  const totalError = window.reduce(
-    (sum, item) => sum + scoreForecastAccuracy(item.predicted_pct, item.actual_pct).error_pts,
-    0
+  const totals = window.reduce(
+    (sums, item) => {
+      const scored = scoreForecastAccuracy(item.predicted_pct, item.actual_pct);
+      return { error: sums.error + scored.error_pts, signed: sums.signed + scored.signed_error_pts };
+    },
+    { error: 0, signed: 0 }
   );
   return {
     week_count: window.length,
-    mean_abs_error_pts: roundPct(totalError / window.length)
+    mean_abs_error_pts: roundPct(totals.error / window.length),
+    mean_signed_error_pts: roundPct(totals.signed / window.length)
   };
 }
 

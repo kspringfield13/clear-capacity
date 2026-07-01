@@ -193,6 +193,17 @@ export function forecastRatingLabel(rating: ForecastAccuracyRating): string {
   return FORECAST_RATING_LABELS[rating];
 }
 
+// Turn the rolling mean signed forecast error into a plain-language bias phrase, so the
+// accuracy line can say whether the model systematically over- or under-predicts (a
+// self-correcting cue). Positive = over-predicts. Returns "" when the average bias rounds
+// to under a point, so a well-calibrated model shows no noise.
+export function forecastBiasPhrase(meanSignedErrorPts: number): string {
+  const rounded = Math.round(meanSignedErrorPts);
+  if (rounded === 0) return "";
+  const direction = rounded > 0 ? "over-predict" : "under-predict";
+  return `tends to ${direction} by ~${Math.abs(rounded)} pts`;
+}
+
 // Render an ISO week id ("2026-W26") as a readable label without date math, so the
 // forecast track record can title each row. Falls back to the raw id if it doesn't parse.
 export function formatIsoWeekLabel(weekId: string): string {
