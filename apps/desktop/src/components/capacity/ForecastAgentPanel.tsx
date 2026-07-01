@@ -1,7 +1,7 @@
 import { RefreshCw, Target, TrendingUp } from "lucide-react";
 import type { ForecastAccuracyReview, PersistedForecastRecord } from "../../services/localStore"; // note: may adjust
 import type { ForecastAccuracyTrend } from "../../../../../packages/inference/src/capacity";
-import { forecastRatingLabel, pct } from "../../lib/format";
+import { forecastBiasPhrase, forecastRatingLabel, pct } from "../../lib/format";
 import { formatAuditTime } from "../../lib/format";
 import { ForecastList } from "../common/ForecastList";
 import { EmptyState } from "../common/EmptyState";
@@ -98,7 +98,10 @@ export function ForecastAgentPanel({
       )}
       {forecastAccuracyTrend && forecastAccuracyTrend.week_count >= 2 && (
         <p className="forecast-accuracy-trend">
-          Forecasts have averaged <strong>±{forecastAccuracyTrend.mean_abs_error_pts} pts</strong> over the last {forecastAccuracyTrend.week_count} weeks.
+          Forecasts have averaged <strong>±{forecastAccuracyTrend.mean_abs_error_pts} pts</strong> over the last {forecastAccuracyTrend.week_count} weeks
+          {forecastBiasPhrase(forecastAccuracyTrend.mean_signed_error_pts)
+            ? <> — the model {forecastBiasPhrase(forecastAccuracyTrend.mean_signed_error_pts)}.</>
+            : "."}
         </p>
       )}
       {error && <InlineError message={error} onRetry={onGenerate} />}

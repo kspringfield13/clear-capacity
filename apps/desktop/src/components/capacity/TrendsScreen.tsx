@@ -7,7 +7,7 @@ import type {
   ForecastAccuracyTrend,
   ForecastTrackRecordEntry,
 } from "../../../../../packages/inference/src/capacity";
-import { formatIsoWeekLabel, pct } from "../../lib/format";
+import { forecastBiasPhrase, formatIsoWeekLabel, pct } from "../../lib/format";
 import { EmptyState } from "../common/EmptyState";
 import { ForecastTrackRecord } from "./ForecastTrackRecord";
 
@@ -144,6 +144,10 @@ export function TrendsScreen({
             {forecastAccuracyTrend
               ? ` Forecasts have averaged ${forecastAccuracyTrend.mean_abs_error_pts} pts of error over the last ${forecastAccuracyTrend.week_count} ${
                   forecastAccuracyTrend.week_count === 1 ? "week" : "weeks"
+                }${
+                  forecastBiasPhrase(forecastAccuracyTrend.mean_signed_error_pts)
+                    ? ` — the model ${forecastBiasPhrase(forecastAccuracyTrend.mean_signed_error_pts)}`
+                    : ""
                 }.`
               : ""}
           </p>
