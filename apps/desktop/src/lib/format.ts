@@ -35,6 +35,35 @@ export function formatHourOfDay(hour: number): string {
   return `${twelve}${meridiem}`;
 }
 
+/** Compact 12-hour clock label for a local hour bucket (0–23), e.g. 0 → "12a", 14 → "2p". */
+export function formatHourCompact(hour: number): string {
+  const normalized = ((Math.round(hour) % 24) + 24) % 24;
+  if (normalized === 0) return "12a";
+  if (normalized === 12) return "12p";
+  return normalized < 12 ? `${normalized}a` : `${normalized - 12}p`;
+}
+
+/** Spoken 12-hour clock label for a local hour bucket (0–23), e.g. 0 → "12 am", 14 → "2 pm". */
+export function formatHourA11y(hour: number): string {
+  const normalized = ((Math.round(hour) % 24) + 24) % 24;
+  if (normalized === 0) return "12 am";
+  if (normalized === 12) return "12 pm";
+  return normalized < 12 ? `${normalized} am` : `${normalized - 12} pm`;
+}
+
+/**
+ * Relative label for a day offset (0 = today, 1 = yesterday, else the weekday name).
+ * `long` picks the full form ("Yesterday" / "Monday") over the compact one ("Yest." / "Mon").
+ */
+export function formatRelativeDayLabel(diffDays: number, options?: { long?: boolean }): string {
+  const long = options?.long ?? false;
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return long ? "Yesterday" : "Yest.";
+  const d = new Date();
+  d.setDate(d.getDate() - diffDays);
+  return d.toLocaleDateString("en-US", { weekday: long ? "long" : "short" });
+}
+
 /** ISO timestamp → local "HH:MM" value for a `<input type="time">`. */
 export function toLocalTimeInput(isoString: string): string {
   const d = new Date(isoString);

@@ -1,4 +1,5 @@
 import type { ActivitySession } from "../../../../../packages/domain/src/models";
+import { formatHourA11y, formatHourCompact, formatRelativeDayLabel } from "../../lib/format";
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
@@ -17,36 +18,6 @@ function buildGrid(sessions: ActivitySession[]): number[][] {
   }
 
   return grid;
-}
-
-function getDayLabel(diffDays: number): string {
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yest.";
-  const d = new Date();
-  d.setDate(d.getDate() - diffDays);
-  return d.toLocaleDateString("en-US", { weekday: "short" });
-}
-
-function getDayFullLabel(diffDays: number): string {
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  const d = new Date();
-  d.setDate(d.getDate() - diffDays);
-  return d.toLocaleDateString("en-US", { weekday: "long" });
-}
-
-function formatHour(h: number): string {
-  const h24 = h % 24;
-  if (h24 === 0) return "12a";
-  if (h24 === 12) return "12p";
-  return h24 < 12 ? `${h24}a` : `${h24 - 12}p`;
-}
-
-function formatHourA11y(h: number): string {
-  const h24 = h % 24;
-  if (h24 === 0) return "12 am";
-  if (h24 === 12) return "12 pm";
-  return h24 < 12 ? `${h24} am` : `${h24 - 12} pm`;
 }
 
 export function ActivityHeatmap({ sessions }: { sessions: ActivitySession[] }) {
@@ -81,21 +52,21 @@ export function ActivityHeatmap({ sessions }: { sessions: ActivitySession[] }) {
           <div className="heatmap-day-label" />
           {HOURS.map(h => (
             <div key={h} className="heatmap-hour-label">
-              {h % 6 === 0 ? formatHour(h) : ""}
+              {h % 6 === 0 ? formatHourCompact(h) : ""}
             </div>
           ))}
         </div>
         {[6, 5, 4, 3, 2, 1, 0].map(diffDays => (
           <div key={diffDays} className="heatmap-day-col">
-            <div className="heatmap-day-label" aria-hidden="true">{getDayLabel(diffDays)}</div>
+            <div className="heatmap-day-label" aria-hidden="true">{formatRelativeDayLabel(diffDays)}</div>
             {HOURS.map(h => {
               const minutes = grid[diffDays][h];
               const level = max > 0 ? Math.ceil((minutes / max) * 5) : 0;
               const tip = minutes > 0
-                ? `${getDayLabel(diffDays)} ${formatHour(h)}–${formatHour(h + 1)} · ${Math.round(minutes)} min`
+                ? `${formatRelativeDayLabel(diffDays)} ${formatHourCompact(h)}–${formatHourCompact(h + 1)} · ${Math.round(minutes)} min`
                 : undefined;
               const cellLabel = minutes > 0
-                ? `${getDayFullLabel(diffDays)} ${formatHourA11y(h)}–${formatHourA11y((h + 1) % 24)}, ${Math.round(minutes)} min`
+                ? `${formatRelativeDayLabel(diffDays, { long: true })} ${formatHourA11y(h)}–${formatHourA11y((h + 1) % 24)}, ${Math.round(minutes)} min`
                 : undefined;
               return (
                 <div
