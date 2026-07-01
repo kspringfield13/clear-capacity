@@ -68,6 +68,7 @@ Analyst workload is often split across planned projects, recurring reporting, me
 - explainable weekly capacity model with a dedicated next-week forecast view and a multi-week capacity trends chart
 - searchable correction history and a filterable audit trail
 - conversational agent for asking questions about your workload and capacity
+- acceleration engine that mines reviewed work for repetitive workflows, tool-able time-sinks, and context-switch hotspots into locally-computed, evidence-cited "plays" (with optional AI-authored skill recipes and tool picks)
 - optional OpenAI-assisted classification, review suggestions, forecasts, and narratives
 - optional screenshot-derived visual context with an explicit opt-in toggle
 - local data export (JSON or CSV) and a user-controlled retention window
@@ -79,7 +80,7 @@ The app is organized into four primary sections, each with focused sub-views:
 
 - **Today** — the daily review queue. Confirm, relabel, or exclude inferred work blocks, with an opt-in Review Copilot that suggests cleanup actions you approve before they apply.
 - **Week** — `Capacity` (the explainable weekly allocation model and risk modifiers), `Forecast` (an AI projection of next week's reliable capacity with scenarios, constraints, and recommendations), `Trends` (allocated, reactive, deep-work, and reliable-capacity percentages charted week over week, with a forecast track record), and `Summary` (an editable analyst or manager narrative).
-- **Agent** — a conversational view to ask questions about your workload, plan, and understand the capacity model.
+- **Agent** — `Ask` (a conversational view to ask questions about your workload, plan, and understand the capacity model) and `Accelerate` (locally-mined, evidence-cited "plays" — repetitive workflows, tool time-sinks, and context-switch hotspots — that estimate reclaimable time each week, with optional AI-authored skill recipes and tool picks).
 - **History** — `Activity` (the live work ledger and capture timeline), `Corrections` (a searchable log of every label, category, project, and planned-status edit), `Audit` (the filterable trail of all local signals, inferences, and privacy events), and `Flagged` (a review queue for visual captures flagged as potentially sensitive, with a per-item discard control).
 
 ## Privacy Model
