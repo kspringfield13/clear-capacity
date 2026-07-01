@@ -2084,7 +2084,8 @@ h3 {
 .play-actions {
   display: flex;
   gap: 7px;
-  margin-top: 2px;
+  margin-top: auto;
+  padding-top: 2px;
 }
 
 .play-action {
