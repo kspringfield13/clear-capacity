@@ -48,6 +48,19 @@ export function NarrativeScreen({
     downloadTextFile(`capacity-narrative-${slug}.txt`, header + managerText, "text/plain");
   }
 
+  async function handleCopyMarkdown() {
+    try {
+      // Non-optional so a missing clipboard (insecure webview) throws into the catch
+      // rather than silently no-op'ing while we falsely announce success.
+      await navigator.clipboard.writeText(markdownContent);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1400);
+      pushToast({ tone: "success", message: "Copied to clipboard" });
+    } catch {
+      pushToast({ tone: "error", message: "Couldn't copy to the clipboard" });
+    }
+  }
+
   if (!hasNarrativeEvidence) {
     return (
       <section className="screen narrative-screen">
@@ -162,12 +175,7 @@ export function NarrativeScreen({
           <button
             className="primary-action"
             type="button"
-            onClick={() => {
-              void navigator.clipboard?.writeText(markdownContent);
-              setCopied(true);
-              window.setTimeout(() => setCopied(false), 1400);
-              pushToast({ tone: "success", message: "Copied to clipboard" });
-            }}
+            onClick={() => void handleCopyMarkdown()}
           >
             <ClipboardCopy size={18} />
             <span>{copied ? "Copied!" : "Copy as Markdown"}</span>

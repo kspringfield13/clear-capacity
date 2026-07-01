@@ -5,8 +5,9 @@ import { auditTypeLabel } from "../../lib/format";
 import { formatAuditTime } from "../../lib/format";
 import { AuditEventRow } from "./AuditEventRow";
 import { EmptyState } from "../common/EmptyState";
+import type { PushToast } from "../../hooks/useToasts";
 
-export function AuditLogScreen({ auditEvents }: { auditEvents: AuditEvent[] }) {
+export function AuditLogScreen({ auditEvents, pushToast }: { auditEvents: AuditEvent[]; pushToast: PushToast }) {
   type AuditFilter = "all" | "capture" | "session" | "visual" | "calendar" | "chat" | "correction" | "classifier" | "copilot" | "forecast" | "narrative" | "acceleration" | "privacy" | "onboarding";
   const [filter, setFilter] = useState<AuditFilter>("all");
   const [query, setQuery] = useState("");
@@ -128,7 +129,7 @@ export function AuditLogScreen({ auditEvents }: { auditEvents: AuditEvent[] }) {
             </EmptyState>
           )
         ) : (
-          filteredEvents.map((event) => <AuditEventRow event={event} key={event.event_id} />)
+          filteredEvents.map((event) => <AuditEventRow event={event} pushToast={pushToast} key={event.event_id} />)
         )}
       </div>
     </section>

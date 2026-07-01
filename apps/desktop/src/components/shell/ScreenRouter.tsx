@@ -377,7 +377,7 @@ export function ScreenRouter({
           pushToast={pushToast}
         />
       )}
-      {active === "audit" && <AuditLogScreen auditEvents={auditEvents} />}
+      {active === "audit" && <AuditLogScreen auditEvents={auditEvents} pushToast={pushToast} />}
       {active === "sensitive" && (
         <SensitiveReviewScreen
           visualContextInsights={visualContextInsights}

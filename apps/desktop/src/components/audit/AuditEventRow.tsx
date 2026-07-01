@@ -2,10 +2,23 @@ import { useState } from "react";
 import { ClipboardCopy } from "lucide-react";
 import type { AuditEvent } from "../../../../../packages/domain/src/models";
 import { auditTypeLabel, formatAuditTime, privacyLevelLabel, privacyLevelTooltip } from "../../lib/format";
+import type { PushToast } from "../../hooks/useToasts";
 
-export function AuditEventRow({ event }: { event: AuditEvent }) {
+export function AuditEventRow({ event, pushToast }: { event: AuditEvent; pushToast: PushToast }) {
   const [copied, setCopied] = useState(false);
   const detailsJson = JSON.stringify(event.details, null, 2);
+
+  async function handleCopyJson() {
+    try {
+      // Non-optional so a missing clipboard (insecure webview) throws into the catch
+      // rather than silently no-op'ing while we falsely announce success.
+      await navigator.clipboard.writeText(JSON.stringify(event, null, 2));
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1200);
+    } catch {
+      pushToast({ tone: "error", message: "Couldn't copy to the clipboard" });
+    }
+  }
 
   return (
     <details className="audit-row">
@@ -30,11 +43,7 @@ export function AuditEventRow({ event }: { event: AuditEvent }) {
           <span>{event.source}</span>
           <button
             type="button"
-            onClick={() => {
-              void navigator.clipboard?.writeText(JSON.stringify(event, null, 2));
-              setCopied(true);
-              window.setTimeout(() => setCopied(false), 1200);
-            }}
+            onClick={() => void handleCopyJson()}
           >
             <ClipboardCopy size={15} />
             {copied ? "JSON Copied" : "Copy JSON"}
