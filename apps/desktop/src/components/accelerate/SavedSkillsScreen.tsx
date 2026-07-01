@@ -126,6 +126,7 @@ function SavedSkillCard({
           type="button"
           className="play-recipe-action"
           title="Remove this skill from your library"
+          aria-label={`Remove ${skill.title} from your library`}
           onClick={remove}
         >
           <Trash2 size={13} aria-hidden />
