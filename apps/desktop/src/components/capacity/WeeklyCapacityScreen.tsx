@@ -378,12 +378,18 @@ export function WeeklyCapacityScreen({
             </li>
             <li
               className="interruption-stat"
-              title="Messages that @-mentioned you directly — the sharpest interruption signal"
+              title={
+                interruptionLoad.mention_pct > 0
+                  ? `${interruptionLoad.mention_count} of ${interruptionLoad.message_count} messages @-mentioned you directly (${interruptionLoad.mention_pct}%) — the sharpest interruption signal`
+                  : "Messages that @-mentioned you directly — the sharpest interruption signal"
+              }
             >
               <strong>{interruptionLoad.mention_count}</strong>
               <span>direct @-mentions</span>
               <span className="sr-only">
-                Messages that pulled you in by name — the sharpest interruption signal.
+                {interruptionLoad.mention_pct > 0
+                  ? `${interruptionLoad.mention_pct}% of this week's ${interruptionLoad.message_count} reactive messages pulled you in by name — the sharpest interruption signal, hardest to batch or defer.`
+                  : "Messages that pulled you in by name — the sharpest interruption signal."}
               </span>
             </li>
             <li

@@ -373,6 +373,14 @@ export interface InterruptionLoadAnalysis {
   message_count: number;
   /** Direct @-mentions — the sharpest interruption signal. */
   mention_count: number;
+  /**
+   * Share (0–100) of reactive messages that were direct @-mentions — how much of the chat
+   * pressure was aimed at the user by name (harder to batch/defer than ambient channel chatter).
+   * Floored to 1 when there is any mention volume (so a non-zero count never displays alongside
+   * "0%"), capped at 100 to stay sane if a malformed export reports more mentions than messages;
+   * 0 only when there are no mentions or no messages to divide by.
+   */
+  mention_pct: number;
   /** Hours spent inside chat bursts. */
   active_hours: number;
   /** Messages per active chat hour — interruption density while engaged. */
@@ -565,6 +573,14 @@ export function analyzeInterruptionLoad(
     burst_count: bursts.length,
     message_count: messageCount,
     mention_count: mentionCount,
+    // Floor to 1% when there is any mention volume (mirrors `after_hours_pct`) so a non-zero
+    // count never renders beside "0%"; cap at 100 so a malformed export reporting more mentions
+    // than messages can't exceed 100%. Guard `messageCount > 0` (a mentions-only, 0-message burst
+    // is possible) so the division never yields Infinity.
+    mention_pct:
+      mentionCount > 0 && messageCount > 0
+        ? Math.min(100, Math.max(1, Math.round((mentionCount / messageCount) * 100)))
+        : 0,
     active_hours: Number(activeHours.toFixed(2)),
     messages_per_active_hour: activeHours > 0 ? Math.round(messageCount / activeHours) : 0,
     deep_work_block_count: deepWorkInWindow.length,
