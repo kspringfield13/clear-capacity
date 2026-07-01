@@ -220,6 +220,15 @@ export interface AccelerationSignal {
 export interface AccelerationPlay extends AccelerationSignal {
   recipe: string | null;
   recommended_tools: string[];
+  /**
+   * Agent Skills authoring fields (Anthropic `SKILL.md` open standard). When the opt-in AI pass
+   * authors an AUTOMATE play it also proposes a hyphenated `skill_name` and a trigger-oriented
+   * `skill_description` ("what it does + when to use it"), so a saved recipe can be exported as a
+   * runnable Agent Skill. Null for TOOL/TECHNIQUE and for deterministic (unauthored) plays; the
+   * exporter derives safe fallbacks from the title/detail when these are absent.
+   */
+  skill_name: string | null;
+  skill_description: string | null;
   authored: boolean;
   dismissed: boolean;
 }
@@ -241,6 +250,14 @@ export interface SavedSkill {
   recommended_tools: string[];
   estimated_minutes_saved_per_week: number;
   saved_at: string;
+  /**
+   * Optional Agent Skills authoring fields snapshotted from the play (Anthropic `SKILL.md`
+   * standard): a hyphenated `skill_name` and a trigger-oriented `skill_description`. Optional so
+   * skills saved before this feature (and any without an AI-authored name/description) still
+   * parse; the SKILL.md exporter falls back to deriving them from `title`/`detail`.
+   */
+  skill_name?: string | null;
+  skill_description?: string | null;
 }
 
 export interface VisualContextInsight {

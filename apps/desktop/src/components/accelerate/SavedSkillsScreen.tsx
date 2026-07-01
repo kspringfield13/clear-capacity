@@ -3,6 +3,7 @@ import {
   Check,
   Copy,
   Download,
+  FileCode2,
   Library,
   Lightbulb,
   Rocket,
@@ -14,7 +15,14 @@ import type { LucideIcon } from "lucide-react";
 import type { AccelerationPlayType, SavedSkill } from "../../../../../packages/domain/src/models";
 import type { Screen } from "../../lib/types";
 import { accelerationTypeLabel, formatAuditTime } from "../../lib/format";
-import { downloadTextFile, exportFilename, exportMimeType, serializeSavedSkills } from "../../lib/dataExport";
+import {
+  downloadTextFile,
+  exportFilename,
+  exportMimeType,
+  serializeSavedSkills,
+  serializeSavedSkillAsSkillMd,
+  serializeSavedSkillsAsSkillBundle,
+} from "../../lib/dataExport";
 import type { PushToast } from "../../hooks/useToasts";
 import { EmptyState } from "../common/EmptyState";
 
@@ -35,6 +43,7 @@ function SavedSkillCard({
 }) {
   const Icon = TYPE_ICONS[skill.play_type];
   const [copied, setCopied] = useState(false);
+  const [copiedSkillMd, setCopiedSkillMd] = useState(false);
 
   async function copyRecipe() {
     try {
@@ -44,6 +53,17 @@ function SavedSkillCard({
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1200);
       pushToast({ tone: "success", message: "Recipe copied to clipboard" });
+    } catch {
+      pushToast({ tone: "error", message: "Couldn't copy to the clipboard" });
+    }
+  }
+
+  async function copySkillMd() {
+    try {
+      await navigator.clipboard.writeText(serializeSavedSkillAsSkillMd(skill));
+      setCopiedSkillMd(true);
+      window.setTimeout(() => setCopiedSkillMd(false), 1200);
+      pushToast({ tone: "success", message: "SKILL.md copied — paste into .claude/skills/<name>/SKILL.md" });
     } catch {
       pushToast({ tone: "error", message: "Couldn't copy to the clipboard" });
     }
@@ -95,6 +115,16 @@ function SavedSkillCard({
         <button
           type="button"
           className="play-recipe-action"
+          title={copiedSkillMd ? "Copied" : "Copy as an Agent Skill (SKILL.md, ready for .claude/skills/)"}
+          aria-label={copiedSkillMd ? "SKILL.md copied to clipboard" : "Copy as an Agent Skill SKILL.md file"}
+          onClick={() => void copySkillMd()}
+        >
+          {copiedSkillMd ? <Check size={13} aria-hidden /> : <FileCode2 size={13} aria-hidden />}
+          <span>{copiedSkillMd ? "Copied" : "SKILL.md"}</span>
+        </button>
+        <button
+          type="button"
+          className="play-recipe-action"
           title="Remove this skill from your library"
           onClick={remove}
         >
@@ -124,6 +154,17 @@ export function SavedSkillsScreen({
     const content = serializeSavedSkills(ordered, "json");
     downloadTextFile(exportFilename("saved_skills", "json"), content, exportMimeType("json"));
     pushToast({ tone: "success", message: `Exported ${ordered.length} saved ${ordered.length === 1 ? "skill" : "skills"}` });
+  }
+
+  function handleExportSkills() {
+    const now = new Date();
+    const stamp = now.toISOString().slice(0, 19).replace(/[:T]/g, "-");
+    const content = serializeSavedSkillsAsSkillBundle(ordered, now);
+    downloadTextFile(`clear-capacity-agent-skills-${stamp}.md`, content, "text/markdown");
+    pushToast({
+      tone: "success",
+      message: `Exported ${ordered.length} Agent ${ordered.length === 1 ? "Skill" : "Skills"} (SKILL.md)`,
+    });
   }
 
   if (savedSkills.length === 0) {
@@ -157,13 +198,18 @@ export function SavedSkillsScreen({
           <h1>Your reusable skill recipes.</h1>
           <p className="screen-subhead">
             {ordered.length} saved {ordered.length === 1 ? "recipe" : "recipes"}, snapshotted from your
-            acceleration plays so they survive regeneration. Copy one into your AI tool, or export the set.
+            acceleration plays so they survive regeneration. Copy one into your AI tool, export the set,
+            or export as Agent Skills (SKILL.md) to run them in Claude.
           </p>
         </div>
         <div className="header-actions">
+          <button type="button" className="secondary-action" onClick={handleExportSkills}>
+            <FileCode2 size={16} />
+            <span>Export as Agent Skills</span>
+          </button>
           <button type="button" className="secondary-action" onClick={handleExport}>
             <Download size={16} />
-            <span>Export skills</span>
+            <span>Export JSON</span>
           </button>
         </div>
       </div>
