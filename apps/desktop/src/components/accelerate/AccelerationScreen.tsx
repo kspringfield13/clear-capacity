@@ -82,11 +82,27 @@ function PlayCard({
   return (
     <article className="play-card">
       <div className="play-header">
-        <span className={`play-type-chip ${signal.type}`} title={TYPE_TOOLTIPS[signal.type]}>
-          <Icon size={13} aria-hidden />
-          <span>{accelerationTypeLabel(signal.type)}</span>
-          <span className="sr-only">. {TYPE_TOOLTIPS[signal.type]}</span>
-        </span>
+        <div className="play-header-tags">
+          <span className={`play-type-chip ${signal.type}`} title={TYPE_TOOLTIPS[signal.type]}>
+            <Icon size={13} aria-hidden />
+            <span>{accelerationTypeLabel(signal.type)}</span>
+            <span className="sr-only">. {TYPE_TOOLTIPS[signal.type]}</span>
+          </span>
+          {signal.authored && (
+            <span
+              className="play-ai-badge"
+              title="Your configured AI wrote this play's description, recipe, and tool picks. The reclaimable estimate, confidence, and cited evidence stay derived from your observed work."
+            >
+              <Sparkles size={12} aria-hidden />
+              <span>AI-authored</span>
+              <span className="sr-only">
+                . The description, recipe, and tool picks were written by your configured AI; the
+                reclaimable estimate, confidence, and cited evidence stay derived from your observed
+                work.
+              </span>
+            </span>
+          )}
+        </div>
         <span
           className="play-confidence"
           title="How confident the deterministic miner is in this signal, from the strength and recurrence of the evidence"

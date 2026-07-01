@@ -2013,6 +2013,28 @@ h3 {
   flex-wrap: wrap;
 }
 
+.play-header-tags {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.play-ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--info);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+}
+
 .play-type-chip {
   display: inline-flex;
   align-items: center;
