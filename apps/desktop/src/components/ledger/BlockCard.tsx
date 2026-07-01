@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Check, Clock, GraduationCap, X } from "lucide-react";
 import type { WorkBlock, WorkCategory, PlannedStatus, WorkMode } from "../../../../../packages/domain/src/models";
 import { workCategories, plannedStatuses, workModes } from "../../../../../packages/domain/src/taxonomy";
-import { fieldLabel, formatRange, humanizeCorrectionValue, pct, plannedStatusLabel } from "../../lib/format";
+import { applyLocalTime, fieldLabel, formatRange, humanizeCorrectionValue, pct, plannedStatusLabel, toLocalTimeInput } from "../../lib/format";
 import type { LearnedLabelMatch } from "../../lib/learnedLabels";
 import { ConfidenceChip } from "../common/ConfidenceChip";
 import { EvidenceDetails } from "../common/EvidenceDetails";
@@ -20,18 +20,6 @@ function blockOrigin(workBlockId: string): { label: string; title: string } {
     return { label: "Workplace chat", title: "Derived from imported workplace-chat activity" };
   }
   return { label: "Activity capture", title: "Captured from your foreground-app activity" };
-}
-
-function toLocalTimeInput(isoString: string): string {
-  const d = new Date(isoString);
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
-function applyLocalTime(originalIso: string, hhmm: string): string {
-  const [hours, minutes] = hhmm.split(":").map(Number);
-  const d = new Date(originalIso);
-  d.setHours(hours, minutes, 0, 0);
-  return d.toISOString();
 }
 
 export function BlockCard({

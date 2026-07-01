@@ -35,6 +35,25 @@ export function formatHourOfDay(hour: number): string {
   return `${twelve}${meridiem}`;
 }
 
+/** ISO timestamp → local "HH:MM" value for a `<input type="time">`. */
+export function toLocalTimeInput(isoString: string): string {
+  const d = new Date(isoString);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+/**
+ * Apply a local "HH:MM" value onto an ISO timestamp, keeping its date. A malformed
+ * `hhmm` yields NaN hours/minutes, and `d.setHours(NaN, NaN)` produces an Invalid Date
+ * whose `.toISOString()` THROWS — so guard the parse and return the original ISO unchanged.
+ */
+export function applyLocalTime(originalIso: string, hhmm: string): string {
+  const [hours, minutes] = hhmm.split(":").map(Number);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return originalIso;
+  const d = new Date(originalIso);
+  d.setHours(hours, minutes, 0, 0);
+  return d.toISOString();
+}
+
 export function compactCategory(category: WorkCategory) {
   return category.replace(" / ", " / ").replace(" stakeholder ", " ");
 }
