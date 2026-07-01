@@ -213,10 +213,14 @@ export interface AccelerationSignal {
  * A presentable Acceleration "Play" card. Extends a mined signal with the optional AI-authored
  * payload: a generated skill `recipe` (AUTOMATE), `recommended_tools` (TOOL), and the user's
  * dismissed state. Deterministic-rendered cards leave `recipe` null and `recommended_tools` empty.
+ * `authored` is true when an opt-in AI synthesis pass overlaid this play's guidance (its
+ * description/recipe/tool picks) — the deterministic estimate, confidence, and evidence stay
+ * model-derived either way, so the UI can attribute the AI prose without implying the facts moved.
  */
 export interface AccelerationPlay extends AccelerationSignal {
   recipe: string | null;
   recommended_tools: string[];
+  authored: boolean;
   dismissed: boolean;
 }
 

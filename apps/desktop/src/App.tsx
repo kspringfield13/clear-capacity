@@ -421,6 +421,9 @@ export function App() {
         detail: match?.detail?.trim() ? match.detail : signal.detail,
         recipe: match?.recipe ?? null,
         recommended_tools: match?.recommended_tools ?? [],
+        // A matched play means the opt-in AI pass authored this signal's guidance (re-whitelisted
+        // to currently-mined ids upstream), so the card can attribute the prose to the AI.
+        authored: Boolean(match),
         dismissed: false,
       };
     });
