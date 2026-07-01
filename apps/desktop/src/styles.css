@@ -4306,6 +4306,17 @@ select {
   cursor: pointer;
 }
 
+/* Second allocation block (work-mode split) inside the capacity-model section. */
+.mode-split-title {
+  margin-top: 18px;
+}
+
+/* Its rows are non-interactive (no StackedBar hover pairing like the category
+   grid), so drop the pointer cursor the shared .allocation-row sets. */
+.mode-allocation-grid .allocation-row {
+  cursor: default;
+}
+
 .allocation-row strong {
   margin-left: auto;
   color: var(--text);

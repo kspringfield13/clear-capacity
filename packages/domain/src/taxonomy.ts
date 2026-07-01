@@ -37,3 +37,14 @@ export const categoryColors: Record<WorkCategory, string> = {
   "Admin / coordination": "#64748b",
   "Blocked / waiting / dependency delay": "#be185d"
 };
+
+// Palette for the work-mode allocation split, mirroring `categoryColors`. Reuses the same
+// hues so the two allocation grids read as one visual system: focus (blue), reactive (red),
+// collaborative (green), fragmented (orange), blocked (pink).
+export const modeColors: Record<WorkMode, string> = {
+  "Deep work": "#2563eb",
+  "Reactive": "#dc2626",
+  "Collaborative": "#16a34a",
+  "Fragmented": "#ea580c",
+  "Blocked": "#be185d"
+};

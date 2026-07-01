@@ -5,7 +5,7 @@ import type { Screen } from "../../lib/types";
 import type { PersistedSnapshotRecord } from "../../services/localStore";
 import { computeWeeklyCapacitySnapshot, computeCapacityBaselines } from "../../../../../packages/inference/src/capacity";
 import type { ChatStakeholderSummary, InterruptionLoadAnalysis } from "../../../../../packages/inference/src/capacity";
-import { categoryColors } from "../../../../../packages/domain/src/taxonomy";
+import { categoryColors, modeColors } from "../../../../../packages/domain/src/taxonomy";
 import { pct, formatHourOfDay } from "../../lib/format";
 import { addDays, getCurrentIsoWeekId, getBusinessWeekRangeLabel } from "../../lib/date";
 import { EmptyState } from "../common/EmptyState";
@@ -94,6 +94,10 @@ export function WeeklyCapacityScreen({
   const blockerCount = useMemo(() => viewedBlocks.filter((b) => b.blocker_flag).length, [viewedBlocks]);
   const unallocatedPct = useMemo(() => {
     const total = snapshot.category_allocation.reduce((acc, item) => acc + item.value, 0);
+    return Math.max(0, 100 - total);
+  }, [snapshot]);
+  const modeUnallocatedPct = useMemo(() => {
+    const total = snapshot.work_mode_allocation.reduce((acc, item) => acc + item.value, 0);
     return Math.max(0, 100 - total);
   }, [snapshot]);
 
@@ -283,6 +287,26 @@ export function WeeklyCapacityScreen({
               <span className="dot" style={{ background: "var(--surface-muted)", border: "1px solid var(--border-strong)" }} />
               <span>Unallocated / buffer</span>
               <strong>{pct(unallocatedPct)}</strong>
+            </div>
+          )}
+        </div>
+        <div className="section-title mode-split-title">
+          <h2>How the week fragmented</h2>
+          <span>same hours, split by work mode</span>
+        </div>
+        <div className="allocation-grid mode-allocation-grid">
+          {snapshot.work_mode_allocation.map((item) => (
+            <div className="allocation-row" key={item.label} title={item.label}>
+              <span className="dot" style={{ background: modeColors[item.label] }} />
+              <span>{item.label}</span>
+              <strong>{pct(item.value)}</strong>
+            </div>
+          ))}
+          {modeUnallocatedPct > 0 && (
+            <div className="allocation-row" title="Hours not yet assigned to a work mode">
+              <span className="dot" style={{ background: "var(--surface-muted)", border: "1px solid var(--border-strong)" }} />
+              <span>Unallocated / buffer</span>
+              <strong>{pct(modeUnallocatedPct)}</strong>
             </div>
           )}
         </div>
