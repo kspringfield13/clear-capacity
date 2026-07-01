@@ -8,6 +8,7 @@ import type {
   AuditEvent,
   UserCorrection,
   ReviewCopilotSuggestion,
+  SavedSkill,
   VisualContextInsight,
   AIConfig
 } from "../../../../packages/domain/src/models";
@@ -30,6 +31,7 @@ interface PersistableState {
   dismissedPlayIds: string[];
   savedPlayIds: string[];
   generatedPlays: PersistedAccelerationRecord | null;
+  savedSkills: SavedSkill[];
   managerSummaryText: string | null;
   generatedNarrative: PersistedNarrativeRecord | null;
   lastNarrativeAutoRunDate: string | null;
@@ -68,6 +70,7 @@ export function usePersistence(state: PersistableState) {
     persistData.dismissedPlayIds,
     persistData.savedPlayIds,
     persistData.generatedPlays,
+    persistData.savedSkills,
     persistData.managerSummaryText,
     persistData.generatedNarrative,
     persistData.lastNarrativeAutoRunDate,

@@ -220,6 +220,25 @@ export interface AccelerationPlay extends AccelerationSignal {
   dismissed: boolean;
 }
 
+/**
+ * A user-saved acceleration skill: a durable snapshot of an AUTOMATE Play's AI-authored
+ * `recipe` captured into a small library so it survives regeneration and the miner
+ * re-deriving (which can retire a signal). Snapshotting the recipe TEXT — not just the
+ * `signal_id` — is what makes generated skills reusable beyond the session. Identity is the
+ * source `signal_id` (re-saving upserts). Privacy: carries only derived fields (title,
+ * detail, recipe, tool names, minutes) — never raw window titles.
+ */
+export interface SavedSkill {
+  signal_id: string;
+  play_type: AccelerationPlayType;
+  title: string;
+  detail: string;
+  recipe: string;
+  recommended_tools: string[];
+  estimated_minutes_saved_per_week: number;
+  saved_at: string;
+}
+
 export interface VisualContextInsight {
   insight_id: string;
   captured_at: string;

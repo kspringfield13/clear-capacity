@@ -1,4 +1,4 @@
-import type { AuditEvent, WorkBlock } from "../../../../packages/domain/src/models";
+import type { AuditEvent, SavedSkill, WorkBlock } from "../../../../packages/domain/src/models";
 
 // Local-first data portability: serialize the work ledger and audit trail to
 // JSON or CSV so the user can take their data with them. Everything here runs in
@@ -68,6 +68,20 @@ const WORK_BLOCK_COLUMNS: Array<[string, (block: WorkBlock) => unknown]> = [
   ["notes", (b) => b.notes],
 ];
 
+// Saved-skills CSV keeps every scalar; `recommended_tools` is joined into one cell
+// (the JSON export retains it as an array at full fidelity). All fields are derived —
+// no window titles — so exporting them to a local file is privacy-safe.
+const SAVED_SKILL_COLUMNS: Array<[string, (skill: SavedSkill) => unknown]> = [
+  ["signal_id", (s) => s.signal_id],
+  ["play_type", (s) => s.play_type],
+  ["title", (s) => s.title],
+  ["detail", (s) => s.detail],
+  ["recipe", (s) => s.recipe],
+  ["recommended_tools", (s) => s.recommended_tools.join("; ")],
+  ["estimated_minutes_saved_per_week", (s) => s.estimated_minutes_saved_per_week],
+  ["saved_at", (s) => s.saved_at],
+];
+
 const AUDIT_COLUMNS: Array<[string, (event: AuditEvent) => unknown]> = [
   ["event_id", (e) => e.event_id],
   ["timestamp", (e) => e.timestamp],
@@ -84,6 +98,14 @@ export function serializeWorkLedger(blocks: WorkBlock[], format: ExportFormat): 
   return toCsv(
     WORK_BLOCK_COLUMNS.map(([header]) => header),
     blocks.map((block) => WORK_BLOCK_COLUMNS.map(([, get]) => get(block)))
+  );
+}
+
+export function serializeSavedSkills(skills: SavedSkill[], format: ExportFormat): string {
+  if (format === "json") return envelope("saved_skills", skills);
+  return toCsv(
+    SAVED_SKILL_COLUMNS.map(([header]) => header),
+    skills.map((skill) => SAVED_SKILL_COLUMNS.map(([, get]) => get(skill)))
   );
 }
 
