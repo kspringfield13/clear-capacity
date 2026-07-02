@@ -7,6 +7,7 @@ import type {
 import { ConfidenceChip } from "../common/ConfidenceChip";
 import { InlineError } from "../common/InlineError";
 import { summarizeRecentSessions } from "../../lib/blocks";
+import { formatDurationMinutes } from "../../lib/format";
 
 export function ActivityCapturePanel({
   activeWindowSamples,
@@ -95,7 +96,7 @@ export function ActivityCapturePanel({
           {latestSessionSummaries.map((session, index) => (
             <div key={`${session.app_name}-${index}`}>
               <span>{session.app_name}</span>
-              <strong>{session.duration_minutes} min</strong>
+              <strong>{formatDurationMinutes(session.duration_minutes)}</strong>
               <small>
                 {session.window_title ?? "Window title unavailable"}
                 {session.session_count > 1 ? ` · ${session.session_count} session fragments combined` : ""}

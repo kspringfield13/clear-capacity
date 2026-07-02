@@ -92,6 +92,20 @@ export function pct(value: number) {
   return `${Math.round(value)}%`;
 }
 
+/**
+ * Humanize a minutes count for a duration label: "45 min" below an hour, "2h 5m" at or above
+ * one. Rounds to whole minutes and clamps NaN/negatives to 0, so a fractional or malformed
+ * duration never renders "12.333 min" or "0h -3m". Shared by the session/observed-time labels
+ * (CompactWidget, ActivityCapturePanel) so long durations read consistently everywhere.
+ */
+export function formatDurationMinutes(minutes: number): string {
+  const total = Number.isFinite(minutes) ? Math.max(0, Math.round(minutes)) : 0;
+  if (total < 60) return `${total} min`;
+  const hours = Math.floor(total / 60);
+  const mins = total % 60;
+  return `${hours}h ${mins}m`;
+}
+
 export function formatAuditTime(value: string) {
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
