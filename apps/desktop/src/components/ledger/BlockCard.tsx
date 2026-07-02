@@ -156,7 +156,7 @@ export function BlockCard({
       <div className="tag-grid">
         <label className="tag-field">
           <span className="tag-field-label">Work category</span>
-          <select aria-label="Work category" title={block.category} value={block.category} onChange={(event) => onRelabel(block.work_block_id, "category", event.target.value as WorkCategory)}>
+          <select aria-label={`Work category — ${block.project_name}`} title={block.category} value={block.category} onChange={(event) => onRelabel(block.work_block_id, "category", event.target.value as WorkCategory)}>
             {workCategories.map((category) => (
               <option key={category}>{category}</option>
             ))}
@@ -164,7 +164,7 @@ export function BlockCard({
         </label>
         <label className="tag-field">
           <span className="tag-field-label">Planned status</span>
-          <select aria-label="Planned status" title={plannedStatusLabel(block.planned_status)} value={block.planned_status} onChange={(event) => onRelabel(block.work_block_id, "planned_status", event.target.value as PlannedStatus)}>
+          <select aria-label={`Planned status — ${block.project_name}`} title={plannedStatusLabel(block.planned_status)} value={block.planned_status} onChange={(event) => onRelabel(block.work_block_id, "planned_status", event.target.value as PlannedStatus)}>
             {plannedStatuses.map((status) => (
               <option key={status} value={status}>{plannedStatusLabel(status)}</option>
             ))}
@@ -172,7 +172,7 @@ export function BlockCard({
         </label>
         <label className="tag-field">
           <span className="tag-field-label">Work mode</span>
-          <select aria-label="Work mode" title={block.mode} value={block.mode} onChange={(event) => onRelabel(block.work_block_id, "mode", event.target.value as WorkMode)}>
+          <select aria-label={`Work mode — ${block.project_name}`} title={block.mode} value={block.mode} onChange={(event) => onRelabel(block.work_block_id, "mode", event.target.value as WorkMode)}>
             {workModes.map((mode) => (
               <option key={mode}>{mode}</option>
             ))}
