@@ -3,7 +3,7 @@ import type { ActiveWindowSample, ActivitySession, WeeklyCapacitySnapshot, WorkB
 import type { Screen } from "../../lib/types";
 import type { ProactiveAlert } from "../../lib/proactiveAlerts";
 import { getLocalDateKey } from "../../lib/date";
-import { pct } from "../../lib/format";
+import { pct, formatDurationMinutes } from "../../lib/format";
 
 export function CompactWidget({
   paused,
@@ -38,7 +38,6 @@ export function CompactWidget({
   const observedMinutesToday = activeWindowSessions
     .filter((session) => getLocalDateKey(new Date(session.start_time)) === today)
     .reduce((total, session) => total + session.duration_minutes, 0);
-  const observedHours = `${Math.floor(observedMinutesToday / 60)}h ${observedMinutesToday % 60}m`;
 
   return (
     <section className="quick-view">
@@ -80,13 +79,13 @@ export function CompactWidget({
             <small>{paused ? "Resume when you are ready" : latestSample?.window_title ?? "No active-window sample yet"}</small>
           </div>
         </div>
-        {latestSession && !paused && <p>{latestSession.duration_minutes} min in this session</p>}
+        {latestSession && !paused && <p>{formatDurationMinutes(latestSession.duration_minutes)} in this session</p>}
       </section>
 
       <section className="quick-stats">
         <button type="button" onClick={() => onOpenScreen("ledger")}>
           <span>Observed today</span>
-          <strong>{observedMinutesToday > 0 ? observedHours : "--"}</strong>
+          <strong>{observedMinutesToday > 0 ? formatDurationMinutes(observedMinutesToday) : "--"}</strong>
         </button>
         <button type="button" onClick={() => onOpenScreen("weekly")}>
           <span>Reliable capacity</span>
