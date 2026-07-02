@@ -2,7 +2,8 @@ import { useMemo } from "react";
 import { analyzeInterruptionLoad, buildForecastTrackRecord, computeCapacityBaselines, computeWeeklyCapacitySnapshot, generateWeeklyNarrative, scoreForecastAccuracy, summarizeChatStakeholders, summarizeForecastAccuracy } from "../../../../packages/inference/src/capacity";
 import type { ChatStakeholderSummary, ForecastAccuracyTrend, ForecastTrackRecordEntry, InterruptionLoadAnalysis } from "../../../../packages/inference/src/capacity";
 import { sessionizeActiveWindowSamples } from "../../../../packages/inference/src/sessionizer/activeWindow";
-import { buildAccelerationSignals } from "../../../../packages/inference/src/accelerate";
+import { buildAccelerationSignals, buildRealizedSavings, summarizeRealizedSavings } from "../../../../packages/inference/src/accelerate";
+import type { RealizedSavingsEntry, RealizedSavingsSummary } from "../../../../packages/inference/src/accelerate";
 import type {
   WorkBlock,
   ActiveWindowSample,
@@ -23,6 +24,7 @@ interface UseDerivedParams {
   forecastHistory: PersistedForecastRecord[];
   snapshotHistory: PersistedSnapshotRecord[];
   accelerationHistory: PersistedAccelerationSnapshot[];
+  actedOnPlayIds: string[];
   managerSummaryText: string | null;
   currentWeekId: string;
   currentWeekRangeLabel: string;
@@ -39,6 +41,7 @@ export function useDerived(params: UseDerivedParams) {
     forecastHistory,
     snapshotHistory,
     accelerationHistory,
+    actedOnPlayIds,
     managerSummaryText,
     currentWeekId,
     currentWeekRangeLabel,
@@ -197,6 +200,25 @@ export function useDerived(params: UseDerivedParams) {
     [weekBlocks, activeWindowSessions, recurrenceBySignalId]
   );
 
+  // Realized-savings track record (E3): for every play the user marked acted-on, score its estimate
+  // one retained week against the following week's — turning the engine's forward-looking estimates
+  // into a proven record. Reads only the derived per-week summaries (id/type/minutes), so it's
+  // privacy-trivial. Mirrors the forecast track-record pairing above.
+  const realizedSavings = useMemo<RealizedSavingsEntry[]>(
+    () =>
+      buildRealizedSavings({
+        history: accelerationHistory,
+        actedOnSignalIds: actedOnPlayIds,
+        currentWeekId,
+      }),
+    [accelerationHistory, actedOnPlayIds, currentWeekId]
+  );
+
+  const realizedSavingsSummary = useMemo<RealizedSavingsSummary | null>(
+    () => summarizeRealizedSavings(realizedSavings),
+    [realizedSavings]
+  );
+
   const hasNarrativeEvidence =
     blocks.length > 0 || activeWindowSessions.length > 0 || calendarEvents.length > 0;
 
@@ -228,5 +250,7 @@ export function useDerived(params: UseDerivedParams) {
     interruptionLoad,
     chatStakeholders,
     accelerationSignals,
+    realizedSavings,
+    realizedSavingsSummary,
   };
 }

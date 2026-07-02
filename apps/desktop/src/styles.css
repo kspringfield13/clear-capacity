@@ -3953,6 +3953,145 @@ select {
   color: var(--danger);
 }
 
+/* Realized-savings track record (E3) — mirrors the forecast track record's row/chip pattern. */
+.acceleration-track-record {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-muted);
+}
+
+.acceleration-track-record-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.acceleration-track-record-icon {
+  flex: none;
+  margin-top: 1px;
+  color: var(--text-subtle);
+}
+
+.acceleration-track-record-header strong {
+  display: block;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.acceleration-track-record-header p {
+  margin: 3px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-subtle);
+}
+
+.acceleration-track-record-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.acceleration-track-record-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: var(--radius-sm, 8px);
+  background: var(--background);
+}
+
+.acceleration-track-record-row--beat {
+  border-left-color: var(--info);
+}
+
+.acceleration-track-record-row--met {
+  border-left-color: var(--success);
+}
+
+.acceleration-track-record-row--missed {
+  border-left-color: var(--warning);
+}
+
+.acceleration-track-record-play {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.acceleration-track-record-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.acceleration-track-record-week {
+  font-size: 11px;
+  color: var(--text-subtle);
+  white-space: nowrap;
+}
+
+.acceleration-track-record-values {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--text-subtle);
+  font-size: 12px;
+}
+
+.acceleration-track-record-values svg {
+  flex: 0 0 auto;
+  color: var(--text-subtle);
+}
+
+.acceleration-track-record-metric {
+  white-space: nowrap;
+}
+
+.acceleration-track-record-metric strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.acceleration-track-record-chip {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.acceleration-track-record-chip--beat {
+  background: var(--blue-soft);
+  color: var(--info);
+}
+
+.acceleration-track-record-chip--met {
+  background: var(--green-soft);
+  color: var(--success);
+}
+
+.acceleration-track-record-chip--missed {
+  background: var(--amber-soft);
+  color: var(--warning);
+}
+
 .forecast-list strong {
   color: var(--text);
   font-size: 13px;

@@ -328,6 +328,7 @@ export function App() {
     forecastHistory,
     snapshotHistory,
     accelerationHistory,
+    actedOnPlayIds,
     managerSummaryText,
     currentWeekId,
     currentWeekRangeLabel,
@@ -349,6 +350,8 @@ export function App() {
     interruptionLoad,
     chatStakeholders,
     accelerationSignals,
+    realizedSavings,
+    realizedSavingsSummary,
   } = derived;
 
   // Retain the latest computed snapshot per ISO week so cross-week trends and
@@ -1565,6 +1568,8 @@ export function App() {
         interruptionLoad={interruptionLoad}
         chatStakeholders={chatStakeholders}
         accelerationPlays={accelerationPlays}
+        realizedSavings={realizedSavings}
+        realizedSavingsSummary={realizedSavingsSummary}
         dismissedPlayIds={dismissedPlayIds}
         savedPlayIds={savedPlayIds}
         actedOnPlayIds={actedOnPlayIds}

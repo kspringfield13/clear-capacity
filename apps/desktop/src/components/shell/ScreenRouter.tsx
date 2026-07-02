@@ -15,6 +15,7 @@ import type {
 } from "../../../../../packages/domain/src/models";
 import type { PersistedForecastRecord, PersistedNarrativeRecord, ForecastAccuracyReview, PersistedSnapshotRecord } from "../../services/localStore";
 import type { computeWeeklyCapacitySnapshot, generateWeeklyNarrative, ChatStakeholderSummary, ForecastAccuracyTrend, ForecastTrackRecordEntry, InterruptionLoadAnalysis } from "../../../../../packages/inference/src/capacity";
+import type { RealizedSavingsEntry, RealizedSavingsSummary } from "../../../../../packages/inference/src/accelerate";
 
 import { CompactWidget } from "../compact/CompactWidget";
 import { SetupScreen } from "../settings/SetupScreen";
@@ -48,6 +49,8 @@ interface ScreenRouterProps {
   interruptionLoad: InterruptionLoadAnalysis | null;
   chatStakeholders: ChatStakeholderSummary | null;
   accelerationPlays: AccelerationPlay[];
+  realizedSavings: RealizedSavingsEntry[];
+  realizedSavingsSummary: RealizedSavingsSummary | null;
   dismissedPlayIds: string[];
   savedPlayIds: string[];
   actedOnPlayIds: string[];
@@ -159,6 +162,8 @@ export function ScreenRouter({
   interruptionLoad,
   chatStakeholders,
   accelerationPlays,
+  realizedSavings,
+  realizedSavingsSummary,
   dismissedPlayIds,
   savedPlayIds,
   actedOnPlayIds,
@@ -402,6 +407,8 @@ export function ScreenRouter({
       {active === "accelerate" && (
         <AccelerationScreen
           signals={accelerationPlays}
+          realizedSavings={realizedSavings}
+          realizedSavingsSummary={realizedSavingsSummary}
           dismissedPlayIds={dismissedPlayIds}
           savedPlayIds={savedPlayIds}
           actedOnPlayIds={actedOnPlayIds}

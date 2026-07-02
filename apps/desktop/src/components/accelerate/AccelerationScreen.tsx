@@ -21,12 +21,14 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { AccelerationPlay, AccelerationSignal, AccelerationPlayType } from "../../../../../packages/domain/src/models";
+import type { RealizedSavingsEntry, RealizedSavingsSummary } from "../../../../../packages/inference/src/accelerate";
 import type { Screen } from "../../lib/types";
 import { accelerationTypeLabel, formatAuditTime } from "../../lib/format";
 import type { PushToast } from "../../hooks/useToasts";
 import { EmptyState } from "../common/EmptyState";
 import { EvidenceDetails } from "../common/EvidenceDetails";
 import { InlineError } from "../common/InlineError";
+import { AccelerationTrackRecord } from "./AccelerationTrackRecord";
 
 const TYPE_ICONS: Record<AccelerationPlayType, LucideIcon> = {
   automate: Workflow,
@@ -246,6 +248,8 @@ function PlayCard({
 
 export function AccelerationScreen({
   signals,
+  realizedSavings,
+  realizedSavingsSummary,
   dismissedPlayIds,
   savedPlayIds,
   actedOnPlayIds,
@@ -270,6 +274,8 @@ export function AccelerationScreen({
   pushToast,
 }: {
   signals: AccelerationPlay[];
+  realizedSavings: RealizedSavingsEntry[];
+  realizedSavingsSummary: RealizedSavingsSummary | null;
   dismissedPlayIds: string[];
   savedPlayIds: string[];
   actedOnPlayIds: string[];
@@ -311,6 +317,12 @@ export function AccelerationScreen({
     () => visibleSignals.reduce((sum, signal) => sum + signal.estimated_minutes_saved_per_week, 0),
     [visibleSignals]
   );
+  // Name still-mined plays in the realized-savings track record; entries for retired signals fall
+  // back to their type label (the persisted history stores no title — id/type/minutes only).
+  const titleBySignalId = useMemo(
+    () => new Map(signals.map((signal) => [signal.signal_id, signal.title])),
+    [signals]
+  );
 
   // No plays mined at all (nothing recurred enough, or no reviewed work yet).
   if (signals.length === 0) {
@@ -339,6 +351,11 @@ export function AccelerationScreen({
             <span>Review today</span>
           </button>
         </EmptyState>
+        <AccelerationTrackRecord
+          entries={realizedSavings}
+          summary={realizedSavingsSummary}
+          titleBySignalId={titleBySignalId}
+        />
       </section>
     );
   }
@@ -367,6 +384,11 @@ export function AccelerationScreen({
             <span>Review today</span>
           </button>
         </EmptyState>
+        <AccelerationTrackRecord
+          entries={realizedSavings}
+          summary={realizedSavingsSummary}
+          titleBySignalId={titleBySignalId}
+        />
       </section>
     );
   }
@@ -449,6 +471,11 @@ export function AccelerationScreen({
         )}
       </div>
       {generateError && <InlineError message={generateError} onRetry={onGenerateSkills} />}
+      <AccelerationTrackRecord
+        entries={realizedSavings}
+        summary={realizedSavingsSummary}
+        titleBySignalId={titleBySignalId}
+      />
       <div className="play-grid">
         {visibleSignals.map((signal) => (
           <PlayCard

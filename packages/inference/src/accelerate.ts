@@ -1,4 +1,5 @@
 import type {
+  AccelerationPlayType,
   AccelerationSignal,
   ActivitySession,
   WorkBlock,
@@ -594,4 +595,230 @@ export function buildAccelerationSignals(input: AccelerationMiningInput): Accele
   // Final emphasis pass: reorder the already-selected survivors so a persistent habit ranks a
   // little higher. Order only — the set and every displayed estimate are already fixed above.
   return kept.slice(0, MAX_ACCELERATION_SIGNALS).sort(compareByRecurrence);
+}
+
+/* ------------------------------------------------------------------------------------------------
+ * Realized-savings track record (E3)
+ *
+ * Turns the engine's forward-looking `estimated_minutes_saved_per_week` claims into a proven record:
+ * for each Play the user marked ACTED ON, compare its estimate in one retained week against the
+ * following retained week and score whether the observed reduction met, missed, or beat what the
+ * play projected. Pure and primitive-only, mirroring the forecast accuracy machinery in `capacity.ts`
+ * (`scoreForecastAccuracy` / `summarizeForecastAccuracy` / `buildForecastTrackRecord`).
+ *
+ * Privacy: reads ONLY the derived per-week summaries (id / type / minutes) — no evidence strings,
+ * no app names, no window titles — so the whole feature is privacy-trivial.
+ * ---------------------------------------------------------------------------------------------- */
+
+export type RealizedSavingsRating = "beat" | "met" | "missed";
+
+/** A scored comparison of one acted-on play across a pair of consecutive retained weeks. */
+export interface RealizedSavingsEntry {
+  signal_id: string;
+  type: AccelerationPlayType;
+  /** The baseline week the play was projected to save time in. */
+  week_id: string;
+  /** The following retained week its observed load was compared against. */
+  next_week_id: string;
+  /** The play's `estimated_minutes_saved_per_week` in the baseline week. */
+  projected_minutes: number;
+  /** Observed minutes reclaimed (reduction in the underlying load; can be negative if load rose). */
+  realized_minutes: number;
+  rating: RealizedSavingsRating;
+}
+
+/** Roll-up across every scored entry — the "your plays reclaimed ~X of the ~Y projected" headline. */
+export interface RealizedSavingsSummary {
+  scored_count: number;
+  total_projected_minutes: number;
+  /** Sum of realized minutes, per-entry floored at 0 — the reclaimed-time headline figure. */
+  total_realized_minutes: number;
+  beat_count: number;
+  met_count: number;
+  missed_count: number;
+}
+
+/** The minimal per-week summary the scorer needs — structurally the persisted acceleration snapshot. */
+export interface RealizedSavingsWeek {
+  week_id: string;
+  signals: {
+    signal_id: string;
+    type: AccelerationPlayType;
+    estimated_minutes_saved_per_week: number;
+  }[];
+}
+
+/**
+ * How much of the underlying observed load each detector's estimate represents, so a week-over-week
+ * drop in the estimate can be inverted back into the observed time actually reclaimed:
+ *   - automate / tool: `estimate = SAVINGS_FRACTION × observed minutes` (the conservative 25% cut),
+ *     so a drop of ΔE in the estimate corresponds to ΔE / SAVINGS_FRACTION observed minutes — which
+ *     is why these plays CAN beat their (deliberately conservative) projection.
+ *   - technique: `estimate = REFOCUS_MINUTES_PER_SWITCH × switch count`, i.e. the refocus minutes
+ *     themselves (capture fraction 1), so a drop of ΔE IS the refocus minutes reclaimed — a technique
+ *     tops out at "met" (full elimination), it cannot beat its own projection.
+ * Coupled to the detector formulas above by necessity; keep in sync if an estimate formula changes.
+ */
+function captureFraction(type: AccelerationPlayType): number {
+  return type === "technique" ? 1 : SAVINGS_FRACTION;
+}
+
+/** A shortfall/overshoot smaller than this many minutes still counts as "met". */
+const REALIZED_TOLERANCE_FLOOR_MIN = 5;
+/** ...or a shortfall/overshoot within this fraction of the projection (whichever is larger). */
+const REALIZED_TOLERANCE_FRACTION = 0.2;
+
+/**
+ * Score one play against the following week: given its baseline-week estimate and the following
+ * retained week's estimate, compute the observed minutes reclaimed (the load reduction the estimate
+ * drop implies) and rate it beat / met / missed against the projection. Pure and primitive-only like
+ * `scoreForecastAccuracy`.
+ */
+export function scoreRealizedSaving(
+  type: AccelerationPlayType,
+  currentEstimate: number,
+  nextEstimate: number
+): { projected_minutes: number; realized_minutes: number; rating: RealizedSavingsRating } {
+  const projected = Math.round(finiteMinutes(currentEstimate));
+  const drop = finiteMinutes(currentEstimate) - finiteMinutes(nextEstimate);
+  const realized = Math.round(drop / captureFraction(type));
+  const tolerance = Math.max(REALIZED_TOLERANCE_FLOOR_MIN, projected * REALIZED_TOLERANCE_FRACTION);
+  let rating: RealizedSavingsRating;
+  if (realized >= projected + tolerance) {
+    rating = "beat";
+  } else if (realized <= projected - tolerance) {
+    rating = "missed";
+  } else {
+    rating = "met";
+  }
+  return { projected_minutes: projected, realized_minutes: realized, rating };
+}
+
+/**
+ * Build the per-week realized-savings track record for every acted-on play. For each acted-on
+ * `signal_id`, walk the retained weeks in chronological order and score each week it was present
+ * against the immediately-following retained week — but ONLY when the signal is present in BOTH
+ * weeks. A signal that is absent the following week is deliberately NOT scored: its absence is
+ * ambiguous (its load may have fallen, OR it may have slipped below a detector threshold / off the
+ * capped top-N — the persisted snapshot only stores the surfaced signals), and crediting absence as
+ * a resolved win would fabricate large false "beats", undercutting the "proof, not claims" contract.
+ * When `currentWeekId` is supplied the still-accumulating current ISO week is excluded, so only
+ * settled, completed weeks are compared — otherwise a row would flip beat↔miss mid-week as this
+ * week's mining fills in (mirrors the forecast track record scoring only once a week completes).
+ * One entry per acted-on play per baseline week; a duplicate week record's later estimate wins
+ * ("latest wins"). Newest baseline week first for display.
+ *
+ * Note (documented limitation): `actedOnSignalIds` carries no timestamp, so a play acted on recently
+ * is also scored against weeks that predate the action — the record shows how the observed load moved
+ * for flagged plays, correlational evidence to review, not a causal proof the action drove it.
+ */
+export function buildRealizedSavings(input: {
+  history: RealizedSavingsWeek[];
+  actedOnSignalIds: string[];
+  /** Exclude this in-progress ISO week so only completed, settled weeks are scored. */
+  currentWeekId?: string;
+}): RealizedSavingsEntry[] {
+  const actedOn = new Set(input.actedOnSignalIds);
+  const completedHistory = input.currentWeekId
+    ? input.history.filter((week) => week.week_id < (input.currentWeekId as string))
+    : input.history;
+  if (actedOn.size === 0 || completedHistory.length < 2) {
+    return [];
+  }
+
+  // Collapse to one estimate per (week_id, signal_id). One record per week upstream, but a later
+  // occurrence overwriting an earlier one keeps "latest wins" if a duplicate ever slips through.
+  const byWeek = new Map<string, Map<string, { type: AccelerationPlayType; estimate: number }>>();
+  for (const week of completedHistory) {
+    let perSignal = byWeek.get(week.week_id);
+    if (!perSignal) {
+      perSignal = new Map();
+      byWeek.set(week.week_id, perSignal);
+    }
+    for (const signal of week.signals) {
+      if (!actedOn.has(signal.signal_id)) {
+        continue;
+      }
+      perSignal.set(signal.signal_id, {
+        type: signal.type,
+        estimate: finiteMinutes(signal.estimated_minutes_saved_per_week)
+      });
+    }
+  }
+
+  const orderedWeeks = [...byWeek.keys()].sort((left, right) => left.localeCompare(right));
+  const entries: RealizedSavingsEntry[] = [];
+
+  for (let index = 0; index < orderedWeeks.length - 1; index += 1) {
+    const weekId = orderedWeeks[index];
+    const nextWeekId = orderedWeeks[index + 1];
+    const currentSignals = byWeek.get(weekId);
+    const nextSignals = byWeek.get(nextWeekId);
+    if (!currentSignals) {
+      continue;
+    }
+    for (const [signalId, current] of currentSignals) {
+      const next = nextSignals?.get(signalId);
+      // Only score when the signal is observable in BOTH weeks — see the doc note: absence the next
+      // week is ambiguous (resolved vs. crowded off the capped top-N), so it is left unscored.
+      if (!next) {
+        continue;
+      }
+      const scored = scoreRealizedSaving(current.type, current.estimate, next.estimate);
+      entries.push({
+        signal_id: signalId,
+        type: current.type,
+        week_id: weekId,
+        next_week_id: nextWeekId,
+        projected_minutes: scored.projected_minutes,
+        realized_minutes: scored.realized_minutes,
+        rating: scored.rating
+      });
+    }
+  }
+
+  // Newest baseline week first; within a week, the bigger projection leads.
+  entries.sort((left, right) => {
+    if (left.week_id !== right.week_id) {
+      return right.week_id.localeCompare(left.week_id);
+    }
+    if (left.projected_minutes !== right.projected_minutes) {
+      return right.projected_minutes - left.projected_minutes;
+    }
+    return left.signal_id < right.signal_id ? -1 : left.signal_id > right.signal_id ? 1 : 0;
+  });
+
+  return entries;
+}
+
+/**
+ * Roll the scored entries into the headline summary. Returns null when nothing has been scored so
+ * the caller can hide the surface. `total_realized_minutes` floors each entry at 0 so a single
+ * regression week can't erase the reclaimed-time headline; per-row detail still shows the honest
+ * (possibly negative) figure.
+ */
+export function summarizeRealizedSavings(
+  entries: RealizedSavingsEntry[]
+): RealizedSavingsSummary | null {
+  if (entries.length === 0) {
+    return null;
+  }
+  return entries.reduce<RealizedSavingsSummary>(
+    (summary, entry) => ({
+      scored_count: summary.scored_count + 1,
+      total_projected_minutes: summary.total_projected_minutes + entry.projected_minutes,
+      total_realized_minutes: summary.total_realized_minutes + Math.max(0, entry.realized_minutes),
+      beat_count: summary.beat_count + (entry.rating === "beat" ? 1 : 0),
+      met_count: summary.met_count + (entry.rating === "met" ? 1 : 0),
+      missed_count: summary.missed_count + (entry.rating === "missed" ? 1 : 0)
+    }),
+    {
+      scored_count: 0,
+      total_projected_minutes: 0,
+      total_realized_minutes: 0,
+      beat_count: 0,
+      met_count: 0,
+      missed_count: 0
+    }
+  );
 }

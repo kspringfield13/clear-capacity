@@ -1,6 +1,7 @@
 import type { WorkBlock, WorkCategory, UserCorrection, ReviewCopilotAction, AccelerationPlayType } from "../../../../packages/domain/src/models";
 import type { AuditEventType } from "../../../../packages/domain/src/models";
 import type { ForecastAccuracyRating } from "../../../../packages/inference/src/capacity";
+import type { RealizedSavingsRating } from "../../../../packages/inference/src/accelerate";
 
 export function formatTime(value: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -191,6 +192,17 @@ const FORECAST_RATING_LABELS: Record<ForecastAccuracyRating, string> = {
 
 export function forecastRatingLabel(rating: ForecastAccuracyRating): string {
   return FORECAST_RATING_LABELS[rating];
+}
+
+const REALIZED_SAVINGS_RATING_LABELS: Record<RealizedSavingsRating, string> = {
+  beat: "Beat estimate",
+  met: "On track",
+  missed: "Below estimate",
+};
+
+// Humanize an acceleration realized-savings rating for the track-record chip (never raw snake_case).
+export function realizedSavingsRatingLabel(rating: RealizedSavingsRating): string {
+  return REALIZED_SAVINGS_RATING_LABELS[rating];
 }
 
 // Turn the rolling mean signed forecast error into a plain-language bias phrase, so the
