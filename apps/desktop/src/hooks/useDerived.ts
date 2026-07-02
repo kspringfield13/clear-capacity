@@ -135,6 +135,17 @@ export function useDerived(params: UseDerivedParams) {
     [weekChatEvents, weekBlocks]
   );
 
+  // This week's imported calendar events — fed to the meeting-load miner (E5). Scoped to the current
+  // ISO week like the blocks/chat above so the engine mines *this* week's meeting load, not lifetime
+  // totals accumulated across every imported `.ics`.
+  const weekCalendarEvents = useMemo(
+    () =>
+      calendarEvents.filter(
+        (event) => getCurrentIsoWeekId(new Date(event.start_time)) === currentWeekId
+      ),
+    [calendarEvents, currentWeekId]
+  );
+
   // Who the week's reactive chat work served — the collaboration view that pairs with the
   // interruption load. Same week-scoped, metadata-only chat events; null when no chat data.
   const chatStakeholders = useMemo<ChatStakeholderSummary | null>(
@@ -188,9 +199,10 @@ export function useDerived(params: UseDerivedParams) {
   }, [accelerationHistory, currentWeekId]);
 
   // Deterministic Acceleration signals — repetitive workflows, tool-able time-sinks,
-  // context-switch hotspots, and (E4) a reactive-comms batching Play mined from this week's reviewed
-  // blocks, captured sessions, and the chat interruption analysis, ranked by reclaimable time. No AI,
-  // no network, always on (the D-tasks add the opt-in AI layer).
+  // context-switch hotspots, (E4) a reactive-comms batching Play, and (E5) meeting-load Plays mined
+  // from this week's reviewed blocks, captured sessions, the chat interruption analysis, and the
+  // imported calendar, ranked by reclaimable time. No AI, no network, always on (the D-tasks add the
+  // opt-in AI layer).
   const accelerationSignals = useMemo<AccelerationSignal[]>(
     () =>
       buildAccelerationSignals({
@@ -198,8 +210,9 @@ export function useDerived(params: UseDerivedParams) {
         sessions: activeWindowSessions,
         recurrenceBySignalId,
         interruptionLoad,
+        calendarEvents: weekCalendarEvents,
       }),
-    [weekBlocks, activeWindowSessions, recurrenceBySignalId, interruptionLoad]
+    [weekBlocks, activeWindowSessions, recurrenceBySignalId, interruptionLoad, weekCalendarEvents]
   );
 
   // Realized-savings track record (E3): for every play the user marked acted-on, score its estimate
