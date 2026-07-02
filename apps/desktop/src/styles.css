@@ -3537,6 +3537,10 @@ select {
   font-weight: 600;
 }
 
+.summary-score strong.summary-score-empty {
+  color: var(--text-muted);
+}
+
 .hero-metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
