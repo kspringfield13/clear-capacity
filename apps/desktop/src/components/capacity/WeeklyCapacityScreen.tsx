@@ -108,6 +108,33 @@ export function WeeklyCapacityScreen({
       ? `${pct(snapshot.committed_utilization_pct)} already committed · past the ${RELIABILITY_KNEE_PCT}% knee`
       : `${pct(snapshot.committed_utilization_pct)} already committed · room to the ${RELIABILITY_KNEE_PCT}% knee`;
 
+  // Explain what the committed-utilization number (the center of the target-utilization model) is
+  // made of. capacity.ts computes it as round(recurring + carryover + reactive*0.72 + frag + wip),
+  // where every term EXCEPT reactive is already an integer — so the reactive contribution derived as
+  // the remainder equals round(reactive_pct * 0.72) exactly, and the five parts sum to the displayed
+  // committed_utilization_pct with zero rounding drift (no capacity.ts change needed). The 0.72
+  // reactive discount is the model's least-obvious input, so it gets a plain-language note.
+  const committedBreakdown = useMemo(() => {
+    const reactiveContribution =
+      snapshot.committed_utilization_pct -
+      snapshot.recurring_pct -
+      snapshot.carryover_risk_pct -
+      snapshot.fragmentation_penalty_pct -
+      snapshot.wip_penalty_pct;
+    const parts = [
+      { key: "recurring", label: "Recurring & fixed", value: snapshot.recurring_pct },
+      { key: "reactive", label: "Reactive (×0.72)", value: reactiveContribution },
+      { key: "carryover", label: "Carryover risk", value: snapshot.carryover_risk_pct },
+      { key: "fragmentation", label: "Fragmentation", value: snapshot.fragmentation_penalty_pct },
+      { key: "wip", label: "WIP load", value: snapshot.wip_penalty_pct },
+    ].filter((part) => part.value > 0);
+    const note =
+      reactiveContribution > 0
+        ? "Reactive load counts at 72% of face value — interrupted work delivers less sustainable throughput (Mark et al., CHI 2008). The parts add up to your committed utilization."
+        : "The parts add up to your committed utilization.";
+    return { parts, note };
+  }, [snapshot]);
+
   // Rolling personal baselines from the weeks strictly before the one in view, so each
   // headline number reads against the user's own norm rather than an absolute scale.
   const baselines = useMemo(() => {
@@ -217,6 +244,23 @@ export function WeeklyCapacityScreen({
         <MetricCard label="Reactive load" value={snapshot.reactive_pct} helper="Unplanned support and interruption work" />
         <MetricCard label="Reliable new work" value={snapshot.reliable_new_work_capacity_pct} helper={reliableHelper} showRing title="Past ~80% utilization, delays grow sharply — we hold back the last ~20% as buffer" />
       </div>
+
+      {committedBreakdown.parts.length > 0 && (isCurrentWeek || viewedBlocks.length > 0) && (
+        <section className="committed-breakdown" aria-label="What makes up your committed load">
+          <span className="baseline-chips-label">
+            Committed load {pct(snapshot.committed_utilization_pct)} · what it&rsquo;s made of
+          </span>
+          <div className="baseline-chip-row">
+            {committedBreakdown.parts.map((part) => (
+              <span key={part.key} className="baseline-chip">
+                <span className="baseline-chip-metric">{part.label}</span>
+                <span className="baseline-chip-delta">{pct(part.value)}</span>
+              </span>
+            ))}
+          </div>
+          <p className="committed-breakdown-note">{committedBreakdown.note}</p>
+        </section>
+      )}
 
       {baselineChips.length > 0 && (isCurrentWeek || viewedBlocks.length > 0) && (
         <section className="baseline-chips" aria-label={`Selected week versus your ${baselines.week_count}-week baseline`}>

@@ -3641,6 +3641,24 @@ select {
   color: var(--text-subtle);
 }
 
+/* Committed-load breakdown: decomposes the target-utilization model's committed_utilization_pct
+   into its contributing parts under the hero metrics. Reuses the baseline-chip row styling
+   (.baseline-chips-label / .baseline-chip-row / .baseline-chip), like the stakeholder chips —
+   only the column wrapper (label above the row, note below) and the note need their own rules. */
+.committed-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: -2px 0 14px;
+}
+
+.committed-breakdown-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-subtle);
+}
+
 /* The stakeholder chip row reuses the baseline-chip styling but follows the interruption
    note rather than the metric cards, so it wants normal top spacing, not the negative pull. */
 .stakeholder-chips {
