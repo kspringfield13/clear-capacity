@@ -85,6 +85,7 @@ interface ScreenRouterProps {
   calendarEvents: OutlookCalendarEvent[];
   captureError: string | null;
   importError: string | null;
+  lastCalendarImportSummary: string | null;
   onImportOutlookIcs: (file: File) => void;
   chatImportError: string | null;
   onImportChatExport: (file: File) => void;
@@ -188,6 +189,7 @@ export function ScreenRouter({
   calendarEvents,
   captureError,
   importError,
+  lastCalendarImportSummary,
   onImportOutlookIcs,
   chatImportError,
   onImportChatExport,
@@ -266,6 +268,7 @@ export function ScreenRouter({
           activeWindowSessions={activeWindowSessions}
           captureError={captureError}
           importError={importError}
+          lastCalendarImportSummary={lastCalendarImportSummary}
           onImportOutlookIcs={onImportOutlookIcs}
           chatImportError={chatImportError}
           onImportChatExport={onImportChatExport}

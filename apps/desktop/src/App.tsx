@@ -8,6 +8,7 @@ import type {
   AccelerationSignal,
   ActiveWindowSample,
   AuditEvent,
+  OutlookCalendarEvent,
   RawEvent,
   ReviewCopilotSuggestion,
   SavedSkill,
@@ -32,7 +33,7 @@ import {
   getLocalDateKey,
 } from "./lib/date";
 import { fieldLabel, humanizeCorrectionValue } from "./lib/format";
-import { createAccelerationPlayAuditEvent, createAuditEvent, createChatImportAuditEvent } from "./lib/audit";
+import { createAccelerationPlayAuditEvent, createAuditEvent, createCalendarImportAuditEvent, createChatImportAuditEvent } from "./lib/audit";
 import { removeSeededCorrections, removeSeededWorkBlocks } from "./lib/blocks";
 import { useDerived } from "./hooks/useDerived";
 import { usePersistence } from "./hooks/usePersistence";
@@ -80,6 +81,21 @@ const UNDOABLE_CORRECTION_FIELDS = [
   "project_name",
   "stakeholder_group"
 ] as const satisfies readonly (keyof WorkBlock)[];
+
+// True when a re-imported calendar event carries different content than the stored one
+// under the same `calendar_event_id`. Excludes identity/constant fields (`calendar_event_id`,
+// `uid`, `source`) and `imported_at` (stamped fresh on every parse, so it always differs and
+// would misreport an unchanged event as "updated").
+function calendarEventChanged(prior: OutlookCalendarEvent, next: OutlookCalendarEvent): boolean {
+  return (
+    prior.title !== next.title ||
+    prior.start_time !== next.start_time ||
+    prior.end_time !== next.end_time ||
+    prior.location !== next.location ||
+    prior.organizer !== next.organizer ||
+    prior.attendee_count !== next.attendee_count
+  );
+}
 
 export function App() {
   const [isDemoMode] = useState(() => new URLSearchParams(window.location.search).get("demo") === "1");
@@ -206,6 +222,7 @@ export function App() {
   );
   const [visualContextAttemptedSessionIds, setVisualContextAttemptedSessionIds] = useState<string[]>([]);
   const [importError, setImportError] = useState<string | null>(null);
+  const [lastCalendarImportSummary, setLastCalendarImportSummary] = useState<string | null>(null);
   const [chatImportError, setChatImportError] = useState<string | null>(null);
   const [captureError, setCaptureError] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -1206,6 +1223,7 @@ export function App() {
     resetAcceleration();
     resetVisualContext();
     setImportError(null);
+    setLastCalendarImportSummary(null);
     setChatImportError(null);
     setCaptureError(null);
     setPaused(true);
@@ -1233,6 +1251,30 @@ export function App() {
           failImport("No usable calendar events were found in that .ics file.");
           return;
         }
+
+        // Diff the parsed events against what's already stored so a re-import isn't a
+        // silent no-op. The merge is an UPSERT (below) — it never drops stored events —
+        // so the honest delta is added / updated / unchanged; there is no truthful
+        // "removed" count (an event missing from the new file is retained, not deleted).
+        const priorEventsById = new Map(calendarEvents.map((event) => [event.calendar_event_id, event]));
+        const previousEventCount = calendarEvents.length;
+        let addedCount = 0;
+        let updatedCount = 0;
+        let unchangedCount = 0;
+        importedEvents.forEach((event) => {
+          const prior = priorEventsById.get(event.calendar_event_id);
+          if (!prior) {
+            addedCount += 1;
+          } else if (calendarEventChanged(prior, event)) {
+            updatedCount += 1;
+          } else {
+            unchangedCount += 1;
+          }
+        });
+        const deltaParts: string[] = [];
+        if (addedCount > 0) deltaParts.push(`+${addedCount} new`);
+        if (updatedCount > 0) deltaParts.push(`${updatedCount} updated`);
+        if (unchangedCount > 0) deltaParts.push(`${unchangedCount} unchanged`);
 
         setCalendarEvents((current) => {
           const merged = new Map(current.map((event) => [event.calendar_event_id, event]));
@@ -1267,26 +1309,26 @@ export function App() {
         });
         setAuditEvents((current) => [
           ...current,
-          createAuditEvent({
-            type: "calendar_import",
-            source: "outlook_ics",
-            title: "Outlook calendar imported",
-            summary: `${importedEvents.length} events parsed from ${file.name}`,
-            privacy_level: "local_only",
-            details: {
-              file_name: file.name,
-              imported_event_count: importedEvents.length,
-              event_ids: importedEvents.map((event) => event.calendar_event_id),
-              stored_locally: true,
-              sent_to_cloud: false,
-              email_bodies: false,
-              meeting_notes: false
-            }
+          createCalendarImportAuditEvent({
+            fileName: file.name,
+            importedEventIds: importedEvents.map((event) => event.calendar_event_id),
+            addedCount,
+            updatedCount,
+            unchangedCount,
+            previousEventCount
           })
         ].slice(-1000));
+        // Persist the delta as a lingering Settings line (the toast auto-expires) so the
+        // user can confirm the calendar stayed in sync after the fact.
+        setLastCalendarImportSummary(deltaParts.length > 0 ? deltaParts.join(" · ") : null);
+        const importedCount = importedEvents.length;
+        const baseMessage = `${importedCount} event${importedCount === 1 ? "" : "s"} imported`;
         pushToast({
           tone: "success",
-          message: `${importedEvents.length} event${importedEvents.length === 1 ? "" : "s"} imported`,
+          message:
+            previousEventCount > 0 && deltaParts.length > 0
+              ? `${baseMessage} (${deltaParts.join(", ")})`
+              : baseMessage,
         });
       } catch {
         failImport("The .ics file could not be parsed.");
@@ -1484,6 +1526,7 @@ export function App() {
         calendarEvents={calendarEvents}
         captureError={captureError}
         importError={importError}
+        lastCalendarImportSummary={lastCalendarImportSummary}
         onImportOutlookIcs={importOutlookIcs}
         chatImportError={chatImportError}
         onImportChatExport={importWorkplaceChat}

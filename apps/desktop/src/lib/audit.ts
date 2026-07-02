@@ -42,6 +42,46 @@ export function createChatImportAuditEvent(input: {
 }
 
 /**
+ * Build the audit event for an Outlook `.ics` calendar import. A local file import is
+ * not a network call, so `privacy_level` is `local_only`, and the details affirm the
+ * privacy invariant (`email_bodies: false`, `meeting_notes: false`). The import is an
+ * UPSERT merge — re-importing never drops previously-stored events — so the recorded
+ * delta is added / updated / unchanged against the prior calendar (there is no truthful
+ * "removed" count), making a re-import auditable rather than a silent no-op.
+ */
+export function createCalendarImportAuditEvent(input: {
+  fileName: string;
+  importedEventIds: string[];
+  addedCount: number;
+  updatedCount: number;
+  unchangedCount: number;
+  previousEventCount: number;
+}): AuditEvent {
+  const { fileName, importedEventIds, addedCount, updatedCount, unchangedCount, previousEventCount } = input;
+  const importedCount = importedEventIds.length;
+  return createAuditEvent({
+    type: "calendar_import",
+    source: "outlook_ics",
+    title: "Outlook calendar imported",
+    summary: `${importedCount} events parsed from ${fileName}`,
+    privacy_level: "local_only",
+    details: {
+      file_name: fileName,
+      imported_event_count: importedCount,
+      added_event_count: addedCount,
+      updated_event_count: updatedCount,
+      unchanged_event_count: unchangedCount,
+      previous_event_count: previousEventCount,
+      event_ids: importedEventIds,
+      stored_locally: true,
+      sent_to_cloud: false,
+      email_bodies: false,
+      meeting_notes: false
+    }
+  });
+}
+
+/**
  * Build the audit event for a discrete user action on an Acceleration Play: bookmark
  * (`saved`), hide (`dismissed`), or snapshot its generated recipe into the Saved Skills
  * library (`saved_to_library`). Plays are mined from the user's observed work, so the event

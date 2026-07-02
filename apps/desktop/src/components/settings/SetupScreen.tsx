@@ -98,6 +98,7 @@ export function SetupScreen({
   activeWindowSessions,
   captureError,
   importError,
+  lastCalendarImportSummary,
   onImportOutlookIcs,
   chatImportError,
   onImportChatExport,
@@ -122,6 +123,7 @@ export function SetupScreen({
   activeWindowSessions: ActivitySession[];
   captureError: string | null;
   importError: string | null;
+  lastCalendarImportSummary: string | null;
   onImportOutlookIcs: (file: File) => void;
   chatImportError: string | null;
   onImportChatExport: (file: File) => void;
@@ -326,6 +328,7 @@ export function SetupScreen({
         <div className="settings-row-status">
           <strong>{calendarEvents.length} events</strong>
           <span>{latestImport ? `Imported ${formatAuditTime(latestImport)}` : "Not imported yet"}</span>
+          {lastCalendarImportSummary && <small className="import-delta">{lastCalendarImportSummary}</small>}
           {importError && <small className="import-error">{importError}</small>}
         </div>
         <label className="settings-control">
