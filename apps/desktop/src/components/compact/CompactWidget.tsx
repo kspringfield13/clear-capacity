@@ -38,6 +38,8 @@ export function CompactWidget({
   const observedMinutesToday = activeWindowSessions
     .filter((session) => getLocalDateKey(new Date(session.start_time)) === today)
     .reduce((total, session) => total + session.duration_minutes, 0);
+  const observedTodayValue = observedMinutesToday > 0 ? formatDurationMinutes(observedMinutesToday) : "--";
+  const reliableCapacityValue = snapshot.allocated_pct > 0 ? pct(snapshot.reliable_new_work_capacity_pct) : "--";
 
   return (
     <section className="quick-view">
@@ -83,13 +85,23 @@ export function CompactWidget({
       </section>
 
       <section className="quick-stats">
-        <button type="button" onClick={() => onOpenScreen("ledger")}>
+        <button
+          type="button"
+          title="Open work ledger"
+          aria-label={`Observed today: ${observedMinutesToday > 0 ? observedTodayValue : "no activity yet"}. Open work ledger`}
+          onClick={() => onOpenScreen("ledger")}
+        >
           <span>Observed today</span>
-          <strong>{observedMinutesToday > 0 ? formatDurationMinutes(observedMinutesToday) : "--"}</strong>
+          <strong>{observedTodayValue}</strong>
         </button>
-        <button type="button" onClick={() => onOpenScreen("weekly")}>
+        <button
+          type="button"
+          title="Open weekly capacity"
+          aria-label={`Reliable capacity: ${snapshot.allocated_pct > 0 ? reliableCapacityValue : "not yet estimated"}. Open weekly capacity`}
+          onClick={() => onOpenScreen("weekly")}
+        >
           <span>Reliable capacity</span>
-          <strong>{snapshot.allocated_pct > 0 ? pct(snapshot.reliable_new_work_capacity_pct) : "--"}</strong>
+          <strong>{reliableCapacityValue}</strong>
         </button>
       </section>
 
