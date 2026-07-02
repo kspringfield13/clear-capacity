@@ -408,12 +408,22 @@ export function WeeklyCapacityScreen({
               value={snapshot.carryover_risk_pct / 40}
               tooltip="Likelihood of blocks spilling into next week: 0 = low, 100 = high"
               hint="/100"
+              caption={
+                snapshot.carryover_risk_pct > 0
+                  ? `~${pct(snapshot.carryover_risk_pct)} of this week's load is at risk of slipping`
+                  : undefined
+              }
             />
             <RiskRow
               label="Meeting density"
               value={snapshot.meeting_pct / 35}
               tooltip="Meeting load relative to capacity: 0 = light, 100 = saturated"
               hint="/100"
+              caption={
+                snapshot.meeting_pct > 0
+                  ? `Meetings fill ~${pct(snapshot.meeting_pct)} of your tracked week`
+                  : undefined
+              }
             />
             <RiskRow
               label="Active blockers"
