@@ -44,6 +44,7 @@ export function AuditEventRow({ event, pushToast }: { event: AuditEvent; pushToa
           <button
             type="button"
             onClick={() => void handleCopyJson()}
+            aria-label={copied ? `JSON copied for ${event.title}` : `Copy JSON for ${event.title}`}
           >
             <ClipboardCopy size={15} />
             {copied ? "JSON Copied" : "Copy JSON"}
