@@ -374,6 +374,9 @@ export function WeeklyCapacityScreen({
             <h2>Delivery risk modifiers</h2>
             <span>forecast inputs</span>
           </div>
+          <p className="risk-scale-note">
+            Higher scores add more delivery risk to next week — lower is better.
+          </p>
           <div className="risk-list">
             <RiskRow
               label="Context switch burden"

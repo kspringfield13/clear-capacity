@@ -3652,11 +3652,16 @@ select {
   margin: -2px 0 14px;
 }
 
-.committed-breakdown-note {
+.committed-breakdown-note,
+.risk-scale-note {
   margin: 0;
   font-size: 12px;
   line-height: 1.4;
   color: var(--text-subtle);
+}
+
+.risk-scale-note {
+  margin: -2px 0 10px;
 }
 
 /* The stakeholder chip row reuses the baseline-chip styling but follows the interruption
