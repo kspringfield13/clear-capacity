@@ -308,7 +308,14 @@ export function createDemoState(reference = new Date()): PersistedAppState {
 
   const calendarEvents: OutlookCalendarEvent[] = [
     ["demo-calendar-planning", "Weekly planning sync", 0, 245, 60, "planning@example.com", 6],
-    ["demo-calendar-product", "Product metrics review", 1, 285, 60, "product@example.com", 8]
+    ["demo-calendar-product", "Product metrics review", 1, 285, 60, "product@example.com", 8],
+    // A daily 15-min standup recurring Mon–Fri — the recurring low-value meeting the E5 miner turns
+    // into a "make it async" TECHNIQUE Play (a distinct meeting card on ?demo=1&screen=accelerate).
+    ["demo-calendar-standup-0", "Daily analytics standup", 0, 0, 15, "standup@example.com", 5],
+    ["demo-calendar-standup-1", "Daily analytics standup", 1, 0, 15, "standup@example.com", 5],
+    ["demo-calendar-standup-2", "Daily analytics standup", 2, 0, 15, "standup@example.com", 5],
+    ["demo-calendar-standup-3", "Daily analytics standup", 3, 0, 15, "standup@example.com", 5],
+    ["demo-calendar-standup-4", "Daily analytics standup", 4, 0, 15, "standup@example.com", 5]
   ].map(([id, title, day, minute, duration, organizer, attendeeCount]) => ({
     calendar_event_id: String(id),
     uid: `${id}@example.com`,

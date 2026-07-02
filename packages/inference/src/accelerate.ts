@@ -2,6 +2,7 @@ import type {
   AccelerationPlayType,
   AccelerationSignal,
   ActivitySession,
+  OutlookCalendarEvent,
   WorkBlock,
   WorkCategory
 } from "../../domain/src/models";
@@ -541,6 +542,229 @@ export function detectReactiveLoad(
   ];
 }
 
+/** A meeting title must recur at least this many times in the observed week to count as recurring. */
+const MIN_MEETING_RECURRENCES = MIN_RECURRENCES;
+
+/**
+ * Two consecutive meetings on the same day separated by less than this many minutes leave no real
+ * focus window between them — a back-to-back transition whose refocus tax protecting a block reclaims.
+ */
+const MEETING_FOCUS_GAP_MINUTES = 30;
+
+/** A day needs at least this many back-to-back transitions before a focus-guard Play is worth it. */
+const MIN_BACK_TO_BACK_TRANSITIONS = 2;
+
+/** Whole minutes between two ISO timestamps, or 0 when either is unparseable or non-positive. */
+function eventMinutes(startIso: string, endIso: string) {
+  const start = new Date(startIso).getTime();
+  const end = new Date(endIso).getTime();
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
+    return 0;
+  }
+  return (end - start) / 60_000;
+}
+
+/** Normalize a meeting title for recurrence grouping: trimmed, lower-cased, whitespace-collapsed. */
+function normalizeMeetingTitle(title: string) {
+  return title.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+const WEEKDAY_LABELS = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday"
+];
+
+/** Local weekday name for an ISO timestamp, or null when it is unparseable. */
+function weekdayLabel(iso: string): string | null {
+  const date = new Date(iso);
+  return Number.isFinite(date.getTime()) ? WEEKDAY_LABELS[date.getDay()] : null;
+}
+
+/** Local calendar-day key (YYYY-MM-DD) for grouping events by day, or null when unparseable. */
+function localDateKey(iso: string): string | null {
+  const date = new Date(iso);
+  if (!Number.isFinite(date.getTime())) {
+    return null;
+  }
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+interface MeetingSeries {
+  /** Display title (first-seen original casing) for the recurring series. */
+  title: string;
+  count: number;
+  totalMinutes: number;
+  attendeeSum: number;
+}
+
+interface MeetingDay {
+  label: string;
+  intervals: { start: number; end: number }[];
+}
+
+/**
+ * Detect meeting load from imported calendar events — the single largest reclaimable sink for analysts,
+ * and the one input the other three miners never see. Emits `technique` Plays for (1) recurring meetings
+ * (same title observed ≥ MIN_MEETING_RECURRENCES times — an async-update candidate) and (2) a day whose
+ * meetings stack back-to-back with no real focus gap (protect a focus block). Pure; dedup/ranking across
+ * detectors is the aggregator's job.
+ *
+ * Estimate model (both `technique`, so the estimate IS the reclaimable minutes — capture fraction 1 in
+ * the E3 track record): the recurring-meeting Play reclaims the conservative shared `SAVINGS_FRACTION` of
+ * the series' time (an async equivalent still costs some reading/writing), while the focus-guard Play
+ * reclaims the refocus tax of the back-to-back transitions using the SAME Mark-et-al.-grounded
+ * `REFOCUS_MINUTES_PER_SWITCH` the other refocus detectors price a switch at. Meeting refocus is a
+ * distinct friction source from app-switch hotspots (sessions) and reactive-chat bursts (chat), so it is
+ * never cross-deduped against them — like the other `technique` detectors, its minutes sum into the
+ * "est. saved/week" headline as a conservative planning aid, not a guarantee.
+ *
+ * Privacy: reads meeting metadata (title, times, attendee count) and emits counts / durations /
+ * recurrence / day-of-week only — never event bodies. Plays are mined from aggregate meeting metadata,
+ * so `derived_from` is [] (the evidence lines carry the metadata-only provenance), matching the E4
+ * reactive-load Play.
+ */
+export function detectMeetingLoad(events: OutlookCalendarEvent[]): AccelerationSignal[] {
+  if (events.length === 0) {
+    return [];
+  }
+
+  const signals: AccelerationSignal[] = [];
+
+  // --- Recurring meetings: same title observed ≥ MIN_MEETING_RECURRENCES times → an async candidate.
+  const series = new Map<string, MeetingSeries>();
+  for (const event of events) {
+    const key = normalizeMeetingTitle(event.title);
+    if (!key) {
+      continue;
+    }
+    let group = series.get(key);
+    if (!group) {
+      group = { title: event.title.trim(), count: 0, totalMinutes: 0, attendeeSum: 0 };
+      series.set(key, group);
+    }
+    group.count += 1;
+    group.totalMinutes += eventMinutes(event.start_time, event.end_time);
+    group.attendeeSum += Number.isFinite(event.attendee_count) ? Math.max(0, event.attendee_count) : 0;
+  }
+
+  for (const group of series.values()) {
+    if (group.count < MIN_MEETING_RECURRENCES || group.totalMinutes <= 0) {
+      continue;
+    }
+    const estimatedSaved = Math.round(SAVINGS_FRACTION * group.totalMinutes);
+    if (estimatedSaved <= 0) {
+      continue;
+    }
+    const hoursPerWeek = group.totalMinutes / 60;
+    const avgAttendees = Math.round(group.attendeeSum / group.count);
+    const confidence = Math.min(0.9, 0.5 + (group.count - MIN_MEETING_RECURRENCES) * 0.1);
+
+    const evidence = [
+      `"${group.title}" recurred ${group.count} times this week (${hoursPerWeek.toFixed(1)}h total)`,
+      avgAttendees > 0
+        ? `About ${avgAttendees} attendee${avgAttendees === 1 ? "" : "s"} per instance`
+        : "Recurring calendar series",
+      `Moving it to an async update could reclaim ~${Math.round(SAVINGS_FRACTION * 100)}% of that time`
+    ];
+
+    signals.push({
+      signal_id: `technique-${stableHash(`meeting-recurring:${normalizeMeetingTitle(group.title)}`)}`,
+      type: "technique",
+      title: `Recurring meeting: ${group.title}`,
+      detail: `"${group.title}" recurred ${group.count} times this week (~${hoursPerWeek.toFixed(1)}h). Making it an async update — a status thread or a recorded summary — could reclaim about ${estimatedSaved} min/week.`,
+      evidence,
+      estimated_minutes_saved_per_week: estimatedSaved,
+      confidence: Number(confidence.toFixed(2)),
+      // Mined from aggregate meeting metadata, not enumerable per-item source ids — the evidence
+      // lines above carry the (metadata-only) provenance.
+      derived_from: []
+    });
+  }
+
+  // --- Back-to-back stacks: the day with the most tight meeting transitions → protect a focus block.
+  const days = new Map<string, MeetingDay>();
+  for (const event of events) {
+    const start = new Date(event.start_time).getTime();
+    const end = new Date(event.end_time).getTime();
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
+      continue;
+    }
+    const key = localDateKey(event.start_time);
+    const label = weekdayLabel(event.start_time);
+    if (!key || !label) {
+      continue;
+    }
+    let day = days.get(key);
+    if (!day) {
+      day = { label, intervals: [] };
+      days.set(key, day);
+    }
+    day.intervals.push({ start, end });
+  }
+
+  let totalTightTransitions = 0;
+  let busiestDayLabel: string | null = null;
+  let busiestDayTransitions = 0;
+  for (const day of days.values()) {
+    const sorted = [...day.intervals].sort((left, right) => left.start - right.start);
+    let tight = 0;
+    for (let index = 1; index < sorted.length; index += 1) {
+      const gapMinutes = (sorted[index].start - sorted[index - 1].end) / 60_000;
+      if (gapMinutes < MEETING_FOCUS_GAP_MINUTES) {
+        tight += 1;
+      }
+    }
+    totalTightTransitions += tight;
+    if (tight > busiestDayTransitions) {
+      busiestDayTransitions = tight;
+      busiestDayLabel = day.label;
+    }
+  }
+
+  if (busiestDayLabel && busiestDayTransitions >= MIN_BACK_TO_BACK_TRANSITIONS) {
+    const estimatedSaved = REFOCUS_MINUTES_PER_SWITCH * totalTightTransitions;
+    if (estimatedSaved > 0) {
+      const confidence = Math.min(
+        0.85,
+        0.5 + (busiestDayTransitions - MIN_BACK_TO_BACK_TRANSITIONS) * 0.1
+      );
+      signals.push({
+        // Stable id (one focus-guard Play per week) so E2 recurrence + E3 track record can follow it.
+        signal_id: `technique-${stableHash("meeting-focus-guard")}`,
+        type: "technique",
+        title: `Protect a focus block on ${busiestDayLabel}`,
+        detail: `${busiestDayLabel} has ${busiestDayTransitions} back-to-back meeting transitions with no real focus gap between them. Blocking a protected focus window — and shortening or declining one adjacent meeting — reclaims the refocus tax of jumping straight from one meeting into the next.`,
+        evidence: [
+          `${busiestDayTransitions} back-to-back meeting transitions on ${busiestDayLabel} (gaps under ${MEETING_FOCUS_GAP_MINUTES} min)`,
+          `${totalTightTransitions} such tight transitions across the week`,
+          `Each avoided back-to-back reclaims ~${REFOCUS_MINUTES_PER_SWITCH} min of refocus time`
+        ],
+        estimated_minutes_saved_per_week: estimatedSaved,
+        confidence: Number(confidence.toFixed(2)),
+        derived_from: []
+      });
+    }
+  }
+
+  // Sensible standalone ordering (aggregator re-ranks): biggest reclaimable time first, id as tie-break.
+  signals.sort((left, right) => {
+    if (left.estimated_minutes_saved_per_week !== right.estimated_minutes_saved_per_week) {
+      return right.estimated_minutes_saved_per_week - left.estimated_minutes_saved_per_week;
+    }
+    return left.signal_id < right.signal_id ? -1 : left.signal_id > right.signal_id ? 1 : 0;
+  });
+
+  return signals;
+}
+
 /** Cap the surfaced Plays to a focused, reviewable set — the highest-leverage signals only. */
 const MAX_ACCELERATION_SIGNALS = 6;
 
@@ -561,6 +785,13 @@ export interface AccelerationMiningInput {
    * no reactive-load Play.
    */
   interruptionLoad?: InterruptionLoadAnalysis | null;
+  /**
+   * Optional imported calendar events (E5). When present, the miner mines recurring low-value
+   * meetings and back-to-back meeting stacks into `technique` Plays — the meeting load the other
+   * detectors never see. Metadata-only (title / times / attendee count), never event bodies.
+   * Missing/empty ⇒ no meeting Plays.
+   */
+  calendarEvents?: OutlookCalendarEvent[];
 }
 
 /** Per-recurring-week ranking bump — a persistent habit ranks slightly above a one-off. */
@@ -628,8 +859,9 @@ function isSubsetOrEqual(a: Set<string>, b: Set<string>) {
 
 /**
  * The single entry point the UI/derived layer consumes: run the deterministic miners
- * (B1 repetitive sequences, B2 time-sinks, B3 context-switch hotspots, and — when an interruption
- * analysis is supplied — E4 reactive-load), dedupe, select and cap by the DETERMINISTIC
+ * (B1 repetitive sequences, B2 time-sinks, B3 context-switch hotspots, E4 reactive-load when an
+ * interruption analysis is supplied, and E5 meeting load when calendar events are supplied), dedupe,
+ * select and cap by the DETERMINISTIC
  * `estimated_minutes_saved_per_week × confidence` score, then apply cross-week recurrence (E2) as a
  * final ORDERING nudge over the survivors.
  *
@@ -650,13 +882,14 @@ function isSubsetOrEqual(a: Set<string>, b: Set<string>) {
  * hotspot whose sessions happen to overlap another's.
  */
 export function buildAccelerationSignals(input: AccelerationMiningInput): AccelerationSignal[] {
-  const { blocks, sessions, recurrenceBySignalId, interruptionLoad } = input;
+  const { blocks, sessions, recurrenceBySignalId, interruptionLoad, calendarEvents } = input;
 
   const mined = [
     ...detectRepetitiveSequences(sessions),
     ...detectTimeSinks(blocks, sessions),
     ...detectContextSwitchHotspots(sessions),
-    ...detectReactiveLoad(interruptionLoad)
+    ...detectReactiveLoad(interruptionLoad),
+    ...detectMeetingLoad(calendarEvents ?? [])
   ];
 
   const byId = new Map<string, AccelerationSignal>();
