@@ -109,6 +109,8 @@ export interface PersistedAppState {
   dismissedPlayIds: string[];
   /** signal_ids of Acceleration Plays the user saved for later. */
   savedPlayIds: string[];
+  /** signal_ids of Acceleration Plays the user marked as acted on (feeds the realized-savings track record). */
+  actedOnPlayIds: string[];
   /** Latest AI-authored Acceleration Plays (opt-in synthesis); null until generated. */
   generatedPlays: PersistedAccelerationRecord | null;
   /** User-saved acceleration skill recipes (durable snapshots, survive regeneration). */
@@ -285,6 +287,7 @@ export async function readPersistedState(): Promise<PersistedAppState | null> {
         visualContextInsights: Array.isArray(parsed.visualContextInsights) ? (parsed.visualContextInsights as VisualContextInsight[]) : [],
         dismissedPlayIds: parseStringIdList(parsed.dismissedPlayIds),
         savedPlayIds: parseStringIdList(parsed.savedPlayIds),
+        actedOnPlayIds: parseStringIdList(parsed.actedOnPlayIds),
         generatedPlays: parseAccelerationRecord(parsed.generatedPlays),
         savedSkills: parseSavedSkills(parsed.savedSkills),
         managerSummaryText: typeof parsed.managerSummaryText === "string" ? parsed.managerSummaryText : null,
@@ -335,6 +338,7 @@ export async function readPersistedState(): Promise<PersistedAppState | null> {
         : [],
       dismissedPlayIds: parseStringIdList(parsed.dismissedPlayIds),
       savedPlayIds: parseStringIdList(parsed.savedPlayIds),
+      actedOnPlayIds: parseStringIdList(parsed.actedOnPlayIds),
       generatedPlays: parseAccelerationRecord(parsed.generatedPlays),
       savedSkills: parseSavedSkills(parsed.savedSkills),
       managerSummaryText:

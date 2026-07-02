@@ -93,19 +93,21 @@ export function createCalendarImportAuditEvent(input: {
  * discrete action to record.
  */
 export function createAccelerationPlayAuditEvent(input: {
-  action: "saved" | "dismissed" | "saved_to_library";
+  action: "saved" | "dismissed" | "saved_to_library" | "acted_on";
   signal: AccelerationSignal;
 }): AuditEvent {
   const { action, signal } = input;
   const titles: Record<typeof action, string> = {
     saved: "Acceleration play saved",
     dismissed: "Acceleration play dismissed",
-    saved_to_library: "Acceleration skill saved to library"
+    saved_to_library: "Acceleration skill saved to library",
+    acted_on: "Acceleration play marked acted on"
   };
   const summaries: Record<typeof action, string> = {
     saved: `Saved the "${signal.title}" play`,
     dismissed: `Dismissed the "${signal.title}" play`,
-    saved_to_library: `Saved the "${signal.title}" skill recipe to your library`
+    saved_to_library: `Saved the "${signal.title}" skill recipe to your library`,
+    acted_on: `Marked the "${signal.title}" play as acted on`
   };
   return createAuditEvent({
     type: "acceleration_engine",

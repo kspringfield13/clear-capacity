@@ -50,9 +50,12 @@ interface ScreenRouterProps {
   accelerationPlays: AccelerationPlay[];
   dismissedPlayIds: string[];
   savedPlayIds: string[];
+  actedOnPlayIds: string[];
   onDismissPlay: (signal: AccelerationSignal) => void;
   onSavePlay: (signal: AccelerationSignal) => void;
   onUnsavePlay: (signalId: string) => void;
+  onMarkPlayActedOn: (signal: AccelerationSignal) => void;
+  onUnmarkPlayActedOn: (signalId: string) => void;
   onRestoreDismissedPlays: () => void;
   // saved skills library
   savedSkills: SavedSkill[];
@@ -158,9 +161,12 @@ export function ScreenRouter({
   accelerationPlays,
   dismissedPlayIds,
   savedPlayIds,
+  actedOnPlayIds,
   onDismissPlay,
   onSavePlay,
   onUnsavePlay,
+  onMarkPlayActedOn,
+  onUnmarkPlayActedOn,
   onRestoreDismissedPlays,
   savedSkills,
   savedSkillIds,
@@ -398,10 +404,13 @@ export function ScreenRouter({
           signals={accelerationPlays}
           dismissedPlayIds={dismissedPlayIds}
           savedPlayIds={savedPlayIds}
+          actedOnPlayIds={actedOnPlayIds}
           savedSkillIds={savedSkillIds}
           onDismissPlay={onDismissPlay}
           onSavePlay={onSavePlay}
           onUnsavePlay={onUnsavePlay}
+          onMarkPlayActedOn={onMarkPlayActedOn}
+          onUnmarkPlayActedOn={onUnmarkPlayActedOn}
           onSaveSkill={onSaveSkill}
           onRemoveSkill={onRemoveSkill}
           onRestoreDismissedPlays={onRestoreDismissedPlays}

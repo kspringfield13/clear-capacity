@@ -129,6 +129,7 @@ export function App() {
         setVisualContextInsights(data.visualContextInsights ?? []);
         setDismissedPlayIds(data.dismissedPlayIds ?? []);
         setSavedPlayIds(data.savedPlayIds ?? []);
+        setActedOnPlayIds(data.actedOnPlayIds ?? []);
         setGeneratedPlays(data.generatedPlays ?? null);
         setSavedSkills(data.savedSkills ?? []);
         setAiConfig(data.aiConfig ?? null);
@@ -194,6 +195,11 @@ export function App() {
   );
   const [savedPlayIds, setSavedPlayIds] = useState<string[]>(
     () => persistedSnapshot?.savedPlayIds ?? []
+  );
+  // signal_ids of Acceleration Plays the user marked as acted on — the foundation the
+  // realized-savings track record (E3) scores against.
+  const [actedOnPlayIds, setActedOnPlayIds] = useState<string[]>(
+    () => persistedSnapshot?.actedOnPlayIds ?? []
   );
   // Latest AI-authored Acceleration Plays (opt-in synthesis). Persisted separately from
   // the deterministic signals (which re-derive each render) and merged back on by signal_id.
@@ -284,6 +290,7 @@ export function App() {
     visualContextInsights,
     dismissedPlayIds,
     savedPlayIds,
+    actedOnPlayIds,
     generatedPlays,
     savedSkills,
     aiConfig,
@@ -889,6 +896,25 @@ export function App() {
     setSavedPlayIds((current) => current.filter((id) => id !== signalId));
   }
 
+  // User marked an Acceleration Play as acted on — the discrete "I tried this" signal the
+  // realized-savings track record (E3) scores against. Derived-only evidence makes it a
+  // `derived_only` event. No-op if already recorded so re-renders never double-log.
+  function markPlayActedOn(signal: AccelerationSignal) {
+    if (actedOnPlayIds.includes(signal.signal_id)) return;
+    setActedOnPlayIds((current) =>
+      current.includes(signal.signal_id) ? current : [...current, signal.signal_id]
+    );
+    if (isDemoMode) return;
+    setAuditEvents((current) =>
+      [...current, createAccelerationPlayAuditEvent({ action: "acted_on", signal })].slice(-1000)
+    );
+  }
+
+  // Undo an "acted on" mark (a mistaken toggle) — not audited, mirroring unsavePlay.
+  function unmarkPlayActedOn(signalId: string) {
+    setActedOnPlayIds((current) => current.filter((id) => id !== signalId));
+  }
+
   // Snapshot an AUTOMATE Play's AI-authored recipe into the durable skills library. Storing
   // the recipe TEXT (not just the signal_id) is what makes a generated skill reusable beyond
   // the session — it survives regeneration and the miner retiring the signal. Upserts by
@@ -1207,6 +1233,7 @@ export function App() {
     setVisualContextAttemptedSessionIds([]);
     setDismissedPlayIds([]);
     setSavedPlayIds([]);
+    setActedOnPlayIds([]);
     setGeneratedPlays(null);
     setSavedSkills([]);
     setRetentionDays(null);
@@ -1496,9 +1523,12 @@ export function App() {
         accelerationPlays={accelerationPlays}
         dismissedPlayIds={dismissedPlayIds}
         savedPlayIds={savedPlayIds}
+        actedOnPlayIds={actedOnPlayIds}
         onDismissPlay={dismissPlay}
         onSavePlay={savePlay}
         onUnsavePlay={unsavePlay}
+        onMarkPlayActedOn={markPlayActedOn}
+        onUnmarkPlayActedOn={unmarkPlayActedOn}
         onRestoreDismissedPlays={restoreDismissedPlays}
         savedSkills={savedSkills}
         savedSkillIds={savedSkillIds}

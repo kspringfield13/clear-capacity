@@ -2112,6 +2112,7 @@ h3 {
 
 .play-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 7px;
   margin-top: auto;
   padding-top: 2px;
@@ -2141,6 +2142,11 @@ h3 {
 .play-action-save.is-saved {
   border-color: var(--success);
   color: var(--success);
+}
+
+.play-action-acted.is-acted {
+  border-color: var(--info);
+  color: var(--info);
 }
 
 .acceleration-restore {

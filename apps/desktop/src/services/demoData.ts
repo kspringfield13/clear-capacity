@@ -429,7 +429,7 @@ export function createDemoState(reference = new Date()): PersistedAppState {
 
   return {
     version: 1, blocks, calendarEvents, chatEvents, activeWindowSamples, auditEvents, corrections, reviewSuggestions,
-    visualContextEnabled: true, visualContextInsights, dismissedPlayIds: [], savedPlayIds: [], generatedPlays: null,
+    visualContextEnabled: true, visualContextInsights, dismissedPlayIds: [], savedPlayIds: [], actedOnPlayIds: [], generatedPlays: null,
     savedSkills: [
       {
         signal_id: "automate-demo-revenue-report",
