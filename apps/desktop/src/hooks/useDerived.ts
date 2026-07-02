@@ -10,7 +10,7 @@ import type {
   RawEvent,
   AccelerationSignal,
 } from "../../../../packages/domain/src/models";
-import type { PersistedNarrativeRecord, PersistedForecastRecord, PersistedSnapshotRecord, ForecastAccuracyReview } from "../services/localStore";
+import type { PersistedNarrativeRecord, PersistedForecastRecord, PersistedSnapshotRecord, PersistedAccelerationSnapshot, ForecastAccuracyReview } from "../services/localStore";
 import { getCurrentIsoWeekId, getLocalDateKey, replaceIsoWeekIds } from "../lib/date";
 import { pct } from "../lib/format";
 
@@ -22,6 +22,7 @@ interface UseDerivedParams {
   generatedNarrative: PersistedNarrativeRecord | null;
   forecastHistory: PersistedForecastRecord[];
   snapshotHistory: PersistedSnapshotRecord[];
+  accelerationHistory: PersistedAccelerationSnapshot[];
   managerSummaryText: string | null;
   currentWeekId: string;
   currentWeekRangeLabel: string;
@@ -37,6 +38,7 @@ export function useDerived(params: UseDerivedParams) {
     generatedNarrative,
     forecastHistory,
     snapshotHistory,
+    accelerationHistory,
     managerSummaryText,
     currentWeekId,
     currentWeekRangeLabel,
@@ -164,12 +166,35 @@ export function useDerived(params: UseDerivedParams) {
     [activeWindowSamples]
   );
 
+  // Cross-week recurrence (E2): count how many PRIOR ISO weeks each signal_id was mined, from the
+  // retained acceleration history. The current week is excluded (it's the week being ranked), so
+  // this map is independent of the current mining and can't feed back into it. Emphasis only — it
+  // nudges ranking and drives the card badge; the estimate stays deterministic.
+  const recurrenceBySignalId = useMemo<Record<string, number>>(() => {
+    const counts: Record<string, number> = {};
+    for (const record of accelerationHistory) {
+      if (record.week_id >= currentWeekId) continue;
+      const seen = new Set<string>();
+      for (const signal of record.signals) {
+        if (seen.has(signal.signal_id)) continue; // one record per week, but guard duplicates
+        seen.add(signal.signal_id);
+        counts[signal.signal_id] = (counts[signal.signal_id] ?? 0) + 1;
+      }
+    }
+    return counts;
+  }, [accelerationHistory, currentWeekId]);
+
   // Deterministic Acceleration signals — repetitive workflows, tool-able time-sinks, and
   // context-switch hotspots mined from this week's reviewed blocks + the captured sessions,
   // ranked by reclaimable time. No AI, no network, always on (the D-tasks add the opt-in AI layer).
   const accelerationSignals = useMemo<AccelerationSignal[]>(
-    () => buildAccelerationSignals({ blocks: weekBlocks, sessions: activeWindowSessions }),
-    [weekBlocks, activeWindowSessions]
+    () =>
+      buildAccelerationSignals({
+        blocks: weekBlocks,
+        sessions: activeWindowSessions,
+        recurrenceBySignalId,
+      }),
+    [weekBlocks, activeWindowSessions, recurrenceBySignalId]
   );
 
   const hasNarrativeEvidence =

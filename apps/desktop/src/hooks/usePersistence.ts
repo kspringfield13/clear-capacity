@@ -12,7 +12,7 @@ import type {
   VisualContextInsight,
   AIConfig
 } from "../../../../packages/domain/src/models";
-import type { PersistedAccelerationRecord, PersistedForecastRecord, PersistedNarrativeRecord, PersistedSnapshotRecord } from "../services/localStore";
+import type { PersistedAccelerationRecord, PersistedAccelerationSnapshot, PersistedForecastRecord, PersistedNarrativeRecord, PersistedSnapshotRecord } from "../services/localStore";
 import type { ProactiveAlertRuntime, ProactiveAlertSettings } from "../lib/proactiveAlerts";
 
 interface PersistableState {
@@ -26,6 +26,7 @@ interface PersistableState {
   generatedForecast: PersistedForecastRecord | null;
   forecastHistory: PersistedForecastRecord[];
   snapshotHistory: PersistedSnapshotRecord[];
+  accelerationHistory: PersistedAccelerationSnapshot[];
   visualContextEnabled: boolean;
   visualContextInsights: VisualContextInsight[];
   dismissedPlayIds: string[];
@@ -66,6 +67,7 @@ export function usePersistence(state: PersistableState) {
     persistData.generatedForecast,
     persistData.forecastHistory,
     persistData.snapshotHistory,
+    persistData.accelerationHistory,
     persistData.visualContextEnabled,
     persistData.visualContextInsights,
     persistData.dismissedPlayIds,

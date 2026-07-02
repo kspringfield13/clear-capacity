@@ -9,7 +9,7 @@ import type {
   WeeklyCapacitySnapshot,
   WorkBlock
 } from "../../../../packages/domain/src/models";
-import type { PersistedAppState, PersistedSnapshotRecord } from "./localStore";
+import type { PersistedAccelerationSnapshot, PersistedAppState, PersistedSnapshotRecord } from "./localStore";
 import { DEFAULT_PROACTIVE_ALERT_SETTINGS, EMPTY_PROACTIVE_ALERT_RUNTIME } from "../lib/proactiveAlerts";
 import { humanizeCorrectionValue } from "../lib/format";
 
@@ -425,6 +425,37 @@ export function createDemoState(reference = new Date()): PersistedAppState {
     { week_id: weekId(addMinutes(now, -10_080)), computed_at: addMinutes(now, -10_080).toISOString(), snapshot: demoSnapshot(weekId(addMinutes(now, -10_080)), { reliable_new_work_capacity_pct: 29, reactive_pct: 21, meeting_pct: 22, context_switch_score: 0.45, allocated_pct: 90, deep_work_pct: 39 }) }
   ];
 
+  // Prior-week acceleration snapshots so the cross-week recurrence badge (E2) has memory to read in
+  // demo. The three currently-mined demo signals recur a DIFFERENT number of prior weeks so each
+  // card shows a distinct badge: the 2pm context-switch hotspot is the most entrenched habit
+  // (3 weeks), the SQL time-sink next (2 weeks), and the Hex→Looker→Teams automation newest
+  // (1 week). Signal_ids match the deterministic miner's output over the seeded demo work; only
+  // the derived id/type/minutes summary is stored (privacy-trivial, no window titles).
+  const accelerationHistory: PersistedAccelerationSnapshot[] = [
+    {
+      week_id: weekId(addMinutes(now, -30_240)),
+      generated_at: addMinutes(now, -30_240).toISOString(),
+      signals: [{ signal_id: "technique-10enw6p", type: "technique", estimated_minutes_saved_per_week: 18 }],
+    },
+    {
+      week_id: weekId(addMinutes(now, -20_160)),
+      generated_at: addMinutes(now, -20_160).toISOString(),
+      signals: [
+        { signal_id: "technique-10enw6p", type: "technique", estimated_minutes_saved_per_week: 20 },
+        { signal_id: "tool-1a0pqj3", type: "tool", estimated_minutes_saved_per_week: 39 },
+      ],
+    },
+    {
+      week_id: weekId(addMinutes(now, -10_080)),
+      generated_at: addMinutes(now, -10_080).toISOString(),
+      signals: [
+        { signal_id: "technique-10enw6p", type: "technique", estimated_minutes_saved_per_week: 21 },
+        { signal_id: "tool-1a0pqj3", type: "tool", estimated_minutes_saved_per_week: 41 },
+        { signal_id: "automate-1vwqzqr", type: "automate", estimated_minutes_saved_per_week: 36 },
+      ],
+    },
+  ];
+
   const managerSummary = "This week centered on the capacity model, executive dashboard, and recurring operating metrics. Two unplanned investigations displaced some planned analysis, while fixed meetings and reporting consumed a meaningful share of the week. The current model indicates 22% reliable capacity for new planned work next week — on top of roughly 58% already committed, which keeps total load near the ~80% reliability knee — provided the warehouse access blocker clears and protected focus time remains intact. Two lower-confidence blocks should be reviewed before this summary is shared.";
 
   return {
@@ -508,6 +539,7 @@ export function createDemoState(reference = new Date()): PersistedAppState {
       }
     ],
     snapshotHistory,
+    accelerationHistory,
     generatedNarrative: {
       generated_at: generatedAt.toISOString(), generated_for_date: now.toISOString().slice(0, 10),
       trigger: "manual", model: "OpenAI narrative", prompt_version: "clear-capacity-weekly-narrative-v2",

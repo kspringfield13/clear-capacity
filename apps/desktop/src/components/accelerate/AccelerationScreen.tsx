@@ -8,6 +8,7 @@ import {
   Copy,
   Library,
   Lightbulb,
+  Repeat,
   Rocket,
   RotateCcw,
   Settings,
@@ -71,6 +72,7 @@ function PlayCard({
   const Icon = TYPE_ICONS[signal.type];
   const savedLabel = `~${signal.estimated_minutes_saved_per_week} min`;
   const confidencePct = Math.round(signal.confidence * 100);
+  const recurrenceWeeks = signal.recurrence_weeks ?? 0;
   const [recipeCopied, setRecipeCopied] = useState(false);
 
   async function copyRecipe() {
@@ -107,6 +109,22 @@ function PlayCard({
                 . The description, recipe, and tool picks were written by your configured AI; the
                 reclaimable estimate, confidence, and cited evidence stay derived from your observed
                 work.
+              </span>
+            </span>
+          )}
+          {recurrenceWeeks > 0 && (
+            <span
+              className="play-recurring-badge"
+              title={`This signal has also surfaced in ${recurrenceWeeks} earlier ${recurrenceWeeks === 1 ? "week" : "weeks"} — a persistent pattern, so it's ranked a little higher.`}
+            >
+              <Repeat size={12} aria-hidden />
+              <span>
+                Recurring {recurrenceWeeks} {recurrenceWeeks === 1 ? "week" : "weeks"}
+              </span>
+              <span className="sr-only">
+                . This signal has also surfaced in {recurrenceWeeks} earlier{" "}
+                {recurrenceWeeks === 1 ? "week" : "weeks"}, a persistent pattern, so it's ranked a
+                little higher.
               </span>
             </span>
           )}

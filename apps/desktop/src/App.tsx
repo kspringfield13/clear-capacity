@@ -24,7 +24,7 @@ import {
   writePersistedState,
   writeThemePreference
 } from "./services/localStore";
-import type { AppTheme, PersistedAccelerationRecord, PersistedAppState, PersistedForecastRecord, PersistedNarrativeRecord, PersistedSnapshotRecord } from "./services/localStore";
+import type { AppTheme, PersistedAccelerationRecord, PersistedAccelerationSnapshot, PersistedAppState, PersistedForecastRecord, PersistedNarrativeRecord, PersistedSnapshotRecord } from "./services/localStore";
 import { createDemoState } from "./services/demoData";
 import {
   addDays,
@@ -124,6 +124,7 @@ export function App() {
         setGeneratedForecast(data.generatedForecast ?? null);
         setForecastHistory(data.forecastHistory ?? []);
         setSnapshotHistory(data.snapshotHistory ?? []);
+        setAccelerationHistory(data.accelerationHistory ?? []);
         setChatEvents(data.chatEvents ?? []);
         setVisualContextEnabled(data.visualContextEnabled ?? false);
         setVisualContextInsights(data.visualContextInsights ?? []);
@@ -165,6 +166,11 @@ export function App() {
   );
   const [snapshotHistory, setSnapshotHistory] = useState<PersistedSnapshotRecord[]>(
     () => persistedSnapshot?.snapshotHistory ?? []
+  );
+  // Per-week summary of the mined Acceleration signals — the memory that lets the engine tell a
+  // recurring habit from a one-off (E2). Retained once per ISO week, like `snapshotHistory`.
+  const [accelerationHistory, setAccelerationHistory] = useState<PersistedAccelerationSnapshot[]>(
+    () => persistedSnapshot?.accelerationHistory ?? []
   );
   // Imported workplace-chat events (metadata only) retained for the interruption-load signal.
   const [chatEvents, setChatEvents] = useState<RawEvent[]>(
@@ -286,6 +292,7 @@ export function App() {
     generatedForecast,
     forecastHistory,
     snapshotHistory,
+    accelerationHistory,
     visualContextEnabled,
     visualContextInsights,
     dismissedPlayIds,
@@ -320,6 +327,7 @@ export function App() {
     generatedNarrative,
     forecastHistory,
     snapshotHistory,
+    accelerationHistory,
     managerSummaryText,
     currentWeekId,
     currentWeekRangeLabel,
@@ -364,6 +372,41 @@ export function App() {
         .slice(-24);
     });
   }, [snapshot, blocks.length, isDemoMode]);
+
+  // Retain a compact per-week summary of the surfaced Acceleration signals so the engine can tell a
+  // recurring habit from a one-off (E2). Mirrors the snapshot-retention effect: one record per
+  // ISO week (latest mining wins), capped to 24 weeks. Only id/type/minutes are stored — never
+  // evidence strings — so it's privacy-trivial (no window titles, no app names). The summary is
+  // sorted by signal_id so the equality guard below compares SETS, not the recurrence-driven display
+  // order — otherwise a pure re-ordering at a week rollover would churn the record needlessly. The
+  // current week's record is EXCLUDED from the recurrence count (prior weeks only), so writing it
+  // here never feeds back into `recurrenceBySignalId` — no render loop.
+  useEffect(() => {
+    if (isDemoMode || accelerationSignals.length === 0) return;
+    const summary = accelerationSignals
+      .map((signal) => ({
+        signal_id: signal.signal_id,
+        type: signal.type,
+        estimated_minutes_saved_per_week: signal.estimated_minutes_saved_per_week,
+      }))
+      .sort((left, right) =>
+        left.signal_id < right.signal_id ? -1 : left.signal_id > right.signal_id ? 1 : 0
+      );
+    setAccelerationHistory((current) => {
+      const existing = current.find((entry) => entry.week_id === currentWeekId);
+      if (existing && JSON.stringify(existing.signals) === JSON.stringify(summary)) {
+        return current;
+      }
+      const record: PersistedAccelerationSnapshot = {
+        week_id: currentWeekId,
+        generated_at: new Date().toISOString(),
+        signals: summary,
+      };
+      return [...current.filter((entry) => entry.week_id !== currentWeekId), record]
+        .sort((left, right) => left.week_id.localeCompare(right.week_id))
+        .slice(-24);
+    });
+  }, [accelerationSignals, currentWeekId, isDemoMode]);
 
   // Retention policy: auto-expire raw activity older than the user-chosen window
   // (null = keep everything). This covers both the raw active-window samples and the
@@ -1227,6 +1270,7 @@ export function App() {
     setGeneratedForecast(null);
     setForecastHistory([]);
     setSnapshotHistory([]);
+    setAccelerationHistory([]);
     setChatEvents([]);
     setVisualContextEnabled(true);
     setVisualContextInsights([]);
