@@ -1208,6 +1208,10 @@ h3 {
   color: #fecaca;
 }
 
+.settings-row-status .import-delta {
+  color: var(--text-muted);
+}
+
 .settings-control {
   position: relative;
   display: inline-flex;
