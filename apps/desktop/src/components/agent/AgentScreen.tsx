@@ -33,6 +33,7 @@ import type {
 import type { AgentChatMessage } from "../../lib/types";
 import type { PushToast } from "../../hooks/useToasts";
 import { agentTools, AGENT_INSTRUCTIONS } from "../../services/agentTools";
+import { ConfirmDialog } from "../common/ConfirmDialog";
 import type { tool as AiToolFn } from "ai";
 
 const AgentMarkdown = lazy(() => import("./AgentMarkdown"));
@@ -90,6 +91,7 @@ export function AgentScreen({
   const [analysisStage, setAnalysisStage] = useState(0);
   const [expandedDetails, setExpandedDetails] = useState<Record<string, boolean>>({});
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const [confirmingClear, setConfirmingClear] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -562,7 +564,7 @@ export function AgentScreen({
         <div className="agent-header-actions">
           <span className="agent-data-freshness"><span /> Data current · {currentWeekRangeLabel}</span>
         {messages.length > 0 && (
-          <button className="secondary-action" onClick={clearChat} title="Clear chat">
+          <button className="secondary-action" onClick={() => setConfirmingClear(true)} title="Clear chat">
             <Trash2 size={16} /> Clear
           </button>
         )}
@@ -778,6 +780,19 @@ export function AgentScreen({
         </div>
         </div>
       </div>
+
+      {confirmingClear && (
+        <ConfirmDialog
+          title="Clear this conversation?"
+          description="This clears this saved conversation from your device. It can't be undone."
+          confirmLabel="Clear conversation"
+          onConfirm={() => {
+            setConfirmingClear(false);
+            clearChat();
+          }}
+          onCancel={() => setConfirmingClear(false)}
+        />
+      )}
     </section>
   );
 }
