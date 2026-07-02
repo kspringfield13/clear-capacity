@@ -4527,6 +4527,17 @@ select {
   cursor: pointer;
 }
 
+/* Keyboard parity for the category-isolation hover: focusing an interactive
+   category row spotlights its StackedBar segment the same way mouse hover does. */
+.allocation-row-interactive {
+  border-radius: 4px;
+}
+
+.allocation-row-interactive:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 2px var(--focus-gap), 0 0 0 4px #006bff;
+}
+
 /* Second allocation block (work-mode split) inside the capacity-model section. */
 .mode-split-title {
   margin-top: 18px;
