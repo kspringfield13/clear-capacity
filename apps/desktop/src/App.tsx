@@ -36,7 +36,7 @@ import { createAccelerationPlayAuditEvent, createAuditEvent, createChatImportAud
 import { removeSeededCorrections, removeSeededWorkBlocks } from "./lib/blocks";
 import { useDerived } from "./hooks/useDerived";
 import { usePersistence } from "./hooks/usePersistence";
-import { useBlocksLedger } from "./hooks/useBlocksLedger";
+import { useBlocksLedger, MANUAL_REVIEW_ADJUSTMENT_REASON } from "./hooks/useBlocksLedger";
 import { useActiveWindow } from "./hooks/useActiveWindow";
 import { useClassification } from "./hooks/useClassification";
 import { useReviewCopilot } from "./hooks/useReviewCopilot";
@@ -66,6 +66,20 @@ import { ScreenRouter } from "./components/shell/ScreenRouter";
 import { buildOnboardingSteps } from "./components/common/OnboardingCard";
 import { WalkthroughOverlay } from "./components/onboarding/WalkthroughOverlay";
 import type { Screen, WindowMode } from "./lib/types";
+
+// Correction fields whose inverse can be replayed cleanly through the relabel path
+// (`updateBlock`): every entry is a string-typed `keyof WorkBlock`, so the stored
+// `old_value` string is directly assignable. Deliberately excludes `blocker_flag`
+// (boolean), `notes` (nullable), `start_time`/`end_time` (a single time edit records a
+// start+end PAIR, so undoing "the last correction" would revert only one edge), and the
+// non-relabel actions `exclude`/`verification`/`manager_summary`/`calendar_import`.
+const UNDOABLE_CORRECTION_FIELDS = [
+  "category",
+  "mode",
+  "planned_status",
+  "project_name",
+  "stakeholder_group"
+] as const satisfies readonly (keyof WorkBlock)[];
 
 export function App() {
   const [isDemoMode] = useState(() => new URLSearchParams(window.location.search).get("demo") === "1");
@@ -1000,6 +1014,45 @@ export function App() {
     ].slice(-1000));
   }
 
+  // The most recent correction, when it can be cleanly reverted through the relabel path:
+  // it came from a single-field manual relabel (not the multi-correction Review Copilot
+  // bulk apply), it's today's, edits an undoable field, and its target block still exists
+  // AND still holds the changed value (so the revert actually does something — no lying
+  // "Reverted…" toast if an AI reclassification already moved the field back).
+  const lastCorrection = corrections.length > 0 ? corrections[corrections.length - 1] : null;
+  const undoTargetBlock =
+    lastCorrection && lastCorrection.reason === MANUAL_REVIEW_ADJUSTMENT_REASON
+      ? blocks.find((block) => block.work_block_id === lastCorrection.work_block_id)
+      : undefined;
+  const canUndoLastCorrection = Boolean(
+    lastCorrection &&
+      undoTargetBlock &&
+      getLocalDateKey(new Date(lastCorrection.timestamp)) === getLocalDateKey() &&
+      (UNDOABLE_CORRECTION_FIELDS as readonly string[]).includes(lastCorrection.field) &&
+      String(undoTargetBlock[lastCorrection.field as (typeof UNDOABLE_CORRECTION_FIELDS)[number]]) !==
+        lastCorrection.old_value
+  );
+
+  function undoLastCorrection() {
+    if (!lastCorrection || !canUndoLastCorrection) {
+      return;
+    }
+    // Re-apply the prior value via the same relabel path — this records the reversal
+    // as a fresh (inverse) correction + audit event, so it stays explainable and redoable.
+    updateBlock(
+      lastCorrection.work_block_id,
+      lastCorrection.field as (typeof UNDOABLE_CORRECTION_FIELDS)[number],
+      lastCorrection.old_value
+    );
+    pushToast({
+      tone: "success",
+      message: `Reverted ${fieldLabel(lastCorrection.field)} to ${humanizeCorrectionValue(
+        lastCorrection.field,
+        lastCorrection.old_value
+      )}`
+    });
+  }
+
   function dismissReviewSuggestion(suggestionId: string) {
     setReviewSuggestions((current) => current.filter((suggestion) => suggestion.suggestion_id !== suggestionId));
   }
@@ -1418,6 +1471,8 @@ export function App() {
         onConfirm={confirmBlock}
         onExclude={excludeBlock}
         onRelabel={updateBlock}
+        onUndoLastCorrection={undoLastCorrection}
+        canUndoLastCorrection={canUndoLastCorrection}
         onOpenScreen={openScreenFromQuickView}
         onboardingSteps={onboardingSteps}
         showOnboarding={showOnboarding}

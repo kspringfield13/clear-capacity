@@ -7,6 +7,12 @@ import type {
   ReviewCopilotSuggestion,
 } from "../../../../packages/domain/src/models";
 
+// Reason stamped on corrections that originate from a single-field manual relabel in the
+// review UI (BlockCard selects). Exported so the "Undo last correction" affordance can
+// scope itself to these — each is exactly one field on one block, so its inverse replays
+// cleanly, unlike the multi-correction Review Copilot bulk apply.
+export const MANUAL_REVIEW_ADJUSTMENT_REASON = "Manual review adjustment";
+
 interface UseBlocksLedgerParams {
   initialBlocks: WorkBlock[];
   initialCalendarEvents: OutlookCalendarEvent[];
@@ -74,7 +80,7 @@ export function useBlocksLedger(params: UseBlocksLedgerParams) {
       field: field as UserCorrection["field"],
       old_value: String(oldBlock[field]),
       new_value: String(value),
-      reason: "Manual review adjustment",
+      reason: MANUAL_REVIEW_ADJUSTMENT_REASON,
     });
   }, [blocks, addCorrection]);
 
