@@ -505,6 +505,7 @@ export function SetupScreen({
           <button
             className={proactiveAlertSettings[rule.key] ? "settings-control is-on" : "settings-control"}
             type="button"
+            aria-label={`${proactiveAlertSettings[rule.key] ? "Disable" : "Enable"} — ${rule.label}`}
             onClick={() => onProactiveAlertSettingsChange({ ...proactiveAlertSettings, [rule.key]: !proactiveAlertSettings[rule.key] })}
           >
             {proactiveAlertSettings[rule.key] ? "Disable" : "Enable"}
