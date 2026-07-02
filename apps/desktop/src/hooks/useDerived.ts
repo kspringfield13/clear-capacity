@@ -187,17 +187,19 @@ export function useDerived(params: UseDerivedParams) {
     return counts;
   }, [accelerationHistory, currentWeekId]);
 
-  // Deterministic Acceleration signals — repetitive workflows, tool-able time-sinks, and
-  // context-switch hotspots mined from this week's reviewed blocks + the captured sessions,
-  // ranked by reclaimable time. No AI, no network, always on (the D-tasks add the opt-in AI layer).
+  // Deterministic Acceleration signals — repetitive workflows, tool-able time-sinks,
+  // context-switch hotspots, and (E4) a reactive-comms batching Play mined from this week's reviewed
+  // blocks, captured sessions, and the chat interruption analysis, ranked by reclaimable time. No AI,
+  // no network, always on (the D-tasks add the opt-in AI layer).
   const accelerationSignals = useMemo<AccelerationSignal[]>(
     () =>
       buildAccelerationSignals({
         blocks: weekBlocks,
         sessions: activeWindowSessions,
         recurrenceBySignalId,
+        interruptionLoad,
       }),
-    [weekBlocks, activeWindowSessions, recurrenceBySignalId]
+    [weekBlocks, activeWindowSessions, recurrenceBySignalId, interruptionLoad]
   );
 
   // Realized-savings track record (E3): for every play the user marked acted-on, score its estimate
