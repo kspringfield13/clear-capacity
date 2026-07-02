@@ -5,6 +5,7 @@ import type {
   WorkBlock,
   WorkCategory
 } from "../../domain/src/models";
+import type { InterruptionLoadAnalysis } from "./capacity";
 
 /**
  * Deterministic Acceleration miner — turns observed work into evidence-cited
@@ -424,6 +425,122 @@ export function detectContextSwitchHotspots(sessions: ActivitySession[]): Accele
   return signals;
 }
 
+/**
+ * Reactive comms are realistically serviceable in a couple of set windows a day; every reactive
+ * burst BEYOND that is a discrete interruption whose refocus tax batching could reclaim. Anchoring
+ * the estimate to interruption COUNT (not raw chat duration) is deliberate: a single long, low-volume
+ * chat window is already "batched" and shouldn't score, while overlapping bursts can't inflate a
+ * count the way summed wall-durations can. Hand-set to a small number of focused windows.
+ */
+const REACTIVE_BATCH_WINDOWS = 2;
+
+/** Reactive load needs at least this many messages in the window to be worth a Play (vs. noise). */
+const MIN_REACTIVE_MESSAGES = MIN_RECURRENCES;
+
+/**
+ * Core working-hour window (local, hour-of-day), mirroring capacity.ts' CORE_HOURS_START/END. A
+ * reactive peak OUTSIDE this window is after-hours bleed: we still cite it, but never advise the user
+ * to "guard it for focused work" — protecting, say, an 8pm slot for deep work would contradict the
+ * after-hours-bleed concern the same Play raises. Local const because the inference layer must not
+ * import from capacity's private constants; mirror a change if that window ever moves.
+ */
+const REACTIVE_CORE_HOURS_START = 8;
+const REACTIVE_CORE_HOURS_END = 18;
+
+/**
+ * Detect a chat-driven reactive load worth batching and emit one `technique` Play — "batch reactive
+ * comms into set windows", with a focus-guard angle when the load has a clear time-of-day peak. Reads
+ * the pre-computed `InterruptionLoadAnalysis` (from `analyzeInterruptionLoad` in `capacity.ts`), so it
+ * adds near-zero new inference and stays in lockstep with the Weekly interruption panel the user
+ * already sees.
+ *
+ * The reclaimable estimate is the refocus tax of the reactive bursts beyond a couple of set windows:
+ * `REFOCUS_MINUTES_PER_SWITCH × max(0, burst_count − REACTIVE_BATCH_WINDOWS)`, reusing the SAME
+ * Mark-et-al.-grounded per-interruption constant `detectContextSwitchHotspots` prices app switches at,
+ * so both `technique` detectors share one refocus model. Keying it to burst COUNT (not `active_hours`)
+ * means a single long low-message window — already effectively batched — doesn't over-claim, and
+ * overlapping bursts can't double-count wall time. As a `technique` its estimate IS the reclaimable
+ * minutes, so it scores against the E3 realized-savings machinery with a capture fraction of 1.
+ *
+ * Privacy: the analysis carries metadata-only figures (message/burst/mention counts, active hours,
+ * and time-of-day/percentage stats) — never message text — so the evidence stays derived-only. Pure;
+ * dedup/ranking across detectors is the aggregator's job. Returns [] when there is no chat signal, the
+ * message volume is below the noise floor, or there aren't enough bursts beyond the batch windows to
+ * reclaim anything.
+ */
+export function detectReactiveLoad(
+  analysis: InterruptionLoadAnalysis | null | undefined
+): AccelerationSignal[] {
+  if (!analysis) {
+    return [];
+  }
+
+  const messageCount = analysis.message_count;
+  // Each reactive burst is a discrete interruption; batching leaves ~REACTIVE_BATCH_WINDOWS check-ins
+  // and consolidates the rest. The reclaimable refocus tax therefore scales with the interruptions
+  // BEYOND those windows — not raw chat duration or message volume.
+  const avoidedInterruptions = Math.max(0, analysis.burst_count - REACTIVE_BATCH_WINDOWS);
+  const estimatedSaved = REFOCUS_MINUTES_PER_SWITCH * avoidedInterruptions;
+  if (messageCount < MIN_REACTIVE_MESSAGES || estimatedSaved <= 0) {
+    return [];
+  }
+
+  // Confidence rises with reactive volume, then with the sharper interruption cues: direct
+  // @-mentions and after-hours bleed are aimed at the user / bleed into personal time, so they're
+  // harder to batch away and make a load a more certain candidate for windowing.
+  const volumeBoost = Math.min(0.2, (messageCount - MIN_REACTIVE_MESSAGES) * 0.01);
+  const sharpnessBoost = (analysis.mention_pct / 100) * 0.1 + (analysis.after_hours_pct / 100) * 0.1;
+  const confidence = Math.min(0.85, 0.5 + volumeBoost + sharpnessBoost);
+
+  // `peak_hour` is non-null exactly when `peak_day` is (see analyzeInterruptionLoad). The peak window
+  // is cited in evidence whatever the hour, but the "guard it for focused work" suggestion is offered
+  // ONLY when the peak falls inside core hours — advising the user to protect an after-hours slot for
+  // deep work would contradict the after-hours-bleed concern this same Play surfaces.
+  const peakHour = analysis.peak_hour;
+  const peakWindow = peakHour !== null ? hourWindowLabel(peakHour) : null;
+  const peakInCoreHours =
+    peakHour !== null && peakHour >= REACTIVE_CORE_HOURS_START && peakHour < REACTIVE_CORE_HOURS_END;
+  const guardSuggestion =
+    peakInCoreHours && peakWindow ? ` and guarding ${peakWindow} for focused work` : "";
+  const hoursLabel = analysis.active_hours.toFixed(1);
+
+  const evidence: string[] = [
+    `${analysis.burst_count} separate reactive chat bursts (${messageCount} messages across ${hoursLabel}h)`
+  ];
+  if (peakWindow) {
+    evidence.push(
+      analysis.peak_day
+        ? `Reactive volume peaked around ${peakWindow} on ${analysis.peak_day}`
+        : `Reactive volume peaked around ${peakWindow}`
+    );
+  }
+  if (analysis.mention_pct > 0) {
+    evidence.push(`${analysis.mention_pct}% were direct @-mentions aimed at you by name`);
+  }
+  if (analysis.after_hours_pct > 0) {
+    evidence.push(`${analysis.after_hours_pct}% landed after hours (before 8am / at or after 6pm)`);
+  }
+  evidence.push(
+    `Batching into ${REACTIVE_BATCH_WINDOWS} set windows consolidates ~${avoidedInterruptions} of those interruptions, each ~${REFOCUS_MINUTES_PER_SWITCH} min of refocus`
+  );
+
+  return [
+    {
+      // Stable id (one reactive-load Play per week) so E2 recurrence + E3 track record can follow it.
+      signal_id: `technique-${stableHash("reactive-load")}`,
+      type: "technique",
+      title: "Batch reactive comms into set windows",
+      detail: `You were pulled into ${analysis.burst_count} separate reactive chat bursts (${messageCount} messages). Batching replies into ${REACTIVE_BATCH_WINDOWS} set windows${guardSuggestion} could reclaim about ${estimatedSaved} min/week of refocus time.`,
+      evidence,
+      estimated_minutes_saved_per_week: estimatedSaved,
+      confidence: Number(confidence.toFixed(2)),
+      // Derived from aggregate reactive metadata, not enumerable per-item source ids — the evidence
+      // lines above carry the (metadata-only) provenance.
+      derived_from: []
+    }
+  ];
+}
+
 /** Cap the surfaced Plays to a focused, reviewable set — the highest-leverage signals only. */
 const MAX_ACCELERATION_SIGNALS = 6;
 
@@ -437,6 +554,13 @@ export interface AccelerationMiningInput {
    * deterministic and explainable. Missing/empty ⇒ every signal is treated as first-seen.
    */
   recurrenceBySignalId?: Record<string, number>;
+  /**
+   * Optional chat-driven interruption analysis (E4), from `analyzeInterruptionLoad` in `capacity.ts`.
+   * When present and above the reactive-volume floor, the miner emits a `technique` Play to batch
+   * reactive comms. Metadata-only (counts / hours / percentages) — never message text. Missing/null ⇒
+   * no reactive-load Play.
+   */
+  interruptionLoad?: InterruptionLoadAnalysis | null;
 }
 
 /** Per-recurring-week ranking bump — a persistent habit ranks slightly above a one-off. */
@@ -503,10 +627,11 @@ function isSubsetOrEqual(a: Set<string>, b: Set<string>) {
 }
 
 /**
- * The single entry point the UI/derived layer consumes: run all three deterministic miners
- * (B1 repetitive sequences, B2 time-sinks, B3 context-switch hotspots), dedupe, select and cap by
- * the DETERMINISTIC `estimated_minutes_saved_per_week × confidence` score, then apply cross-week
- * recurrence (E2) as a final ORDERING nudge over the survivors.
+ * The single entry point the UI/derived layer consumes: run the deterministic miners
+ * (B1 repetitive sequences, B2 time-sinks, B3 context-switch hotspots, and — when an interruption
+ * analysis is supplied — E4 reactive-load), dedupe, select and cap by the DETERMINISTIC
+ * `estimated_minutes_saved_per_week × confidence` score, then apply cross-week recurrence (E2) as a
+ * final ORDERING nudge over the survivors.
  *
  * Recurrence is handled in two deliberately-separated steps so it can never change a surfaced
  * signal's minutes: (a) each signal is annotated with `recurrence_weeks` + an evidence line for the
@@ -525,12 +650,13 @@ function isSubsetOrEqual(a: Set<string>, b: Set<string>) {
  * hotspot whose sessions happen to overlap another's.
  */
 export function buildAccelerationSignals(input: AccelerationMiningInput): AccelerationSignal[] {
-  const { blocks, sessions, recurrenceBySignalId } = input;
+  const { blocks, sessions, recurrenceBySignalId, interruptionLoad } = input;
 
   const mined = [
     ...detectRepetitiveSequences(sessions),
     ...detectTimeSinks(blocks, sessions),
-    ...detectContextSwitchHotspots(sessions)
+    ...detectContextSwitchHotspots(sessions),
+    ...detectReactiveLoad(interruptionLoad)
   ];
 
   const byId = new Map<string, AccelerationSignal>();
