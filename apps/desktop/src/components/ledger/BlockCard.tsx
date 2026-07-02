@@ -92,7 +92,7 @@ export function BlockCard({
                 type="button"
                 className="time-edit-btn"
                 title={timeError ? "End must be after start" : "Save time"}
-                aria-label="Save time changes"
+                aria-label={`Save time changes — ${block.project_name}`}
                 onClick={handleSaveTime}
               >
                 <Check size={13} />
@@ -101,7 +101,7 @@ export function BlockCard({
                 type="button"
                 className="time-edit-btn"
                 title="Cancel"
-                aria-label="Cancel time edit"
+                aria-label={`Cancel time edit — ${block.project_name}`}
                 onClick={() => setEditingTime(false)}
               >
                 <X size={13} />
@@ -117,7 +117,7 @@ export function BlockCard({
                 type="button"
                 className="time-edit-btn"
                 title="Edit time range"
-                aria-label="Edit block time range"
+                aria-label={`Edit block time range — ${block.project_name}`}
                 onClick={handleStartTimeEdit}
               >
                 <Clock size={12} />
@@ -186,11 +186,11 @@ export function BlockCard({
         emptyText="No inference detail recorded for this block."
       />
       <div className="block-actions">
-        <button type="button" className="block-confirm" onClick={() => onConfirm(block.work_block_id)}>
+        <button type="button" className="block-confirm" aria-label={`Confirm — ${block.project_name}`} onClick={() => onConfirm(block.work_block_id)}>
           <Check size={16} />
           <span>Confirm</span>
         </button>
-        <button type="button" className="block-exclude" onClick={() => onExclude(block.work_block_id)}>
+        <button type="button" className="block-exclude" aria-label={`Exclude — ${block.project_name}`} onClick={() => onExclude(block.work_block_id)}>
           <X size={16} />
           <span>Exclude</span>
         </button>
