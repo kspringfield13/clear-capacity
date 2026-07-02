@@ -30,6 +30,7 @@ interface PersistableState {
   visualContextInsights: VisualContextInsight[];
   dismissedPlayIds: string[];
   savedPlayIds: string[];
+  actedOnPlayIds: string[];
   generatedPlays: PersistedAccelerationRecord | null;
   savedSkills: SavedSkill[];
   managerSummaryText: string | null;
@@ -69,6 +70,7 @@ export function usePersistence(state: PersistableState) {
     persistData.visualContextInsights,
     persistData.dismissedPlayIds,
     persistData.savedPlayIds,
+    persistData.actedOnPlayIds,
     persistData.generatedPlays,
     persistData.savedSkills,
     persistData.managerSummaryText,

@@ -3,6 +3,8 @@ import {
   Bookmark,
   BookmarkCheck,
   Check,
+  CheckCircle2,
+  CircleCheck,
   Copy,
   Library,
   Lightbulb,
@@ -43,20 +45,26 @@ function PlayCard({
   signal,
   isSaved,
   isInLibrary,
+  isActedOn,
   onSave,
   onUnsave,
   onSaveSkill,
   onRemoveSkill,
+  onMarkActedOn,
+  onUnmarkActedOn,
   onDismiss,
   pushToast,
 }: {
   signal: AccelerationPlay;
   isSaved: boolean;
   isInLibrary: boolean;
+  isActedOn: boolean;
   onSave: (signal: AccelerationSignal) => void;
   onUnsave: (signalId: string) => void;
   onSaveSkill: (play: AccelerationPlay) => void;
   onRemoveSkill: (signalId: string) => void;
+  onMarkActedOn: (signal: AccelerationSignal) => void;
+  onUnmarkActedOn: (signalId: string) => void;
   onDismiss: (signal: AccelerationSignal) => void;
   pushToast: PushToast;
 }) {
@@ -192,6 +200,20 @@ function PlayCard({
         </button>
         <button
           type="button"
+          className={`play-action play-action-acted${isActedOn ? " is-acted" : ""}`}
+          aria-pressed={isActedOn}
+          title={
+            isActedOn
+              ? "You marked this play as acted on — select again to undo"
+              : "Mark this play as acted on so its impact can be tracked over time"
+          }
+          onClick={() => (isActedOn ? onUnmarkActedOn(signal.signal_id) : onMarkActedOn(signal))}
+        >
+          {isActedOn ? <CheckCircle2 size={14} aria-hidden /> : <CircleCheck size={14} aria-hidden />}
+          <span>{isActedOn ? "Acted on" : "I acted on this"}</span>
+        </button>
+        <button
+          type="button"
           className="play-action play-action-dismiss"
           title="Dismiss this play — hide it from your acceleration list"
           onClick={() => onDismiss(signal)}
@@ -208,10 +230,13 @@ export function AccelerationScreen({
   signals,
   dismissedPlayIds,
   savedPlayIds,
+  actedOnPlayIds,
   savedSkillIds,
   onDismissPlay,
   onSavePlay,
   onUnsavePlay,
+  onMarkPlayActedOn,
+  onUnmarkPlayActedOn,
   onSaveSkill,
   onRemoveSkill,
   onRestoreDismissedPlays,
@@ -229,10 +254,13 @@ export function AccelerationScreen({
   signals: AccelerationPlay[];
   dismissedPlayIds: string[];
   savedPlayIds: string[];
+  actedOnPlayIds: string[];
   savedSkillIds: string[];
   onDismissPlay: (signal: AccelerationSignal) => void;
   onSavePlay: (signal: AccelerationSignal) => void;
   onUnsavePlay: (signalId: string) => void;
+  onMarkPlayActedOn: (signal: AccelerationSignal) => void;
+  onUnmarkPlayActedOn: (signalId: string) => void;
   onSaveSkill: (play: AccelerationPlay) => void;
   onRemoveSkill: (signalId: string) => void;
   onRestoreDismissedPlays: () => void;
@@ -249,6 +277,7 @@ export function AccelerationScreen({
 }) {
   const dismissed = useMemo(() => new Set(dismissedPlayIds), [dismissedPlayIds]);
   const saved = useMemo(() => new Set(savedPlayIds), [savedPlayIds]);
+  const actedOn = useMemo(() => new Set(actedOnPlayIds), [actedOnPlayIds]);
   const inLibrary = useMemo(() => new Set(savedSkillIds), [savedSkillIds]);
   // Hide dismissed plays. Dismiss is keyed by the deterministic `signal_id`, so a hidden
   // play stays hidden as the miner re-derives — until the user restores it.
@@ -409,10 +438,13 @@ export function AccelerationScreen({
             signal={signal}
             isSaved={saved.has(signal.signal_id)}
             isInLibrary={inLibrary.has(signal.signal_id)}
+            isActedOn={actedOn.has(signal.signal_id)}
             onSave={onSavePlay}
             onUnsave={onUnsavePlay}
             onSaveSkill={onSaveSkill}
             onRemoveSkill={onRemoveSkill}
+            onMarkActedOn={onMarkPlayActedOn}
+            onUnmarkActedOn={onUnmarkPlayActedOn}
             onDismiss={onDismissPlay}
             pushToast={pushToast}
           />
