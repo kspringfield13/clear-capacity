@@ -426,31 +426,36 @@ export function createDemoState(reference = new Date()): PersistedAppState {
   ];
 
   // Prior-week acceleration snapshots so the cross-week recurrence badge (E2) has memory to read in
-  // demo. The three currently-mined demo signals recur a DIFFERENT number of prior weeks so each
-  // card shows a distinct badge: the 2pm context-switch hotspot is the most entrenched habit
+  // demo AND the realized-savings track record (E3) has a week-over-week trend to score. The three
+  // currently-mined demo signals recur a DIFFERENT number of prior weeks so each card shows a
+  // distinct recurrence badge: the 2pm context-switch hotspot is the most entrenched habit
   // (3 weeks), the SQL time-sink next (2 weeks), and the Hex→Looker→Teams automation newest
-  // (1 week). Signal_ids match the deterministic miner's output over the seeded demo work; only
-  // the derived id/type/minutes summary is stored (privacy-trivial, no window titles).
+  // (1 week). The per-week `estimated_minutes_saved_per_week` values are ALSO tuned so the two
+  // acted-on plays (see `actedOnPlayIds`) produce a rich track record: the SQL time-sink's estimate
+  // falls sharply (44 → 24) → its observed load reduction BEATS the conservative projection; the 2pm
+  // hotspot drops steeply late (18 → 3) → MET, but barely moved early (21 → 18) → BELOW estimate.
+  // Signal_ids match the deterministic miner's output over the seeded demo work; only the derived
+  // id/type/minutes summary is stored (privacy-trivial, no window titles).
   const accelerationHistory: PersistedAccelerationSnapshot[] = [
     {
       week_id: weekId(addMinutes(now, -30_240)),
       generated_at: addMinutes(now, -30_240).toISOString(),
-      signals: [{ signal_id: "technique-10enw6p", type: "technique", estimated_minutes_saved_per_week: 18 }],
+      signals: [{ signal_id: "technique-10enw6p", type: "technique", estimated_minutes_saved_per_week: 21 }],
     },
     {
       week_id: weekId(addMinutes(now, -20_160)),
       generated_at: addMinutes(now, -20_160).toISOString(),
       signals: [
-        { signal_id: "technique-10enw6p", type: "technique", estimated_minutes_saved_per_week: 20 },
-        { signal_id: "tool-1a0pqj3", type: "tool", estimated_minutes_saved_per_week: 39 },
+        { signal_id: "technique-10enw6p", type: "technique", estimated_minutes_saved_per_week: 18 },
+        { signal_id: "tool-1a0pqj3", type: "tool", estimated_minutes_saved_per_week: 44 },
       ],
     },
     {
       week_id: weekId(addMinutes(now, -10_080)),
       generated_at: addMinutes(now, -10_080).toISOString(),
       signals: [
-        { signal_id: "technique-10enw6p", type: "technique", estimated_minutes_saved_per_week: 21 },
-        { signal_id: "tool-1a0pqj3", type: "tool", estimated_minutes_saved_per_week: 41 },
+        { signal_id: "technique-10enw6p", type: "technique", estimated_minutes_saved_per_week: 3 },
+        { signal_id: "tool-1a0pqj3", type: "tool", estimated_minutes_saved_per_week: 24 },
         { signal_id: "automate-1vwqzqr", type: "automate", estimated_minutes_saved_per_week: 36 },
       ],
     },
@@ -460,7 +465,10 @@ export function createDemoState(reference = new Date()): PersistedAppState {
 
   return {
     version: 1, blocks, calendarEvents, chatEvents, activeWindowSamples, auditEvents, corrections, reviewSuggestions,
-    visualContextEnabled: true, visualContextInsights, dismissedPlayIds: [], savedPlayIds: [], actedOnPlayIds: [], generatedPlays: null,
+    visualContextEnabled: true, visualContextInsights, dismissedPlayIds: [], savedPlayIds: [],
+    // The 2pm hotspot + SQL time-sink are marked acted-on so the realized-savings track record (E3)
+    // has plays to score against `accelerationHistory` above (beat / met / below-estimate rows).
+    actedOnPlayIds: ["technique-10enw6p", "tool-1a0pqj3"], generatedPlays: null,
     savedSkills: [
       {
         signal_id: "automate-demo-revenue-report",
