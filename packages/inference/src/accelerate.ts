@@ -429,9 +429,32 @@ const MAX_ACCELERATION_SIGNALS = 6;
 export interface AccelerationMiningInput {
   blocks: WorkBlock[];
   sessions: ActivitySession[];
+  /**
+   * Optional cross-week recurrence (E2): `signal_id` → count of prior ISO weeks that signal was
+   * mined, from persisted `accelerationHistory`. Nudges ranking/emphasis and drives the card badge;
+   * it NEVER touches `estimated_minutes_saved_per_week`, so the reclaimable estimate stays
+   * deterministic and explainable. Missing/empty ⇒ every signal is treated as first-seen.
+   */
+  recurrenceBySignalId?: Record<string, number>;
 }
 
-/** Rank weight: expected minutes reclaimed, discounted by how sure the miner is. */
+/** Per-recurring-week ranking bump — a persistent habit ranks slightly above a one-off. */
+const RECURRENCE_BOOST_PER_WEEK = 0.12;
+/** Cap the boost so a long-running signal can't dominate a genuinely bigger one-off win. */
+const MAX_RECURRENCE_BOOST_WEEKS = 4;
+
+/** Ranking multiplier from a signal's `recurrence_weeks` (1.0 when first-seen). Emphasis only. */
+function recurrenceMultiplier(signal: AccelerationSignal) {
+  const weeks = Math.min(Math.max(0, signal.recurrence_weeks ?? 0), MAX_RECURRENCE_BOOST_WEEKS);
+  return 1 + RECURRENCE_BOOST_PER_WEEK * weeks;
+}
+
+/**
+ * DETERMINISTIC rank weight: expected minutes reclaimed, discounted by how sure the miner is.
+ * Recurrence is deliberately NOT folded in here — this score decides which signals survive dedup,
+ * the nested-`automate` collapse, and the top-N cap, so keeping it recurrence-free guarantees a
+ * signal's surfaced `estimated_minutes_saved_per_week` never changes because of recurrence.
+ */
 function signalScore(signal: AccelerationSignal) {
   return signal.estimated_minutes_saved_per_week * signal.confidence;
 }
@@ -452,6 +475,22 @@ function compareSignals(left: AccelerationSignal, right: AccelerationSignal) {
   return left.signal_id < right.signal_id ? -1 : left.signal_id > right.signal_id ? 1 : 0;
 }
 
+/**
+ * FINAL display ordering: the deterministic score nudged by the recurrence multiplier, so a
+ * persistent habit sits a little higher among the already-selected cards. Applied only to the set
+ * that already survived the deterministic dedup/collapse/cap, so it changes ORDER only — never
+ * which signals surface or their `estimated_minutes_saved_per_week`. Falls back to `compareSignals`
+ * on a tie so ordering stays stable.
+ */
+function compareByRecurrence(left: AccelerationSignal, right: AccelerationSignal) {
+  const leftScore = signalScore(left) * recurrenceMultiplier(left);
+  const rightScore = signalScore(right) * recurrenceMultiplier(right);
+  if (leftScore !== rightScore) {
+    return rightScore - leftScore;
+  }
+  return compareSignals(left, right);
+}
+
 /** True when every member of `a` is also in `b` (a ⊆ b). Callers guard against an empty `a`. */
 function isSubsetOrEqual(a: Set<string>, b: Set<string>) {
   for (const value of a) {
@@ -464,8 +503,16 @@ function isSubsetOrEqual(a: Set<string>, b: Set<string>) {
 
 /**
  * The single entry point the UI/derived layer consumes: run all three deterministic miners
- * (B1 repetitive sequences, B2 time-sinks, B3 context-switch hotspots), dedupe, rank by
- * `estimated_minutes_saved_per_week × confidence` (descending), and cap to a focused top-N.
+ * (B1 repetitive sequences, B2 time-sinks, B3 context-switch hotspots), dedupe, select and cap by
+ * the DETERMINISTIC `estimated_minutes_saved_per_week × confidence` score, then apply cross-week
+ * recurrence (E2) as a final ORDERING nudge over the survivors.
+ *
+ * Recurrence is handled in two deliberately-separated steps so it can never change a surfaced
+ * signal's minutes: (a) each signal is annotated with `recurrence_weeks` + an evidence line for the
+ * card badge; (b) selection — dedup, the nested-`automate` collapse, and the top-N cap — runs on the
+ * recurrence-FREE `compareSignals`, so which signals survive (and thus their displayed estimate) is
+ * fully deterministic; only the final `compareByRecurrence` re-sort lets a persistent habit sit a
+ * little higher among the already-chosen cards.
  *
  * Dedup has two layers: (1) defensive signal_id dedup (detectors mint unique ids today, but a
  * future detector could collide — keep the higher-ranked on a clash); (2) nested-evidence collapse
@@ -477,7 +524,7 @@ function isSubsetOrEqual(a: Set<string>, b: Set<string>) {
  * hotspot whose sessions happen to overlap another's.
  */
 export function buildAccelerationSignals(input: AccelerationMiningInput): AccelerationSignal[] {
-  const { blocks, sessions } = input;
+  const { blocks, sessions, recurrenceBySignalId } = input;
 
   const mined = [
     ...detectRepetitiveSequences(sessions),
@@ -494,7 +541,27 @@ export function buildAccelerationSignals(input: AccelerationMiningInput): Accele
     }
   }
 
-  const ranked = [...byId.values()].sort(compareSignals);
+  // Cross-week recurrence (E2): tag each signal with how many prior weeks it was mined and cite
+  // that in its evidence. This adjusts ranking/emphasis and the card badge ONLY — the estimate is
+  // untouched. A malformed/negative count degrades to first-seen (no boost, no badge, no note).
+  const annotated = [...byId.values()].map((signal) => {
+    const weeks = Math.floor(recurrenceBySignalId?.[signal.signal_id] ?? 0);
+    if (!Number.isFinite(weeks) || weeks < 1) {
+      return signal;
+    }
+    return {
+      ...signal,
+      recurrence_weeks: weeks,
+      evidence: [
+        ...signal.evidence,
+        `Recurring signal: also surfaced in ${weeks} earlier ${weeks === 1 ? "week" : "weeks"} — a persistent pattern, so it's ranked a little higher`
+      ]
+    };
+  });
+
+  // Select on the recurrence-free score so recurrence can't change which signals (or which minutes)
+  // survive; the recurrence emphasis is applied as a final re-sort below.
+  const ranked = annotated.sort(compareSignals);
 
   const kept: AccelerationSignal[] = [];
   for (const candidate of ranked) {
@@ -524,5 +591,7 @@ export function buildAccelerationSignals(input: AccelerationMiningInput): Accele
     }
   }
 
-  return kept.slice(0, MAX_ACCELERATION_SIGNALS);
+  // Final emphasis pass: reorder the already-selected survivors so a persistent habit ranks a
+  // little higher. Order only — the set and every displayed estimate are already fixed above.
+  return kept.slice(0, MAX_ACCELERATION_SIGNALS).sort(compareByRecurrence);
 }

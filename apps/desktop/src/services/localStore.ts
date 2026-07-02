@@ -1,5 +1,6 @@
 import { Store } from "@tauri-apps/plugin-store";
 import type {
+  AccelerationPlayType,
   ActiveWindowSample,
   AuditEvent,
   ForecastAgentResult,
@@ -75,6 +76,26 @@ export interface PersistedSnapshotRecord {
   computed_at: string;
 }
 
+/** The compact per-signal summary retained in a weekly acceleration snapshot (E2). */
+export interface PersistedAccelerationSignalSummary {
+  signal_id: string;
+  type: AccelerationPlayType;
+  estimated_minutes_saved_per_week: number;
+}
+
+/**
+ * A per-ISO-week snapshot of the surfaced Acceleration signals (the ranked, capped top-N the user
+ * actually sees), retained so the engine can see which signals RECUR across weeks (a habit) versus
+ * one-offs (noise). Only the derived summary is stored — id/type/minutes, never the evidence
+ * strings — which keeps it compact and privacy-trivial (no window titles, no app names). One record
+ * per week (latest computation wins). Mirrors `PersistedSnapshotRecord`.
+ */
+export interface PersistedAccelerationSnapshot {
+  week_id: string;
+  generated_at: string;
+  signals: PersistedAccelerationSignalSummary[];
+}
+
 /**
  * A past forecast paired with how it scored once its target week arrived. Assembled
  * in `useDerived` from `forecastHistory` + the live snapshot; kept here next to
@@ -103,6 +124,8 @@ export interface PersistedAppState {
   generatedForecast: PersistedForecastRecord | null;
   forecastHistory: PersistedForecastRecord[];
   snapshotHistory: PersistedSnapshotRecord[];
+  /** Per-week summary of the mined Acceleration signals, for cross-week recurrence (E2). */
+  accelerationHistory: PersistedAccelerationSnapshot[];
   visualContextEnabled: boolean;
   visualContextInsights: VisualContextInsight[];
   /** signal_ids of Acceleration Plays the user dismissed (hidden across reloads). */
@@ -200,6 +223,53 @@ function parseSnapshotHistory(value: unknown): PersistedSnapshotRecord[] {
   );
 }
 
+const ACCELERATION_PLAY_TYPES: ReadonlySet<AccelerationPlayType> = new Set<AccelerationPlayType>([
+  "automate",
+  "tool",
+  "technique"
+]);
+
+/**
+ * Validate the persisted weekly acceleration history (E2). Drops entries without a string
+ * `week_id`/array `signals`, and within each record keeps only well-formed summaries (string
+ * `signal_id`, known `type`, finite minutes) — so a corrupted blob degrades gracefully to a
+ * smaller/empty history rather than crashing the recurrence computation.
+ */
+function parseAccelerationHistory(value: unknown): PersistedAccelerationSnapshot[] {
+  if (!Array.isArray(value)) return [];
+  const records: PersistedAccelerationSnapshot[] = [];
+  for (const entry of value) {
+    if (!isRecord(entry) || typeof entry.week_id !== "string" || !Array.isArray(entry.signals)) {
+      continue;
+    }
+    const signals: PersistedAccelerationSignalSummary[] = [];
+    for (const signal of entry.signals) {
+      if (
+        isRecord(signal) &&
+        typeof signal.signal_id === "string" &&
+        typeof signal.type === "string" &&
+        ACCELERATION_PLAY_TYPES.has(signal.type as AccelerationPlayType)
+      ) {
+        signals.push({
+          signal_id: signal.signal_id,
+          type: signal.type as AccelerationPlayType,
+          estimated_minutes_saved_per_week:
+            typeof signal.estimated_minutes_saved_per_week === "number" &&
+            Number.isFinite(signal.estimated_minutes_saved_per_week)
+              ? signal.estimated_minutes_saved_per_week
+              : 0
+        });
+      }
+    }
+    records.push({
+      week_id: entry.week_id,
+      generated_at: typeof entry.generated_at === "string" ? entry.generated_at : "",
+      signals
+    });
+  }
+  return records;
+}
+
 function parseStringIdList(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.filter((entry): entry is string => typeof entry === "string");
@@ -283,6 +353,7 @@ export async function readPersistedState(): Promise<PersistedAppState | null> {
         generatedForecast: isRecord(parsed.generatedForecast) && isRecord(parsed.generatedForecast.forecast) ? (parsed.generatedForecast as unknown as PersistedForecastRecord) : null,
         forecastHistory: parseForecastHistory(parsed.forecastHistory),
         snapshotHistory: parseSnapshotHistory(parsed.snapshotHistory),
+        accelerationHistory: parseAccelerationHistory(parsed.accelerationHistory),
         visualContextEnabled: typeof parsed.visualContextEnabled === "boolean" ? parsed.visualContextEnabled : false,
         visualContextInsights: Array.isArray(parsed.visualContextInsights) ? (parsed.visualContextInsights as VisualContextInsight[]) : [],
         dismissedPlayIds: parseStringIdList(parsed.dismissedPlayIds),
@@ -331,6 +402,7 @@ export async function readPersistedState(): Promise<PersistedAppState | null> {
           : null,
       forecastHistory: parseForecastHistory(parsed.forecastHistory),
       snapshotHistory: parseSnapshotHistory(parsed.snapshotHistory),
+      accelerationHistory: parseAccelerationHistory(parsed.accelerationHistory),
       visualContextEnabled:
         typeof parsed.visualContextEnabled === "boolean" ? parsed.visualContextEnabled : false,
       visualContextInsights: Array.isArray(parsed.visualContextInsights)

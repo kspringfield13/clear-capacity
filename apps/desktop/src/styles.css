@@ -2039,6 +2039,21 @@ h3 {
   border: 1px solid var(--border);
 }
 
+.play-recurring-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--warning);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+}
+
 .play-type-chip {
   display: inline-flex;
   align-items: center;

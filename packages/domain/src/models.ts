@@ -207,6 +207,13 @@ export interface AccelerationSignal {
   estimated_minutes_saved_per_week: number;
   confidence: number;
   derived_from: string[];
+  /**
+   * Count of prior ISO weeks this same `signal_id` was mined, from persisted acceleration
+   * history (E2). Emphasis only — a recurring signal is nudged higher in the ranking and shows
+   * a "recurring" badge; the `estimated_minutes_saved_per_week` estimate is left unchanged so it
+   * stays deterministic and explainable. Absent (or 0) for a first-seen / one-off signal.
+   */
+  recurrence_weeks?: number;
 }
 
 /**
