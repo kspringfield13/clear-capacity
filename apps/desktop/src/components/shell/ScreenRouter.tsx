@@ -69,6 +69,8 @@ interface ScreenRouterProps {
   onConfirm: (blockId: string) => void;
   onExclude: (blockId: string) => void;
   onRelabel: (blockId: string, field: keyof WorkBlock, value: WorkBlock[keyof WorkBlock]) => void;
+  onUndoLastCorrection: () => void;
+  canUndoLastCorrection: boolean;
   onOpenScreen: (screen: Screen) => void;
   // first-run onboarding
   onboardingSteps: OnboardingStep[];
@@ -172,6 +174,8 @@ export function ScreenRouter({
   onConfirm,
   onExclude,
   onRelabel,
+  onUndoLastCorrection,
+  canUndoLastCorrection,
   onOpenScreen,
   onboardingSteps,
   showOnboarding,
@@ -319,6 +323,8 @@ export function ScreenRouter({
           onConfirm={onConfirm}
           onExclude={onExclude}
           onRelabel={onRelabel}
+          onUndoLastCorrection={onUndoLastCorrection}
+          canUndoLastCorrection={canUndoLastCorrection}
           corrections={corrections}
           pushToast={pushToast}
         />

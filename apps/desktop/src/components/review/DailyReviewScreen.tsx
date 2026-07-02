@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Check, CalendarCheck, Sparkles, Upload } from "lucide-react";
+import { Check, CalendarCheck, Sparkles, Undo2, Upload } from "lucide-react";
 import type {
   WorkBlock,
   ReviewCopilotSuggestion,
@@ -29,6 +29,8 @@ export function DailyReviewScreen({
   onConfirm,
   onExclude,
   onRelabel,
+  onUndoLastCorrection,
+  canUndoLastCorrection,
   corrections,
   pushToast
 }: {
@@ -46,6 +48,8 @@ export function DailyReviewScreen({
   onConfirm: (blockId: string) => void;
   onExclude: (blockId: string) => void;
   onRelabel: (blockId: string, field: keyof WorkBlock, value: WorkBlock[keyof WorkBlock]) => void;
+  onUndoLastCorrection: () => void;
+  canUndoLastCorrection: boolean;
   corrections: UserCorrection[];
   pushToast: PushToast;
 }) {
@@ -149,6 +153,18 @@ export function DailyReviewScreen({
           <div className="review-progress-fill" style={{ width: `${progressPct}%` }} />
         </div>
       </div>
+
+      {canUndoLastCorrection && (
+        <button
+          className="review-undo-button"
+          type="button"
+          onClick={onUndoLastCorrection}
+          title="Revert your most recent relabel — records the reversal in your history"
+        >
+          <Undo2 size={15} />
+          <span>Undo last correction</span>
+        </button>
+      )}
 
       <ReviewCopilotPanel
         suggestions={reviewSuggestions}
