@@ -310,12 +310,15 @@ export function WeeklyCapacityScreen({
         <div className="allocation-grid">
           {snapshot.category_allocation.map((item) => (
             <div
-              className="allocation-row"
+              className="allocation-row allocation-row-interactive"
               key={item.label}
               title={item.label}
+              tabIndex={0}
               style={{ opacity: hoveredCategory && hoveredCategory !== item.label ? 0.35 : 1, transition: "opacity 0.12s" }}
               onMouseEnter={() => setHoveredCategory(item.label)}
               onMouseLeave={() => setHoveredCategory(null)}
+              onFocus={() => setHoveredCategory(item.label)}
+              onBlur={() => setHoveredCategory(null)}
             >
               <span className="dot" style={{ background: categoryColors[item.label] }} />
               <span>{item.label}</span>
