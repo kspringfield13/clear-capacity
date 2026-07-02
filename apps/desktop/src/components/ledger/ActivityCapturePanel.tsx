@@ -119,7 +119,10 @@ export function ActivityCapturePanel({
           {visualContextInsights.slice(-3).reverse().map((insight) => (
             <div key={insight.insight_id}>
               <span>{insight.visible_tool ?? insight.app_name}</span>
-              <strong>{Math.round(insight.confidence * 100)}%</strong>
+              <strong title="How confident this derived visual-context insight is">
+                {Number.isFinite(insight.confidence) ? Math.round(insight.confidence * 100) : 0}%
+                <span className="sr-only"> insight confidence</span>
+              </strong>
               <small>{insight.activity_summary}</small>
             </div>
           ))}
