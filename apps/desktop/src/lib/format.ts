@@ -238,6 +238,35 @@ export function formatIsoWeekLabel(weekId: string): string {
   return `Week ${Number(match[2])}, ${match[1]}`;
 }
 
+// Plain-language labels for the known `AuditEvent.source` identifiers, so the audit
+// detail header never surfaces a raw snake_case internal id. Anything unmapped falls
+// back to a Title-Case-from-snake_case rendering via `sourceLabel`.
+const AUDIT_SOURCE_LABELS: Record<string, string> = {
+  review_layer: "Review layer",
+  openai_responses_api: "OpenAI Responses API",
+  openai_vision: "OpenAI Vision",
+  macos_active_window: "macOS active window",
+  outlook_ics: "Outlook .ics",
+  chat_export: "Chat export",
+  proactive_alerts: "Proactive alerts",
+  acceleration_engine: "Acceleration engine",
+  privacy_control: "Privacy control",
+  sessionizer: "Sessionizer",
+  onboarding: "Onboarding",
+  walkthrough: "Walkthrough",
+};
+
+// Humanize an `AuditEvent.source` for display (never render the raw snake_case id).
+export function sourceLabel(source: string): string {
+  const mapped = AUDIT_SOURCE_LABELS[source];
+  if (mapped) return mapped;
+  // Title-Case-from-snake_case fallback for any source not in the map.
+  return source
+    .split("_")
+    .map((word) => (word ? word.charAt(0).toUpperCase() + word.slice(1) : word))
+    .join(" ");
+}
+
 export function auditTypeLabel(type: AuditEventType) {
   const labels: Record<AuditEventType, string> = {
     active_window_sample: "Capture",

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ClipboardCopy } from "lucide-react";
 import type { AuditEvent } from "../../../../../packages/domain/src/models";
-import { auditTypeLabel, formatAuditTime, privacyLevelLabel, privacyLevelTooltip } from "../../lib/format";
+import { auditTypeLabel, formatAuditTime, privacyLevelLabel, privacyLevelTooltip, sourceLabel } from "../../lib/format";
 import type { PushToast } from "../../hooks/useToasts";
 
 export function AuditEventRow({ event, pushToast }: { event: AuditEvent; pushToast: PushToast }) {
@@ -40,7 +40,7 @@ export function AuditEventRow({ event, pushToast }: { event: AuditEvent; pushToa
       </summary>
       <div className="audit-detail">
         <div className="audit-detail-header">
-          <span>{event.source}</span>
+          <span>{sourceLabel(event.source)}</span>
           <button
             type="button"
             onClick={() => void handleCopyJson()}
