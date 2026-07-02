@@ -144,10 +144,10 @@ export function WeeklyCapacityScreen({
             <p className="eyebrow">Weekly capacity view</p>
             <div className="headline-with-score">
               <h1>{weekRangeLabel}: waiting for real workload signal.</h1>
-              <div className="summary-score" title="How confident the model is in this week's capacity estimate">
+              <div className="summary-score" title="No capacity estimate yet — confidence appears once work blocks exist">
                 <span>Summary confidence</span>
-                <strong>--</strong>
-                <span className="sr-only">How confident the model is in this week's capacity estimate</span>
+                <strong className="summary-score-empty" aria-hidden>—</strong>
+                <span className="sr-only">No capacity estimate yet — confidence appears once work blocks exist</span>
               </div>
             </div>
           </div>
