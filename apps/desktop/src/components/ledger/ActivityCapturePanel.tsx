@@ -9,6 +9,12 @@ import { InlineError } from "../common/InlineError";
 import { summarizeRecentSessions } from "../../lib/blocks";
 import { formatDurationMinutes } from "../../lib/format";
 
+// Capture-health heuristic surfaced by the chip below (0–1, higher = healthier).
+// This reflects capture RELIABILITY, not any classification confidence.
+const CAPTURE_HEALTH_ACTIVE = 0.9;
+const CAPTURE_HEALTH_PAUSED = 0.72;
+const CAPTURE_HEALTH_ERROR = 0.4;
+
 export function ActivityCapturePanel({
   activeWindowSamples,
   activeWindowSessions,
@@ -57,7 +63,10 @@ export function ActivityCapturePanel({
             <RefreshCw size={16} />
             <span>{classificationStatus === "classifying" ? "Classifying…" : "Classify Sessions"}</span>
           </button>
-          <ConfidenceChip value={captureError ? 0.4 : paused ? 0.72 : 0.9} />
+          <ConfidenceChip
+            value={captureError ? CAPTURE_HEALTH_ERROR : paused ? CAPTURE_HEALTH_PAUSED : CAPTURE_HEALTH_ACTIVE}
+            glossLabel="capture health"
+          />
         </div>
       </summary>
       {classificationStatus === "classifying" && (
