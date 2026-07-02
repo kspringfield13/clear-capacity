@@ -177,7 +177,11 @@ function PlayCard({
               type="button"
               className="play-recipe-action"
               title={recipeCopied ? "Copied" : "Copy this recipe to the clipboard"}
-              aria-label={recipeCopied ? "Recipe copied to clipboard" : "Copy this recipe to the clipboard"}
+              aria-label={
+                recipeCopied
+                  ? `Recipe copied to clipboard — ${signal.title}`
+                  : `Copy this recipe to the clipboard — ${signal.title}`
+              }
               onClick={() => void copyRecipe()}
             >
               {recipeCopied ? <Check size={13} aria-hidden /> : <Copy size={13} aria-hidden />}
@@ -187,6 +191,11 @@ function PlayCard({
               type="button"
               className={`play-recipe-action${isInLibrary ? " is-saved" : ""}`}
               aria-pressed={isInLibrary}
+              aria-label={
+                isInLibrary
+                  ? `In library — ${signal.title}. Select again to remove`
+                  : `Save to library — ${signal.title}`
+              }
               title={
                 isInLibrary
                   ? "Saved to your skills library — select again to remove"
@@ -212,6 +221,7 @@ function PlayCard({
           type="button"
           className={`play-action play-action-save${isSaved ? " is-saved" : ""}`}
           aria-pressed={isSaved}
+          aria-label={isSaved ? `Saved — ${signal.title}. Select again to remove` : `Save — ${signal.title}`}
           title={isSaved ? "Saved — select again to remove from your saved plays" : "Save this play to revisit later"}
           onClick={() => (isSaved ? onUnsave(signal.signal_id) : onSave(signal))}
         >
@@ -222,6 +232,11 @@ function PlayCard({
           type="button"
           className={`play-action play-action-acted${isActedOn ? " is-acted" : ""}`}
           aria-pressed={isActedOn}
+          aria-label={
+            isActedOn
+              ? `Acted on — ${signal.title}. Select again to undo`
+              : `I acted on this — ${signal.title}`
+          }
           title={
             isActedOn
               ? "You marked this play as acted on — select again to undo"
@@ -235,6 +250,7 @@ function PlayCard({
         <button
           type="button"
           className="play-action play-action-dismiss"
+          aria-label={`Dismiss — ${signal.title}`}
           title="Dismiss this play — hide it from your acceleration list"
           onClick={() => onDismiss(signal)}
         >
